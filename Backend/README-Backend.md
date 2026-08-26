@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/backend-Python%203.12%2B-3776AB?logo=python&logoColor=white)]()
 [![Next.js](https://img.shields.io/badge/frontend-Next.js%2016-black?logo=next.js&logoColor=white)]()
 [![Qiskit](https://img.shields.io/badge/quantum-Qiskit%20%7C%20PennyLane-6929C4)]()
-[![License](https://img.shields.io/badge/license-TBD-lightgrey)]()
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
 
 This folder owns everything that isn't the UI: data ingestion, classical ML, the quantum layer, explainability, benchmarking, and the API the frontend talks to.
 

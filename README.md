@@ -11,7 +11,7 @@ Built for **Smart India Hackathon 2026 — Problem Statement SIH26139** (Organiz
 [![Python](https://img.shields.io/badge/backend-Python%203.12%2B-3776AB?logo=python&logoColor=white)]()
 [![Next.js](https://img.shields.io/badge/frontend-Next.js%2016-black?logo=next.js&logoColor=white)]()
 [![Qiskit](https://img.shields.io/badge/quantum-Qiskit%20%7C%20PennyLane-6929C4)]()
-[![License](https://img.shields.io/badge/license-TBD-lightgrey)]()
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 </div>
 
@@ -222,7 +222,7 @@ This list will drift as the plan does — the live version of what's being worke
 
 ## License
 
-**To be decided.** Before choosing (or defaulting to something like MIT), check Egreen Quanta's / SIH 2026's specific terms on IP ownership for submitted solutions — competition rules around this vary, and it's worth confirming before this repo is made public or a license file is added.
+This project is licensed under the **Apache License 2.0**. This allows for permissive use, modification, and distribution while providing explicit patent protections, in alignment with Smart India Hackathon 2026 guidelines.
 
 ## Acknowledgements
 
