@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
 export const metadata: Metadata = {
-  title: "QuantumX | Hybrid Quantum ML Diagnostics",
-  description: "High-precision, explainable diagnostics using Quantum Machine Learning.",
+  title: "QuantumX | Under Development",
+  description: "Hybrid Quantum ML Diagnostics Platform",
 };
 
 export default function RootLayout({
@@ -15,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={inter.className}>{children}</body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }
