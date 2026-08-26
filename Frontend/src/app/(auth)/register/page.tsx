@@ -1,112 +1,64 @@
 import Link from "next/link";
-import { Activity, ArrowRight, Lock, Mail, User, ShieldCheck } from "lucide-react";
-import FloatingCard from "@/components/ui/FloatingCard";
+import { Activity } from "lucide-react";
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-screen cream-gradient flex flex-col justify-center py-12 px-6 lg:px-8 relative overflow-hidden">
-      
-      {/* Ambient background glow */}
-      <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-violet-200/30 rounded-full blur-[140px]" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center mb-8">
-        <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-            <Activity className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <Link href="/" className="flex justify-center mb-6">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+            <Activity className="h-7 w-7 text-white" />
           </div>
         </Link>
-        <h2 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-          Create Researcher Account
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
+          Create an Account
         </h2>
-        <p className="mt-2 text-sm text-slate-500">
-          Join the quantum biomedical network to run hybrid VQC models.
+        <p className="mt-2 text-center text-sm text-gray-400">
+          Already have an account? <Link href="/login" className="font-medium text-purple-400 hover:text-purple-300 transition-colors">Sign in</Link>
         </p>
       </div>
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <FloatingCard depth={10}>
-          <div className="bg-white/85 backdrop-blur-2xl border border-black/[0.06] py-10 px-6 sm:px-10 rounded-3xl shadow-2xl shadow-indigo-500/5">
-            <form className="space-y-4" action="/verify-otp" method="GET">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Full Name & Credentials
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Dr. Eleanor Vance, MD"
-                    className="block w-full pl-10 pr-3.5 py-3 border border-black/[0.08] rounded-xl bg-slate-50/60 placeholder-slate-400 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all"
-                  />
-                </div>
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white/[0.02] border border-white/5 py-8 px-4 shadow sm:rounded-2xl sm:px-10 backdrop-blur-sm">
+          <form className="space-y-6" action="#" method="POST">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+                Full Name
+              </label>
+              <div className="mt-1">
+                <input id="name" name="name" type="text" required className="appearance-none block w-full px-3 py-2 border border-white/10 rounded-md shadow-sm bg-black/50 placeholder-gray-500 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors" />
               </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Institutional Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    placeholder="eleanor@bioclinic.edu"
-                    className="block w-full pl-10 pr-3.5 py-3 border border-black/[0.08] rounded-xl bg-slate-50/60 placeholder-slate-400 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Create Master Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Minimum 12 characters"
-                    className="block w-full pl-10 pr-3.5 py-3 border border-black/[0.08] rounded-xl bg-slate-50/60 placeholder-slate-400 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="text-[11px] text-slate-500 pt-1 leading-normal">
-                By creating an account, you agree to the{" "}
-                <Link href="/terms" className="text-indigo-600 font-semibold hover:underline">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="/privacy" className="text-indigo-600 font-semibold hover:underline">
-                  Privacy Policy
-                </Link>.
-              </div>
-
-              <Link
-                href="/verify-otp"
-                className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 text-sm mt-4"
-              >
-                Proceed to Two-Factor Verification <ArrowRight className="w-4 h-4" />
-              </Link>
-            </form>
-
-            <div className="mt-8 pt-6 border-t border-black/[0.06] text-center">
-              <p className="text-xs text-slate-500">
-                Already have an account?{" "}
-                <Link href="/login" className="font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
-                  Sign In
-                </Link>
-              </p>
             </div>
-          </div>
-        </FloatingCard>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300">
+                Email address
+              </label>
+              <div className="mt-1">
+                <input id="email" name="email" type="email" autoComplete="email" required className="appearance-none block w-full px-3 py-2 border border-white/10 rounded-md shadow-sm bg-black/50 placeholder-gray-500 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                Password
+              </label>
+              <div className="mt-1">
+                <input id="password" name="password" type="password" autoComplete="new-password" required className="appearance-none block w-full px-3 py-2 border border-white/10 rounded-md shadow-sm bg-black/50 placeholder-gray-500 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm transition-colors" />
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-400">
+              By registering, you agree to our <Link href="/terms" className="text-purple-400 hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link>.
+            </div>
+
+            <div>
+              <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-black bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black focus:ring-white transition-colors">
+                Register
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

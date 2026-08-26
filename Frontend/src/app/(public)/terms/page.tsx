@@ -1,51 +1,28 @@
-import Link from "next/link";
-import { ShieldCheck, ArrowLeft } from "lucide-react";
-
 export default function TermsPage() {
   return (
-    <div className="max-w-4xl mx-auto py-16 md:py-24 px-6 text-slate-700">
-      
-      <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 mb-8 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Return to Platform Overview
-      </Link>
+    <div className="max-w-4xl mx-auto py-24 px-6 text-gray-300">
+      <h1 className="text-4xl font-bold text-white mb-8">Terms of Service</h1>
 
-      <div className="bg-white/80 backdrop-blur-2xl border border-black/[0.06] rounded-3xl p-8 md:p-12 shadow-xl shadow-slate-900/5 space-y-8">
-        
-        <div className="border-b border-black/[0.06] pb-6">
-          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">Legal Architecture</span>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-950 mt-1">
-            Terms of Service
-          </h1>
-          <p className="text-xs text-slate-400 mt-2">
-            Last Updated: August 2026 • Governed under Apache 2.0 Open-Source IP Clauses
-          </p>
-        </div>
+      <div className="space-y-8 text-sm leading-relaxed">
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-4">1. Acceptance of Terms</h2>
+          <p>By accessing and using the QuantumX platform ("Service"), you agree to be bound by these Terms of Service. This platform is a prototype developed for the Smart India Hackathon 2026 and should not be used as a substitute for professional medical advice.</p>
+        </section>
 
-        <div className="space-y-6 text-sm leading-relaxed">
-          <section className="space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">1. Nature of the Service & Medical Disclaimer</h2>
-            <p>
-              QuantumX is an advanced research platform deploying hybrid variational quantum circuits (VQC) and quantum kernel support vector machines (QSVM) for biomedical feature analysis. All diagnostic probabilities, state-vector projections, and Q-SHAP feature attributions are provided exclusively for computational research, validation, and benchmarking purposes.
-            </p>
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/60 text-amber-900 text-xs font-medium">
-              <strong>Caution:</strong> QuantumX does not offer formal medical diagnoses or direct clinical treatments. Healthcare practitioners must exercise independent clinical discretion before interpreting any algorithmic outputs.
-            </div>
-          </section>
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-4">2. Medical Disclaimer</h2>
+          <p>QuantumX provides predictive modeling using hybrid quantum-classical algorithms. The outputs, including Quantum SHAP explainability metrics, are for research and informational purposes only. They do not constitute clinical diagnoses. Always consult a qualified healthcare provider for medical decisions.</p>
+        </section>
 
-          <section className="space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">2. Quantum Computing Resource Usage</h2>
-            <p>
-              Workloads dispatched to real quantum processing units (QPUs) via IBM Quantum Qiskit Runtime or simulator nodes are queued based on availability. QuantumX is not liable for runtime latency or gate noise fluctuations inherent in NISQ-era quantum hardware.
-            </p>
-          </section>
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-4">3. Data Usage & Privacy</h2>
+          <p>Datasets uploaded to the platform are processed temporarily for the purpose of quantum state preparation and inference. We do not permanently store, sell, or distribute any personally identifiable medical data. Please refer to our Privacy Policy for detailed information on data handling.</p>
+        </section>
 
-          <section className="space-y-2">
-            <h2 className="text-lg font-bold text-slate-900">3. Intellectual Property & Open Source Licensing</h2>
-            <p>
-              The QuantumX framework, circuit topology engines, and visualization modules are released under the <strong>Apache License 2.0</strong>, providing explicit patent protection and open collaboration standards.
-            </p>
-          </section>
-        </div>
+        <section>
+          <h2 className="text-xl font-semibold text-white mb-4">4. Intellectual Property</h2>
+          <p>The QuantumX platform architecture, hybrid training orchestration engine, and proprietary visualization tools are the intellectual property of the QuantumX Team, unless governed otherwise by the SIH 2026 competition guidelines or open-source licenses (e.g., Apache 2.0).</p>
+        </section>
       </div>
     </div>
   );
