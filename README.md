@@ -4,10 +4,9 @@
 
 **A hybrid quantum–classical machine learning platform for early disease detection.**
 
-Built for **Smart India Hackathon 2026 — Problem Statement SIH26139** (Organization: **Egreen Quanta**, Theme: MedTech/BioTech/HealthTech).
+Pioneering the intersection of Quantum Computing and Healthcare to deliver high-precision, explainable diagnostics.
 
 [![Status](https://img.shields.io/badge/status-active%20development-yellow)]()
-[![SIH](https://img.shields.io/badge/SIH%202026-SIH26139-blue)]()
 [![Python](https://img.shields.io/badge/backend-Python%203.12%2B-3776AB?logo=python&logoColor=white)]()
 [![Next.js](https://img.shields.io/badge/frontend-Next.js%2016-black?logo=next.js&logoColor=white)]()
 [![Qiskit](https://img.shields.io/badge/quantum-Qiskit%20%7C%20PennyLane-6929C4)]()
