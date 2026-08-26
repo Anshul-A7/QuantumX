@@ -1,3 +1,5 @@
+<div align="center">
+
 # QuantumX
 
 **A hybrid quantum–classical machine learning platform for early disease detection.**
@@ -10,6 +12,8 @@ Built for **Smart India Hackathon 2026 — Problem Statement SIH26139** (Organiz
 [![Next.js](https://img.shields.io/badge/frontend-Next.js%2016-black?logo=next.js&logoColor=white)]()
 [![Qiskit](https://img.shields.io/badge/quantum-Qiskit%20%7C%20PennyLane-6929C4)]()
 [![License](https://img.shields.io/badge/license-TBD-lightgrey)]()
+
+</div>
 
 ---
 
