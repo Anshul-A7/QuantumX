@@ -1,54 +1,135 @@
-# Setup Guide
+# QuantumX Setup Guide
 
-Follow these steps to set up the QuantumX development environment.
+This guide details the setup instructions for the QuantumX project, tailored for each team member's role and the tech stack outlined in our project documentation.
 
-## 1. Prerequisites
-- **Python:** 3.12 or newer.
-- **Node.js:** 18 or newer (with npm or yarn).
+## Prerequisites for All Roles
 
-## 2. Backend Setup
-The backend uses Python and FastAPI, with Qiskit and PennyLane for Quantum Machine Learning.
+Before starting, ensure you have the following installed:
+- Git
+- VS Code (or your preferred IDE)
+- A GitHub account with access to the QuantumX repository
 
-1. Navigate to the Backend folder:
-   ```bash
-   cd Backend
-   ```
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv .venv
-   # On Windows:
-   .venv\Scripts\activate
-   # On macOS/Linux:
-   source .venv/bin/activate
-   ```
-3. Install dependencies (once `requirements.txt` is created):
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Copy the `.env.example` file to `.env` and fill in your secrets (e.g., IBM Quantum API token).
-5. Run the server:
-   ```bash
-   uvicorn app.main:app --reload
-   ```
+Clone the repository:
+```bash
+git clone <repository_url>
+cd QuantumX
+```
 
-## 3. Frontend Setup
-The frontend uses Next.js (App Router).
+---
 
-1. Navigate to the Frontend folder:
+## Role-Specific Setup Instructions
+
+### 🖥️ R1-FRONTEND (Frontend Developer)
+
+**Tech Stack:** Next.js 16 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Recharts, Framer Motion, Axios.
+
+**Setup Instructions:**
+1. Navigate to the Frontend directory:
    ```bash
    cd Frontend
    ```
-2. Install dependencies:
+2. Install Node.js (v18 or higher recommended).
+3. Install dependencies:
    ```bash
    npm install
    ```
-3. Run the development server:
+4. Set up environment variables:
+   Copy `.env.example` to `.env.local` and configure the backend API URL.
+5. Start the development server:
    ```bash
    npm run dev
    ```
 
-## 4. Quantum Hardware Access
-To run the benchmarking on real quantum hardware:
-1. Sign up for an IBM Quantum account at [quantum.cloud.ibm.com](https://quantum.cloud.ibm.com/).
-2. Get your API token and save it to the `.env` file in the Backend.
-3. Use the Qiskit Runtime to dispatch jobs to the real QPUs. Development should default to `qiskit_aer` or `default.qubit` to avoid queue times.
+### ⚙️ R2-BACKEND (Backend Developer)
+
+**Tech Stack:** Python 3.12+, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Pydantic, bcrypt, python-jose.
+
+**Setup Instructions:**
+1. Install Python 3.12+.
+2. Install PostgreSQL and create a database named `quantumx`.
+3. Navigate to the Backend directory:
+   ```bash
+   cd Backend
+   ```
+4. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+5. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+6. Set up environment variables:
+   Copy `.env.example` to `.env` and configure your database credentials and JWT secret.
+7. Run database migrations:
+   ```bash
+   alembic upgrade head
+   ```
+8. Start the FastAPI server:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+### 📈 R3-ML (Machine Learning Engineer)
+
+**Tech Stack:** Python 3.12+, scikit-learn, XGBoost, PyTorch, pandas, NumPy, SHAP, SciPy.
+
+**Setup Instructions:**
+1. Install Python 3.12+.
+2. Navigate to the Backend directory (as ML runs within the backend environment):
+   ```bash
+   cd Backend
+   ```
+3. Create and activate a virtual environment (if you haven't already):
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+4. Install ML specific dependencies:
+   Ensure `requirements.txt` includes all necessary ML packages or install them directly:
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Set up datasets:
+   Download the WDBC, Cleveland Heart Disease, and CKD datasets and place them in the designated `Backend/data/` folder (or as defined by the data pipeline).
+
+### ⚛️ R6-LEADER (Team Lead + Quantum ML Architect)
+
+**Tech Stack:** Quantum pipeline tools (Qiskit, etc.), plus all Backend and ML stacks.
+
+**Setup Instructions:**
+1. Follow all setup instructions for R2-BACKEND and R3-ML.
+2. Install IBM Quantum Lab credentials if running on real hardware:
+   ```python
+   from qiskit_ibm_provider import IBMProvider
+   IBMProvider.save_account('YOUR_API_TOKEN')
+   ```
+3. Ensure all quantum-specific packages are installed via `requirements.txt`.
+
+### 🔄 R4-INTEGRATION (Integration & QA Tester)
+
+**Setup Instructions:**
+1. Follow both Frontend and Backend setup instructions to run the full stack locally.
+2. Set up testing frameworks (e.g., pytest for backend, Jest/Cypress for frontend).
+3. Ensure you can successfully start both servers and communicate between them.
+
+### 📋 R5-DOCS (Documentation, Research & Presentation Lead)
+
+**Setup Instructions:**
+1. No technical environment setup is strictly required, but having a Markdown editor (like Typora or VS Code) is recommended.
+2. Access the `Plan/` and `Team Data/` folders for project tracking and documentation updates.
+
+---
+
+## Troubleshooting
+
+- If you encounter package conflicts in Python, ensure you are using a clean virtual environment.
+- For database connection issues, verify your PostgreSQL service is running and the `.env` credentials match.
+- Frontend build errors? Try deleting `node_modules` and running `npm install` again.
