@@ -40,6 +40,8 @@ cd QuantumX
    npm run dev
    ```
 
+---
+
 ### ⚙️ R2-BACKEND (Backend Developer)
 
 **Tech Stack:** Python 3.12+, FastAPI, SQLAlchemy, Alembic, PostgreSQL, Pydantic, bcrypt, python-jose.
@@ -74,6 +76,8 @@ cd QuantumX
    uvicorn app.main:app --reload
    ```
 
+---
+
 ### 📈 R3-ML (Machine Learning Engineer)
 
 **Tech Stack:** Python 3.12+, scikit-learn, XGBoost, PyTorch, pandas, NumPy, SHAP, SciPy.
@@ -100,18 +104,7 @@ cd QuantumX
 5. Set up datasets:
    Download the WDBC, Cleveland Heart Disease, and CKD datasets and place them in the designated `Backend/data/` folder (or as defined by the data pipeline).
 
-### ⚛️ R6-LEADER (Team Lead + Quantum ML Architect)
-
-**Tech Stack:** Quantum pipeline tools (Qiskit, etc.), plus all Backend and ML stacks.
-
-**Setup Instructions:**
-1. Follow all setup instructions for R2-BACKEND and R3-ML.
-2. Install IBM Quantum Lab credentials if running on real hardware:
-   ```python
-   from qiskit_ibm_provider import IBMProvider
-   IBMProvider.save_account('YOUR_API_TOKEN')
-   ```
-3. Ensure all quantum-specific packages are installed via `requirements.txt`.
+---
 
 ### 🔄 R4-INTEGRATION (Integration & QA Tester)
 
@@ -119,6 +112,8 @@ cd QuantumX
 1. Follow both Frontend and Backend setup instructions to run the full stack locally.
 2. Set up testing frameworks (e.g., pytest for backend, Jest/Cypress for frontend).
 3. Ensure you can successfully start both servers and communicate between them.
+
+---
 
 ### 📋 R5-DOCS (Documentation, Research & Presentation Lead)
 
