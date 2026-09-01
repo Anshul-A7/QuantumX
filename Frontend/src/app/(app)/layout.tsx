@@ -104,15 +104,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Distinct open vs close transitions
   const sidebarTransition = sidebarOpen
     ? {
-        type: "spring" as const,
-        stiffness: 280,
-        damping: 26,
-        mass: 0.8,
-      } // OPEN ANIMATION: Smooth, elastic spring expansion
+      type: "spring" as const,
+      stiffness: 280,
+      damping: 26,
+      mass: 0.8,
+    } // OPEN ANIMATION: Smooth, elastic spring expansion
     : {
-        duration: 0.2,
-        ease: [0.4, 0, 0.2, 1] as const,
-      }; // CLOSE ANIMATION: Crisp, rapid cubic-bezier collapse
+      duration: 0.2,
+      ease: [0.4, 0, 0.2, 1] as const,
+    }; // CLOSE ANIMATION: Crisp, rapid cubic-bezier collapse
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => {
@@ -146,6 +146,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     let isMounted = true;
 
+    // Check cached user synchronously to avoid flashing
+    const cachedUser = AuthService.getCachedUser();
+    if (cachedUser) {
+      const name = cachedUser.fullName || cachedUser.username || "User";
+      setUserName(name);
+      setUserEmail(cachedUser.email || "user@quantumx.io");
+      if (cachedUser.profileImageUrl) {
+        setUserAvatar(cachedUser.profileImageUrl);
+      }
+      setIsAuthChecking(false);
+    }
+
     async function verifyAndLoadSession() {
       try {
         const user = await AuthService.bootstrapSession();
@@ -159,19 +171,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
             setUserAvatar(user.profileImageUrl);
           }
           setIsAuthChecking(false);
-        } else {
-          // Allow seamless guest researcher access to workbench & home dashboard
-          setUserName("Clinical Researcher (Guest)");
-          setUserEmail("investigator@quantumx.health");
+        } else if (!cachedUser) {
+          // If completely unauthenticated, redirect to login
           setIsAuthChecking(false);
+          router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
       } catch (err) {
         if (!isMounted) return;
-        setUserName("Clinical Researcher (Guest)");
-        setUserEmail("investigator@quantumx.health");
-        setIsAuthChecking(false);
+        if (!cachedUser) {
+          setIsAuthChecking(false);
+          router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+        }
       }
     }
+
+    verifyAndLoadSession();
 
     if (typeof window !== "undefined") {
       const storedSidebar = localStorage.getItem("quantumx_sidebar_open");
@@ -200,7 +214,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       const FIVE_MINUTES_MS = 5 * 60 * 1000;
       if (now - lastActiveRef.current > FIVE_MINUTES_MS) {
         lastActiveRef.current = now;
-        AuthService.getCurrentUser().catch(() => {});
+        AuthService.getCurrentUser().catch(() => { });
       }
     };
 
@@ -293,8 +307,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               type="button"
               onClick={() => handleBackendChange("ibmq_eagle")}
               className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${quantumBackend === "ibmq_eagle"
-                  ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
-                  : "text-ink-soft hover:text-ink"
+                ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
+                : "text-ink-soft hover:text-ink"
                 }`}
             >
               <Cpu size={12} className={quantumBackend === "ibmq_eagle" ? "text-quantum animate-pulse" : ""} />
@@ -305,8 +319,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               type="button"
               onClick={() => handleBackendChange("gpu_simulator")}
               className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${quantumBackend === "gpu_simulator"
-                  ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
-                  : "text-ink-soft hover:text-ink"
+                ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
+                : "text-ink-soft hover:text-ink"
                 }`}
             >
               <Zap size={12} />
@@ -701,8 +715,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             href={item.href}
                             onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${isActive
-                                ? "bg-ink text-parchment shadow-xs font-semibold"
-                                : "text-ink-soft hover:text-ink hover:bg-cream-deep/40"
+                              ? "bg-ink text-parchment shadow-xs font-semibold"
+                              : "text-ink-soft hover:text-ink hover:bg-cream-deep/40"
                               }`}
                           >
                             <div className="flex items-center gap-3">
@@ -738,8 +752,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     href="/account"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`p-2.5 rounded-xl flex items-center gap-2.5 cursor-pointer transition-colors ${pathname === "/account"
-                        ? "bg-ink text-parchment shadow-xs font-semibold"
-                        : "hover:bg-cream-deep/50 text-ink"
+                      ? "bg-ink text-parchment shadow-xs font-semibold"
+                      : "hover:bg-cream-deep/50 text-ink"
                       }`}
                   >
                     <div className="relative flex items-center justify-center shrink-0">
@@ -782,8 +796,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     href="/settings"
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${pathname === "/settings"
-                        ? "bg-ink text-parchment shadow-xs font-semibold"
-                        : "text-ink-soft hover:text-ink hover:bg-cream-deep/40"
+                      ? "bg-ink text-parchment shadow-xs font-semibold"
+                      : "text-ink-soft hover:text-ink hover:bg-cream-deep/40"
                       }`}
                   >
                     <div className="relative flex items-center justify-center shrink-0">
