@@ -88,7 +88,6 @@ function FormattedMessage({ text, isBot }: { text: string; isBot: boolean }) {
 
 function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  // Matches **bold**, `code`, or unclosed ** during streaming
   const regex = /(\*\*[^*]+\*\*|`[^`]+`|\*\*[^*]+$)/g;
   let lastIdx = 0;
   let match: RegExpExecArray | null;
@@ -109,7 +108,6 @@ function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
         </strong>
       );
     } else if (token.startsWith("**") && !token.endsWith("**")) {
-      // Halfway streaming bold
       const boldText = token.slice(2);
       parts.push(
         <strong
@@ -322,7 +320,7 @@ export default function QuantumChatbot() {
   };
 
   return (
-    <div className="fixed bottom-11 right-9 z-50 font-sans">
+    <div className="fixed bottom-6 right-6 z-50 font-sans">
       {/* Floating Trigger Button with Rotating Rainbow Border */}
       <div className="relative group flex items-center justify-center">
         <div className="absolute -inset-[2.5px] rounded-full overflow-hidden opacity-90 group-hover:opacity-100 transition-opacity">
@@ -373,14 +371,14 @@ export default function QuantumChatbot() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.94 }}
+            initial={{ opacity: 0, y: 25, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 25, scale: 0.94 }}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className={`absolute bottom-16 right-0 ${
               isExpanded
-                ? "w-[92vw] sm:w-[680px] h-[82vh] max-h-[820px]"
-                : "w-[92vw] sm:w-[420px] h-[580px] max-h-[75vh]"
+                ? "w-[92vw] sm:w-[640px] h-[80vh] max-h-[780px]"
+                : "w-[92vw] sm:w-[390px] h-[550px] max-h-[76vh]"
             } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_25px_70px_-15px_rgba(40,30,20,0.35)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
           >
             {/* Window Header */}
@@ -483,6 +481,36 @@ export default function QuantumChatbot() {
                 );
               })}
 
+              {/* Suggestions placed inside the chat area before user starts chatting */}
+              {messages.length === 1 && !isThinking && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="flex flex-col items-center justify-center text-center space-y-2 pt-2 pb-1"
+                >
+                  <span className="text-[9.5px] text-ink-soft font-mono flex items-center justify-center gap-1 uppercase tracking-wider">
+                    <Sparkles size={10} className="text-quantum" />
+                    Suggested questions
+                  </span>
+                  <div className="flex flex-col items-center gap-1.5 w-full">
+                    {suggestedPrompts.map((prompt, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSendMessage(prompt)}
+                        className="w-full max-w-[94%] px-3.5 py-2.5 rounded-full bg-parchment hover:bg-cream-deep border border-hairline/90 hover:border-quantum/40 text-[11px] text-ink transition-all cursor-pointer font-medium text-center shadow-2xs flex items-center justify-center gap-2 group"
+                      >
+                        <span className="text-quantum text-[11px] group-hover:scale-115 transition-transform">
+                          ✦
+                        </span>
+                        <span className="leading-snug">{prompt}</span>
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Minimal Thinking Animation (Only bouncing dots) */}
               {isThinking && (
                 <motion.div
@@ -503,47 +531,35 @@ export default function QuantumChatbot() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Simple Random Suggestions Area (No category banner, clean pills) */}
-            {suggestedPrompts.length > 0 && (
-              <div className="px-4 py-2.5 bg-cream/40 border-t border-hairline/70 flex flex-col gap-1.5">
-                {suggestedPrompts.map((p, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSendMessage(p)}
-                    className="w-full text-left text-[11.5px] px-3.5 py-2 rounded-2xl bg-parchment hover:bg-cream-deep border border-hairline/90 text-ink transition-all cursor-pointer font-normal hover:border-quantum/50 shadow-2xs flex items-center gap-2 group"
-                  >
-                    <span className="text-quantum text-[11px] group-hover:scale-110 transition-transform">✦</span>
-                    <span className="truncate">{p}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Input Bar */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="p-3 bg-cream border-t border-hairline flex items-center gap-2 shrink-0"
-            >
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask about screening, detection, API..."
-                className="flex-1 px-4 py-2.5 rounded-2xl bg-parchment border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink transition-all"
-              />
-              <button
-                type="submit"
-                disabled={!inputText.trim() || isThinking}
-                className="w-10 h-10 rounded-2xl bg-ink text-parchment hover:opacity-90 disabled:opacity-40 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
-                title="Send query"
+            <div className="p-3 bg-cream border-t border-hairline flex flex-col gap-1 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+                className="flex items-center gap-2"
               >
-                <Send size={15} />
-              </button>
-            </form>
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Ask about screening, detection, API..."
+                  className="flex-1 px-4 py-2.5 rounded-2xl bg-parchment border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || isThinking}
+                  className="w-10 h-10 rounded-2xl bg-ink text-parchment hover:opacity-90 disabled:opacity-40 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
+                  title="Send query"
+                >
+                  <Send size={15} />
+                </button>
+              </form>
+              <span className="text-[10px] text-ink-soft/70 text-center block pt-0.5 pb-0.5 font-light">
+                Enter to send · Shift+Enter for newline
+              </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
