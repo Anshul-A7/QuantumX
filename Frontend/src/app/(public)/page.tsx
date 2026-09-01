@@ -595,12 +595,15 @@ function Footer() {
     {
       title: "System & Company",
       items: [
+        { name: "Research Documentation", path: "https://github.com/Anshul-A7/QuantumX" },
+        {
+          name: "API Reference",
+          path: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`,
+        },
         { name: "Terms of Service", path: "/terms" },
         { name: "Privacy Policy", path: "/privacy" },
         { name: "Clinical Disclaimer", path: "/disclaimer" },
         { name: "Cookie Policy", path: "/cookies" },
-        { name: "Research Documentation", path: "/predict/demo" },
-        { name: "API Reference", path: "https://github.com/Anshul-A7/QuantumX" },
       ],
     },
   ];
