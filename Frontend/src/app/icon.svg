@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0A1612"/>
+  <!-- Crisp Minimalist Quantum Nexus Mark -->
+  <path d="M16 5 L17.5 13.5 L26 15 L17.5 16.5 L16 25 L14.5 16.5 L6 15 L14.5 13.5 Z" fill="#FFFFFF"/>
+  <circle cx="16" cy="15" r="2.2" fill="#10B981"/>
+  <!-- Subtly refined accent cross points -->
+  <circle cx="9" cy="8" r="1.2" fill="#10B981" opacity="0.8"/>
+  <circle cx="23" cy="22" r="1.2" fill="#10B981" opacity="0.8"/>
+</svg>

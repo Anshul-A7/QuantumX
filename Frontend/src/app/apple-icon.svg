@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <rect width="180" height="180" rx="40" fill="#0A1612"/>
+  <!-- Crisp Minimalist Quantum Nexus Mark -->
+  <path d="M90 28 L98 76 L146 84 L98 92 L90 140 L82 92 L34 84 L82 76 Z" fill="#FFFFFF"/>
+  <circle cx="90" cy="84" r="12" fill="#10B981"/>
+  <circle cx="50" cy="44" r="6" fill="#10B981" opacity="0.8"/>
+  <circle cx="130" cy="124" r="6" fill="#10B981" opacity="0.8"/>
+</svg>
