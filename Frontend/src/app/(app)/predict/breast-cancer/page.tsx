@@ -15,15 +15,16 @@ import {
   CheckCircle2,
   Download,
   Check,
-  ShieldAlert,
   Info,
   UploadCloud,
-  FileSpreadsheet,
   Calculator,
+  Link2,
+  Unlink2,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
-import BiomarkerDerivationModal from "@/components/predict/BiomarkerDerivationModal";
 import { showToast } from "@/components/common/ToastNotification";
 
 interface FieldConfig {
@@ -94,12 +95,15 @@ interface InferenceResult {
 
 export default function BreastCancerDetailPage() {
   const [formValues, setFormValues] = useState<Record<string, number>>({});
-  const [derivedLabels, setDerivedLabels] = useState<Record<string, string>>({});
+  const [derivedNotes, setDerivedNotes] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
   const [patientIdInput, setPatientIdInput] = useState("");
-  
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [activeDerivationKey, setActiveDerivationKey] = useState<string | null>(null);
+  
+  // Morphology linking: automatically updates Perimeter and Area as Radius changes if enabled
+  const [linkGeometry, setLinkGeometry] = useState(false);
+  // Quick inline derivation helper open for specific field
+  const [inlineHelperKey, setInlineHelperKey] = useState<string | null>(null);
 
   const [isInferring, setIsInferring] = useState(false);
   const [hasInferred, setHasInferred] = useState(false);
@@ -117,13 +121,13 @@ export default function BreastCancerDetailPage() {
 
   const handleSelectPreset = (preset: typeof PRESETS[0]) => {
     setFormValues(preset.values);
-    setDerivedLabels({});
+    setDerivedNotes({});
     setSelectedPresetName(preset.name);
   };
 
   const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
     setFormValues(extractedValues);
-    setDerivedLabels({});
+    setDerivedNotes({});
     setSelectedPresetName(null);
     if (detectedPatientId) {
       setPatientIdInput(detectedPatientId);
@@ -135,15 +139,90 @@ export default function BreastCancerDetailPage() {
     });
   };
 
-  const handleApplyDerivedValue = (key: string, val: number, label: string) => {
-    setFormValues((prev) => ({ ...prev, [key]: val }));
-    setDerivedLabels((prev) => ({ ...prev, [key]: label }));
+  // Updates a field value and handles geometric coupling if enabled
+  const handleValueChange = (key: string, numVal: number, fromDerivation?: string) => {
+    const updated = { ...formValues, [key]: numVal };
+
+    if (linkGeometry && key === "radius_mean") {
+      // Auto-compute geometric Perimeter (2*pi*r) and Area (pi*r^2)
+      const p = parseFloat((2 * Math.PI * numVal).toFixed(2));
+      const a = parseFloat((Math.PI * Math.pow(numVal, 2)).toFixed(1));
+      updated["perimeter_mean"] = p;
+      updated["area_mean"] = a;
+    }
+
+    setFormValues(updated);
+
+    if (fromDerivation) {
+      setDerivedNotes((prev) => ({ ...prev, [key]: fromDerivation }));
+    } else {
+      // Clear specific derivation note if user manually drags slider
+      if (derivedNotes[key]) {
+        setDerivedNotes((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    }
     setSelectedPresetName(null);
-    showToast({
-      title: "Biomarker Computed",
-      message: `${label} (${val})`,
-      type: "quantum",
+  };
+
+  const handleClearNote = (key: string) => {
+    setDerivedNotes((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
     });
+  };
+
+  // Instant inline mathematical derivations
+  const executeInlineDerivation = (key: string, method: string) => {
+    if (key === "radius_mean") {
+      if (method === "from_area") {
+        const a = formValues.area_mean || 1001.0;
+        const r = parseFloat(Math.sqrt(a / Math.PI).toFixed(2));
+        handleValueChange("radius_mean", r, `Derived from Area: r = √(1001/π) = ${r}μm`);
+      } else if (method === "from_perimeter") {
+        const p = formValues.perimeter_mean || 122.8;
+        const r = parseFloat((p / (2 * Math.PI)).toFixed(2));
+        handleValueChange("radius_mean", r, `Derived from Perimeter: r = P/2π = ${r}μm`);
+      } else if (method === "cohort_median") {
+        handleValueChange("radius_mean", 17.99, "Population Benchmark: 17.99μm");
+      }
+    } else if (key === "area_mean") {
+      if (method === "from_radius") {
+        const r = formValues.radius_mean || 17.99;
+        const a = parseFloat((Math.PI * Math.pow(r, 2)).toFixed(1));
+        handleValueChange("area_mean", a, `Derived from Radius: A = πr² = ${a}μm²`);
+      } else if (method === "cohort_median") {
+        handleValueChange("area_mean", 1001.0, "Population Benchmark: 1001.0μm²");
+      }
+    } else if (key === "perimeter_mean") {
+      if (method === "from_radius") {
+        const r = formValues.radius_mean || 17.99;
+        const p = parseFloat((2 * Math.PI * r).toFixed(2));
+        handleValueChange("perimeter_mean", p, `Derived from Radius: P = 2πr = ${p}μm`);
+      } else if (method === "cohort_median") {
+        handleValueChange("perimeter_mean", 122.8, "Population Benchmark: 122.8μm");
+      }
+    } else if (key === "compactness_mean") {
+      if (method === "from_perim_area") {
+        const p = formValues.perimeter_mean || 122.8;
+        const a = formValues.area_mean || 1001.0;
+        const c = parseFloat(Math.max(0.01, Math.min(0.35, Math.abs(Math.pow(p, 2) / (4 * Math.PI * a) - 1.0))).toFixed(4));
+        handleValueChange("compactness_mean", c, `Derived: C = (P²/4πA)-1 = ${c}`);
+      } else if (method === "cohort_median") {
+        handleValueChange("compactness_mean", 0.2776, "Population Benchmark: 0.2776");
+      }
+    } else {
+      // General cohort fallback
+      const fieldDef = FIELDS.find((f) => f.key === key);
+      if (fieldDef) {
+        handleValueChange(key, fieldDef.defaultValue, `Population Benchmark: ${fieldDef.defaultValue}`);
+      }
+    }
+    setInlineHelperKey(null);
   };
 
   const handleRunInference = async () => {
@@ -270,19 +349,11 @@ ${inferenceResult.clinicalNote}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="space-y-5 pb-12 w-full"
     >
-      {/* Upload Modal */}
+      {/* Upload Modal (Only for multi-format files) */}
       <BiomarkerUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
-      />
-
-      {/* Biomarker Derivation Modal */}
-      <BiomarkerDerivationModal
-        isOpen={!!activeDerivationKey}
-        biomarkerKey={activeDerivationKey}
-        onClose={() => setActiveDerivationKey(null)}
-        onApplyDerivedValue={handleApplyDerivedValue}
       />
 
       {/* Back Button + Title */}
@@ -336,8 +407,8 @@ ${inferenceResult.clinicalNote}
 
       {activeTab === "form" ? (
         <>
-          {/* Quick Presets & Upload Action Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-cream-deep/40 border border-hairline text-xs">
+          {/* Quick Presets, Geometry Auto-Sync, and Upload Action Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-xl bg-cream-deep/40 border border-hairline text-xs">
             <div className="flex items-center gap-2 flex-wrap">
               <FlaskConical size={14} className="text-quantum shrink-0" />
               <span className="font-medium text-ink">Sample Cases:</span>
@@ -360,6 +431,21 @@ ${inferenceResult.clinicalNote}
             </div>
 
             <div className="flex items-center gap-2.5 flex-wrap">
+              {/* Linked Morphology Toggle */}
+              <button
+                type="button"
+                onClick={() => setLinkGeometry(!linkGeometry)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-xs ${
+                  linkGeometry
+                    ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-semibold"
+                    : "bg-parchment border-hairline text-ink-soft hover:text-ink"
+                }`}
+                title="When enabled, moving Cell Radius automatically calculates Perimeter (2πr) and Area (πr²)."
+              >
+                {linkGeometry ? <Link2 size={13} className="text-emerald-600" /> : <Unlink2 size={13} />}
+                <span>Auto-Link Geometry {linkGeometry ? "(On)" : "(Off)"}</span>
+              </button>
+
               {/* Import Medical Report Button */}
               <button
                 type="button"
@@ -367,7 +453,7 @@ ${inferenceResult.clinicalNote}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-quantum/10 border border-quantum/30 text-quantum hover:bg-quantum hover:text-white transition-all font-medium text-xs cursor-pointer shadow-xs"
               >
                 <UploadCloud size={13} />
-                <span>Upload Report (CSV, PDF, JSON)</span>
+                <span>Upload Report</span>
               </button>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -377,7 +463,7 @@ ${inferenceResult.clinicalNote}
                   value={patientIdInput}
                   onChange={(e) => setPatientIdInput(e.target.value)}
                   placeholder="Patient Name"
-                  className="w-36 h-7 px-2 rounded-lg bg-parchment border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum/60"
+                  className="w-32 h-7 px-2 rounded-lg bg-parchment border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum/60"
                 />
               </div>
             </div>
@@ -390,7 +476,11 @@ ${inferenceResult.clinicalNote}
               <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                 <div>
                   <h2 className="font-serif text-base font-medium text-ink">Cellular Biomarker Parameters</h2>
-                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact readings, or calculate missing metrics</p>
+                  <p className="text-[11px] text-ink-soft">
+                    {linkGeometry
+                      ? "🔗 Linked Mode: Adjusting Cell Radius automatically computes Perimeter and Area in real-time."
+                      : "Drag sliders or type exact values. Click 'Derive' to auto-calculate missing values."}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -400,7 +490,7 @@ ${inferenceResult.clinicalNote}
                       initial[f.key] = f.defaultValue;
                     });
                     setFormValues(initial);
-                    setDerivedLabels({});
+                    setDerivedNotes({});
                     setSelectedPresetName(null);
                   }}
                   className="text-[11px] text-ink-soft hover:text-ink flex items-center gap-1 cursor-pointer"
@@ -412,10 +502,19 @@ ${inferenceResult.clinicalNote}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {FIELDS.map((field) => {
                   const val = formValues[field.key] ?? field.defaultValue;
-                  const derivationTag = derivedLabels[field.key];
+                  const derivationNote = derivedNotes[field.key];
+                  const isHelperOpen = inlineHelperKey === field.key;
 
                   return (
-                    <div key={field.key} className="space-y-1.5 p-3 rounded-xl bg-cream/50 border border-hairline/60 transition-all hover:border-hairline">
+                    <div
+                      key={field.key}
+                      className={`space-y-1.5 p-3 rounded-xl border transition-all ${
+                        derivationNote
+                          ? "bg-purple-500/5 border-purple-500/30"
+                          : "bg-cream/50 border-hairline/60 hover:border-hairline"
+                      }`}
+                    >
+                      {/* Label + Direct Numeric Input */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 max-w-[130px]">
                           <label className="text-[11px] font-semibold text-ink truncate" title={field.description}>
@@ -424,7 +523,6 @@ ${inferenceResult.clinicalNote}
                           <HelpTooltip text={field.simpleExplanation} title={field.label} />
                         </div>
                         
-                        {/* Direct Numeric Input Box with Unit */}
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
@@ -435,10 +533,7 @@ ${inferenceResult.clinicalNote}
                             onChange={(e) => {
                               const parsed = parseFloat(e.target.value);
                               if (!isNaN(parsed)) {
-                                setFormValues({
-                                  ...formValues,
-                                  [field.key]: parsed,
-                                });
+                                handleValueChange(field.key, parsed);
                               }
                             }}
                             className="w-16 h-6 px-1.5 text-right font-mono text-[11px] font-semibold text-ink bg-parchment rounded border border-hairline focus:outline-none focus:border-quantum"
@@ -449,43 +544,164 @@ ${inferenceResult.clinicalNote}
                         </div>
                       </div>
 
-                      {/* Derivation helper button & Active Tag */}
-                      <div className="flex items-center justify-between text-[10px]">
-                        <button
-                          type="button"
-                          onClick={() => setActiveDerivationKey(field.key)}
-                          className="text-purple-600 dark:text-purple-400 hover:underline font-medium flex items-center gap-1 cursor-pointer"
-                        >
-                          <Calculator size={10} />
-                          <span>Don&apos;t have this?</span>
-                        </button>
-                        
-                        {derivationTag && (
-                          <span className="text-[9px] font-mono font-medium text-purple-600 dark:text-purple-400 truncate max-w-[140px]" title={derivationTag}>
-                            {derivationTag}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Micro Range Slider */}
+                      {/* Micro Range Slider (The Main Interactive Element) */}
                       <input
                         type="range"
                         min={field.min}
                         max={field.max}
                         step={field.step}
                         value={val}
-                        onChange={(e) =>
-                          setFormValues({
-                            ...formValues,
-                            [field.key]: parseFloat(e.target.value),
-                          })
-                        }
+                        onChange={(e) => handleValueChange(field.key, parseFloat(e.target.value))}
                         className="w-full accent-quantum cursor-pointer h-1.5 bg-hairline rounded-lg"
                       />
-                      <div className="flex justify-between text-[9px] font-mono text-ink-soft/70">
+
+                      {/* Slider Bounds + Quick Derive Option */}
+                      <div className="flex items-center justify-between text-[9px] font-mono text-ink-soft/70">
                         <span>{field.min}</span>
+                        <button
+                          type="button"
+                          onClick={() => setInlineHelperKey(isHelperOpen ? null : field.key)}
+                          className="text-[10px] font-sans font-medium text-quantum hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <Calculator size={10} />
+                          <span>{isHelperOpen ? "Close Derivation" : "Don't have this?"}</span>
+                        </button>
                         <span>{field.max}</span>
                       </div>
+
+                      {/* Active Derivation Note Tag with Clear Button */}
+                      {derivationNote && (
+                        <div className="flex items-center justify-between p-1 px-1.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-[9px] font-mono text-purple-700 dark:text-purple-300">
+                          <span className="truncate max-w-[170px]" title={derivationNote}>
+                            ⚡ {derivationNote}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleClearNote(field.key)}
+                            className="text-purple-600 hover:text-purple-900 ml-1 cursor-pointer"
+                            title="Remove derivation note"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Inline Clean Derivation Expandable Panel (Zero Popups) */}
+                      <AnimatePresence>
+                        {isHelperOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="pt-2 border-t border-hairline/60 space-y-1.5 text-[10px]"
+                          >
+                            <span className="font-semibold text-ink block">Quick Calculate / Baseline:</span>
+
+                            {field.key === "radius_mean" && (
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("radius_mean", "from_area")}
+                                  className="text-left px-2 py-1 rounded bg-parchment hover:bg-cream border border-hairline text-ink flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>From Nuclear Area ($A = {formValues.area_mean || 1001}$)</span>
+                                  <span className="font-mono text-quantum">r = √(A/π)</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("radius_mean", "from_perimeter")}
+                                  className="text-left px-2 py-1 rounded bg-parchment hover:bg-cream border border-hairline text-ink flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>From Perimeter ($P = {formValues.perimeter_mean || 122.8}$)</span>
+                                  <span className="font-mono text-quantum">r = P/2π</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("radius_mean", "cohort_median")}
+                                  className="text-left px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>No data available?</span>
+                                  <span className="font-mono font-semibold">Apply Baseline: 17.99μm</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {field.key === "area_mean" && (
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("area_mean", "from_radius")}
+                                  className="text-left px-2 py-1 rounded bg-parchment hover:bg-cream border border-hairline text-ink flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>From Radius ($r = {formValues.radius_mean || 17.99}$)</span>
+                                  <span className="font-mono text-quantum">A = πr²</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("area_mean", "cohort_median")}
+                                  className="text-left px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>No data available?</span>
+                                  <span className="font-mono font-semibold">Apply Baseline: 1001.0μm²</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {field.key === "perimeter_mean" && (
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("perimeter_mean", "from_radius")}
+                                  className="text-left px-2 py-1 rounded bg-parchment hover:bg-cream border border-hairline text-ink flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>From Radius ($r = {formValues.radius_mean || 17.99}$)</span>
+                                  <span className="font-mono text-quantum">P = 2πr</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("perimeter_mean", "cohort_median")}
+                                  className="text-left px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>No data available?</span>
+                                  <span className="font-mono font-semibold">Apply Baseline: 122.8μm</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {field.key === "compactness_mean" && (
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("compactness_mean", "from_perim_area")}
+                                  className="text-left px-2 py-1 rounded bg-parchment hover:bg-cream border border-hairline text-ink flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>From Perimeter & Area</span>
+                                  <span className="font-mono text-quantum">C = (P²/4πA)-1</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => executeInlineDerivation("compactness_mean", "cohort_median")}
+                                  className="text-left px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>No data available?</span>
+                                  <span className="font-mono font-semibold">Apply Baseline: 0.2776</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {field.key !== "radius_mean" && field.key !== "area_mean" && field.key !== "perimeter_mean" && field.key !== "compactness_mean" && (
+                              <button
+                                type="button"
+                                onClick={() => executeInlineDerivation(field.key, "cohort_median")}
+                                className="w-full text-left px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-between cursor-pointer"
+                              >
+                                <span>No proxy data? Apply Cohort Baseline</span>
+                                <span className="font-mono font-semibold">{field.defaultValue} {field.unit}</span>
+                              </button>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   );
                 })}
