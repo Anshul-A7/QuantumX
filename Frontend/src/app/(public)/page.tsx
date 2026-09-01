@@ -19,6 +19,25 @@ import {
   Globe2,
 } from "lucide-react";
 
+function GithubIcon({ size = 15, className = "" }: { size?: number; className?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Motion primitives                                                    */
 /* ------------------------------------------------------------------ */
@@ -95,11 +114,10 @@ function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
       <div
-        className={`mx-auto flex max-w-6xl items-center justify-between rounded-full border px-5 transition-all duration-500 ${
-          scrolled
-            ? "border-hairline/90 bg-parchment/70 py-2.5 shadow-[0_16px_40px_-34px_rgba(60,50,35,0.8)] backdrop-blur-xl"
-            : "border-transparent bg-transparent py-4"
-        }`}
+        className={`mx-auto flex max-w-6xl items-center justify-between rounded-full border px-5 transition-all duration-500 ${scrolled
+          ? "border-hairline/90 bg-parchment/70 py-2.5 shadow-[0_16px_40px_-34px_rgba(60,50,35,0.8)] backdrop-blur-xl"
+          : "border-transparent bg-transparent py-4"
+          }`}
       >
         <a href="#top" className="flex items-baseline gap-2">
           <span className="font-serif text-[19px] tracking-tight text-ink">QuantumX</span>
@@ -474,9 +492,8 @@ function Benchmarking() {
                     {ROWS.map((r, i) => (
                       <tr
                         key={r[0]}
-                        className={`border-b border-hairline/60 last:border-0 ${
-                          i >= 3 ? "bg-quantum-soft/40" : ""
-                        }`}
+                        className={`border-b border-hairline/60 last:border-0 ${i >= 3 ? "bg-quantum-soft/40" : ""
+                          }`}
                       >
                         <td className="px-6 py-3.5 text-ink">{r[0]}</td>
                         <td className="px-4 py-3.5 font-mono text-ink">{r[1]}</td>
@@ -629,7 +646,7 @@ function Footer() {
 
         <div className="col-span-12 md:col-span-4 flex flex-col justify-end gap-4 mt-8 md:mt-0">
           <motion.a
-            href="https://anshul-portfolio.vercel.app/"
+            href="https://github.com/Anshul-A7/QuantumX"
             target="_blank"
             rel="noopener noreferrer"
             initial={{ opacity: 0, x: 30 }}
@@ -640,7 +657,7 @@ function Footer() {
             className="rounded-full px-6 h-14 flex items-center justify-between gap-3 group bg-white/[0.05] border border-white/10 hover:bg-white hover:text-black transition-colors backdrop-blur-md"
           >
             <span className="font-mono text-xs uppercase tracking-widest font-semibold flex items-center gap-2">
-              <Globe2 size={15} /> VISIT PORTFOLIO
+              <GithubIcon size={15} /> VISIT GITHUB
             </span>
             <ArrowUpRight
               size={16}
@@ -890,11 +907,10 @@ function CohortStratificationView() {
               <button
                 key={k}
                 onClick={() => setSelectedMarker(k)}
-                className={`rounded-md px-2.5 py-1 font-mono text-[10px] uppercase transition-all ${
-                  selectedMarker === k
-                    ? "bg-ink text-parchment shadow-sm"
-                    : "text-muted-foreground hover:text-ink"
-                }`}
+                className={`rounded-md px-2.5 py-1 font-mono text-[10px] uppercase transition-all ${selectedMarker === k
+                  ? "bg-ink text-parchment shadow-sm"
+                  : "text-muted-foreground hover:text-ink"
+                  }`}
               >
                 {k}
               </button>
@@ -1001,9 +1017,8 @@ function QuantumKernelView() {
                   <button
                     key={`${rIdx}-${cIdx}`}
                     onMouseEnter={() => setHoveredCell({ row: rIdx, col: cIdx, val })}
-                    className={`h-7 w-7 rounded-[4px] transition-all sm:h-8 sm:w-8 ${
-                      isHovered ? "ring-2 ring-ink scale-110 z-10" : ""
-                    }`}
+                    className={`h-7 w-7 rounded-[4px] transition-all sm:h-8 sm:w-8 ${isHovered ? "ring-2 ring-ink scale-110 z-10" : ""
+                      }`}
                     style={{
                       backgroundColor: isDiagonal
                         ? "oklch(0.24 0.02 50)"
@@ -1098,17 +1113,15 @@ function GateAblationView() {
               <button
                 key={g.id}
                 onClick={() => toggleGate(g.id)}
-                className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
-                  isOff
-                    ? "border-dashed border-hairline bg-cream-deep/30 opacity-60"
-                    : "border-hairline bg-parchment/60 hover:border-quantum/50 shadow-sm"
-                }`}
+                className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${isOff
+                  ? "border-dashed border-hairline bg-cream-deep/30 opacity-60"
+                  : "border-hairline bg-parchment/60 hover:border-quantum/50 shadow-sm"
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`flex h-6 w-16 shrink-0 items-center justify-center rounded font-mono text-[10px] font-semibold transition-colors ${
-                      isOff ? "bg-muted text-muted-foreground line-through" : "bg-ink text-parchment"
-                    }`}
+                    className={`flex h-6 w-16 shrink-0 items-center justify-center rounded font-mono text-[10px] font-semibold transition-colors ${isOff ? "bg-muted text-muted-foreground line-through" : "bg-ink text-parchment"
+                      }`}
                   >
                     {g.label}
                   </span>
@@ -1193,11 +1206,10 @@ function TranslationalWorkflow() {
                     <button
                       key={section.id}
                       onClick={() => setActiveTab(idx)}
-                      className={`w-full rounded-2xl border p-5 text-left transition-all duration-300 ${
-                        isSelected
-                          ? "border-hairline/90 bg-parchment shadow-[0_12px_32px_-20px_rgba(60,50,35,0.4)]"
-                          : "border-transparent hover:bg-parchment/40"
-                      }`}
+                      className={`w-full rounded-2xl border p-5 text-left transition-all duration-300 ${isSelected
+                        ? "border-hairline/90 bg-parchment shadow-[0_12px_32px_-20px_rgba(60,50,35,0.4)]"
+                        : "border-transparent hover:bg-parchment/40"
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <h3 className={`font-serif text-[18px] transition-colors ${isSelected ? "text-ink font-medium" : "text-ink-soft"}`}>

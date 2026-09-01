@@ -11,6 +11,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           "/",
           "/predict/demo",
+          "/terms",
+          "/privacy",
+          "/disclaimer",
+          "/cookies",
           "/login",
           "/register",
           "/predict",
