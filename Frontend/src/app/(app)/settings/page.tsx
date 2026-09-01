@@ -4,11 +4,9 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Settings,
   Sliders,
   ShieldCheck,
   Zap,
-  Save,
   CheckCircle2,
   Trash2,
   Download,
@@ -56,12 +54,12 @@ function playClinicalChime() {
 export default function SettingsPage() {
   const router = useRouter();
 
-  // Settings State
+  // Settings State (Persisted)
   const [autoSaveHistory, setAutoSaveHistory] = useState(true);
   const [autoDownloadReport, setAutoDownloadReport] = useState(false);
   const [highContrastMode, setHighContrastMode] = useState(false);
   const [soundEffects, setSoundEffects] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [historyCount, setHistoryCount] = useState(0);
 
   // User Profile
@@ -119,36 +117,48 @@ export default function SettingsPage() {
     }
   };
 
-  const handleToggleHighContrast = (enable: boolean) => {
-    setHighContrastMode(enable);
-    applyHighContrast(enable);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("quantumx_setting_highcontrast", String(enable));
-    }
-  };
-
-  const handleToggleAudio = (enable: boolean) => {
-    setSoundEffects(enable);
-    if (enable) playClinicalChime();
-    if (typeof window !== "undefined") {
-      localStorage.setItem("quantumx_setting_audio", String(enable));
-    }
-  };
-
-  const handleSaveSettings = () => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("quantumx_setting_autosave", String(autoSaveHistory));
-      localStorage.setItem("quantumx_setting_autodl", String(autoDownloadReport));
-      localStorage.setItem("quantumx_setting_highcontrast", String(highContrastMode));
-      localStorage.setItem("quantumx_setting_audio", String(soundEffects));
-    }
-    setSaveSuccess(true);
+  const triggerAutoSaveFeedback = (settingName: string, stateText: string) => {
+    setLastSavedTime(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     showToast({
-      title: "Preferences Saved",
-      message: "Workspace configurations updated.",
-      type: "success",
+      title: `${settingName} ${stateText}`,
+      message: "Preference auto-saved and applied.",
+      type: "info",
+      duration: 3000,
     });
-    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleToggleAutoSave = (val: boolean) => {
+    setAutoSaveHistory(val);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("quantumx_setting_autosave", String(val));
+    }
+    triggerAutoSaveFeedback("Auto-Save Screenings", val ? "Enabled" : "Disabled");
+  };
+
+  const handleToggleAutoDownload = (val: boolean) => {
+    setAutoDownloadReport(val);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("quantumx_setting_autodl", String(val));
+    }
+    triggerAutoSaveFeedback("Auto-Generate Report", val ? "Enabled" : "Disabled");
+  };
+
+  const handleToggleHighContrast = (val: boolean) => {
+    setHighContrastMode(val);
+    applyHighContrast(val);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("quantumx_setting_highcontrast", String(val));
+    }
+    triggerAutoSaveFeedback("High-Contrast Mode", val ? "Active" : "Standard");
+  };
+
+  const handleToggleAudio = (val: boolean) => {
+    setSoundEffects(val);
+    if (val) playClinicalChime();
+    if (typeof window !== "undefined") {
+      localStorage.setItem("quantumx_setting_audio", String(val));
+    }
+    triggerAutoSaveFeedback("Audio Feedback", val ? "Enabled" : "Muted");
   };
 
   const handleExportAllData = async () => {
@@ -258,16 +268,12 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {saveSuccess && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium"
-          >
-            <CheckCircle2 size={13} className="text-emerald-600" />
-            <span>Settings saved!</span>
-          </motion.div>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cream border border-hairline text-ink-soft text-[11px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Auto-saving active {lastSavedTime ? `· ${lastSavedTime}` : ""}</span>
+          </div>
+        </div>
       </div>
 
       {/* Grid of Settings Sections */}
@@ -298,7 +304,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={autoSaveHistory}
-                onChange={(e) => setAutoSaveHistory(e.target.checked)}
+                onChange={(e) => handleToggleAutoSave(e.target.checked)}
                 className="w-4 h-4 accent-quantum cursor-pointer rounded"
               />
             </div>
@@ -316,7 +322,7 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={autoDownloadReport}
-                onChange={(e) => setAutoDownloadReport(e.target.checked)}
+                onChange={(e) => handleToggleAutoDownload(e.target.checked)}
                 className="w-4 h-4 accent-quantum cursor-pointer rounded"
               />
             </div>
@@ -487,17 +493,6 @@ export default function SettingsPage() {
             <Trash2 size={13} /> Delete Account Permanently
           </button>
         </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end pt-2">
-        <button
-          type="button"
-          onClick={handleSaveSettings}
-          className="px-5 py-2.5 rounded-xl bg-ink text-parchment font-medium text-xs tracking-wider hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
-        >
-          <Save size={13} /> Save All Preferences
-        </button>
       </div>
 
       {/* MODAL 1: Cross-Confirmation Dialog for Clear History */}
