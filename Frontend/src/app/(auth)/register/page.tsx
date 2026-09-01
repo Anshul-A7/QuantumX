@@ -155,6 +155,7 @@ export default function RegisterPage() {
       if (typeof window !== "undefined") {
         localStorage.setItem("quantumx_user_email", authResponse.user.email);
         localStorage.setItem("quantumx_user_name", authResponse.user.username);
+        localStorage.setItem("quantumx_is_new_registration", "true");
         if (authResponse.user.profileImageUrl) {
           localStorage.setItem("quantumx_user_avatar", authResponse.user.profileImageUrl);
         }

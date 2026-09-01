@@ -53,6 +53,7 @@ function VerifyEmailForm() {
       if (typeof window !== "undefined") {
         localStorage.setItem("quantumx_user_name", response.user.username);
         localStorage.setItem("quantumx_user_email", response.user.email);
+        localStorage.setItem("quantumx_is_new_registration", "true");
         if (response.user.profileImageUrl) {
           localStorage.setItem("quantumx_user_avatar", response.user.profileImageUrl);
         }
