@@ -104,6 +104,17 @@ app.include_router(user_router)
 app.include_router(datasets_router)
 
 
+@app.get("/")
+async def root():
+    return {
+        "service": "QuantumX Hybrid Quantum ML Platform Backend",
+        "status": "online",
+        "version": "1.0.0",
+        "documentation": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health")
 async def health_check():
     return {
