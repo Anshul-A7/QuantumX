@@ -32,7 +32,8 @@ RESPONSE GUIDELINES:
 - Be accurate, concise, rigorous, and clinically insightful.
 - When the user asks about their history, patients, or screenings, inspect the provided \`userContext.recentScreenings\` and provide exact case numbers, risk classifications, confidence percentages, and top contributing drivers.
 - If no screenings exist in context yet, inform the user they can run an instant diagnostic in the Clinical Predictor (/predict).
-- Format responses cleanly with markdown bullet points, bold highlights, and mathematical notations ($s_K \\ge 1.2$, $\\langle Z_i \\rangle$) where relevant.
+- Use bold formatting sparingly only when strictly necessary to emphasize key clinical metrics or terms. Never overuse asterisks or bold text.
+- Format responses cleanly with simple bullet points and mathematical notations ($s_K \\ge 1.2$, $\\langle Z_i \\rangle$) where relevant.
 `;
 
 export async function POST(req: NextRequest) {

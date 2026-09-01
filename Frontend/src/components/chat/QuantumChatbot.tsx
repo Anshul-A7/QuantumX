@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -10,12 +10,6 @@ import {
   RotateCcw,
   Maximize2,
   Minimize2,
-  User,
-  RefreshCw,
-  Cpu,
-  Layers,
-  FileText,
-  Activity,
 } from "lucide-react";
 import { AuthService } from "@/services/auth.service";
 import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
@@ -28,44 +22,114 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const SUGGESTION_GROUPS = [
-  {
-    category: "Screening & Patient Reports",
-    icon: FileText,
-    prompts: [
-      "Summarize my recent patient screening records",
-      "Why was my latest patient classified as high risk?",
-      "What are the primary cellular shape drivers in breast cancer?",
-    ],
-  },
-  {
-    category: "Quantum vs Classical Benchmarks",
-    icon: Activity,
-    prompts: [
-      "What is the difference between Quantum VQC and XGBoost?",
-      "What are the McNemar χ² test results in the BVP protocol?",
-      "Explain Cohen's d effect size on WDBC classification",
-    ],
-  },
-  {
-    category: "Theoretical Advantage (s_K) & Circuits",
-    icon: Layers,
-    prompts: [
-      "How does the s_K ≥ 1.2 geometric advantage metric work?",
-      "Explain the ZZ-feature map state encoding formula",
-      "How does the Parameter-Shift rule calculate quantum gradients?",
-    ],
-  },
-  {
-    category: "Hardware & Error Mitigation",
-    icon: Cpu,
-    prompts: [
-      "How does Zero-Noise Extrapolation (ZNE) mitigate NISQ noise?",
-      "What is the difference between statevector simulation and IBM QPU?",
-      "How does QXplain calculate gate ablation saliency maps?",
-    ],
-  },
+const ALL_PROMPTS = [
+  "How does the Quantum model detect subtle disease signs?",
+  "What is the difference between Quantum and Classical models?",
+  "Summarize my recent patient screening cases",
+  "How does the s_K ≥ 1.2 geometric advantage metric work?",
+  "How does Zero-Noise Extrapolation (ZNE) mitigate noise?",
+  "Explain the primary shape factors in breast cancer screening",
+  "What are the McNemar χ² statistical significance results?",
+  "How does QXplain calculate gate ablation saliency maps?",
+  "What is the role of the ZZ-feature map in data encoding?",
+  "How does Parameter-Shift compute quantum gradients?",
 ];
+
+function getRandomPrompts(count: number = 2): string[] {
+  const shuffled = [...ALL_PROMPTS].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
+
+/**
+ * Lightweight inline markdown formatter that converts bold, code, bullets and headings to clean JSX
+ */
+function FormattedMessage({ text, isBot }: { text: string; isBot: boolean }) {
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-1.5 text-[12.5px] leading-relaxed">
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={lineIdx} className="h-1" />;
+        }
+
+        // Headings (e.g. ### Heading)
+        if (trimmed.startsWith("### ")) {
+          const headingText = trimmed.replace(/^###\s+/, "");
+          return (
+            <h4 key={lineIdx} className="font-serif font-medium text-[13px] text-ink mt-1.5 mb-0.5">
+              {parseInlineMarkdown(headingText, isBot)}
+            </h4>
+          );
+        }
+
+        // Bullets (e.g. - item or • item or 1. item)
+        const isBullet = trimmed.startsWith("- ") || trimmed.startsWith("• ") || /^\d+\.\s/.test(trimmed);
+        if (isBullet) {
+          const bulletContent = trimmed.replace(/^[-•]\s+|\d+\.\s+/, "");
+          return (
+            <div key={lineIdx} className="flex items-start gap-1.5 pl-1 my-0.5">
+              <span className={`text-[10px] mt-0.5 ${isBot ? "text-quantum" : "text-parchment"}`}>•</span>
+              <span className="flex-1">{parseInlineMarkdown(bulletContent, isBot)}</span>
+            </div>
+          );
+        }
+
+        return (
+          <p key={lineIdx} className="my-0.5">
+            {parseInlineMarkdown(line, isBot)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
+  // Regex to match **bold** and `code`
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+  let lastIdx = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(text.substring(lastIdx, match.index));
+    }
+    const token = match[0];
+    if (token.startsWith("**") && token.endsWith("**")) {
+      const boldText = token.slice(2, -2);
+      parts.push(
+        <strong
+          key={`${match.index}-b`}
+          className={`font-semibold ${isBot ? "text-ink" : "text-white"}`}
+        >
+          {boldText}
+        </strong>
+      );
+    } else if (token.startsWith("`") && token.endsWith("`")) {
+      const codeText = token.slice(1, -1);
+      parts.push(
+        <code
+          key={`${match.index}-c`}
+          className={`font-mono text-[11px] px-1 py-0.5 rounded ${
+            isBot ? "bg-cream-deep/90 text-ink" : "bg-white/20 text-white"
+          }`}
+        >
+          {codeText}
+        </code>
+      );
+    }
+    lastIdx = regex.lastIndex;
+  }
+
+  if (lastIdx < text.length) {
+    parts.push(text.substring(lastIdx));
+  }
+
+  return parts;
+}
 
 export default function QuantumChatbot() {
   const pathname = usePathname();
@@ -82,12 +146,19 @@ export default function QuantumChatbot() {
   const [userEmail, setUserEmail] = useState("");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [recentScreenings, setRecentScreenings] = useState<StoredPrediction[]>([]);
-  const [suggestionGroupIdx, setSuggestionGroupIdx] = useState(0);
+  const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
 
-  // Sync user profile & recent screenings from Supabase
+  // Randomize suggestions when opened
+  useEffect(() => {
+    if (isOpen) {
+      setSuggestedPrompts(getRandomPrompts(2));
+    }
+  }, [isOpen]);
+
+  // Sync user profile & recent screenings
   useEffect(() => {
     const cachedUser = AuthService.getCachedUser();
     if (cachedUser) {
@@ -103,7 +174,7 @@ export default function QuantumChatbot() {
 
   const getWelcomeText = () => {
     const count = recentScreenings.length;
-    return `Hi ${userName}! 👋 I'm **QuantumX AI**, your specialized clinical intelligence assistant.\n\nI have real-time access to your **${count} saved patient diagnostic record(s)** and the **${activeBackend === "ibmq_eagle" ? "IBM Quantum Eagle 127Q" : "GPU Simulator"}** backend.\n\nWhat would you like to investigate today?`;
+    return `Hi ${userName}! 👋 I'm QuantumX AI, your clinical intelligence assistant.\n\nI have real-time access to your ${count} saved patient diagnostic record(s) and the ${activeBackend === "ibmq_eagle" ? "IBM Quantum Eagle 127Q" : "GPU Simulator"} backend.\n\nWhat would you like to investigate today?`;
   };
 
   const scrollToBottom = () => {
@@ -114,7 +185,7 @@ export default function QuantumChatbot() {
     scrollToBottom();
   }, [messages, displayedTextMap, isThinking]);
 
-  // Initial thinking + typewriter on first opening
+  // Initial welcome on first opening
   useEffect(() => {
     if (isOpen && !hasInitializedRef.current && messages.length === 0) {
       hasInitializedRef.current = true;
@@ -131,7 +202,7 @@ export default function QuantumChatbot() {
         };
         setMessages([welcomeMsg]);
         startTypewriter("msg-welcome", welcomeStr);
-      }, 350);
+      }, 200);
 
       return () => clearTimeout(thinkTimer);
     }
@@ -143,7 +214,7 @@ export default function QuantumChatbot() {
     setDisplayedTextMap((prev) => ({ ...prev, [msgId]: "" }));
 
     const interval = setInterval(() => {
-      currIdx += 4; // Fast, responsive streaming
+      currIdx += 8; // Ultra-fast, responsive stream
       if (currIdx >= fullText.length) {
         setDisplayedTextMap((prev) => ({ ...prev, [msgId]: fullText }));
         setTypingMessageId(null);
@@ -154,7 +225,7 @@ export default function QuantumChatbot() {
           [msgId]: fullText.slice(0, currIdx),
         }));
       }
-    }, 10);
+    }, 8);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -212,7 +283,7 @@ export default function QuantumChatbot() {
       const fallbackMsg: ChatMessage = {
         id: newBotId,
         sender: "assistant",
-        text: "The clinical query engine is online. You can view all diagnostic details in the **[Screening History](/history)** and **[Benchmarks](/benchmarks)** dashboards.",
+        text: "The clinical query engine is online. You can view all diagnostic details in the [Screening History](/history) and [Benchmarks](/benchmarks) dashboards.",
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -224,6 +295,7 @@ export default function QuantumChatbot() {
     setMessages([]);
     setDisplayedTextMap({});
     hasInitializedRef.current = false;
+    setSuggestedPrompts(getRandomPrompts(2));
     setIsThinking(true);
     const welcomeStr = getWelcomeText();
     setTimeout(() => {
@@ -236,15 +308,8 @@ export default function QuantumChatbot() {
       };
       setMessages([welcomeMsg]);
       startTypewriter("msg-welcome-reset", welcomeStr);
-    }, 300);
+    }, 200);
   };
-
-  const cycleSuggestions = () => {
-    setSuggestionGroupIdx((prev) => (prev + 1) % SUGGESTION_GROUPS.length);
-  };
-
-  const currentSuggestions = SUGGESTION_GROUPS[suggestionGroupIdx];
-  const SuggestionIcon = currentSuggestions.icon;
 
   return (
     <div className="fixed bottom-11 right-9 z-50 font-sans">
@@ -312,7 +377,7 @@ export default function QuantumChatbot() {
             <div className="px-5 py-4 border-b border-hairline bg-cream/70 backdrop-blur-md flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-xs">
-                  <Sparkles size={16} className="text-quantum animate-pulse" />
+                  <Sparkles size={16} className="text-quantum" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -361,7 +426,7 @@ export default function QuantumChatbot() {
               {messages.map((msg) => {
                 const isBot = msg.sender === "assistant";
                 const isTyping = typingMessageId === msg.id;
-                const displayText = displayedTextMap[msg.id] ?? msg.text;
+                const rawText = displayedTextMap[msg.id] ?? msg.text;
 
                 return (
                   <motion.div
@@ -384,10 +449,8 @@ export default function QuantumChatbot() {
                           : "bg-ink text-parchment font-medium shadow-xs"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap font-normal text-[12.5px] leading-relaxed">
-                        {displayText}
-                        {isTyping && <span className="inline-block w-1.5 h-3 bg-quantum ml-1 animate-pulse" />}
-                      </div>
+                      <FormattedMessage text={rawText} isBot={isBot} />
+                      {isTyping && <span className="inline-block w-1.5 h-3 bg-quantum ml-1 animate-pulse" />}
                       <span
                         className={`block text-[9px] font-mono mt-1.5 ${
                           isBot ? "text-ink-soft/70 text-left" : "text-parchment/60 text-right"
@@ -410,56 +473,42 @@ export default function QuantumChatbot() {
                 );
               })}
 
+              {/* Minimal Thinking Animation (Only bouncing dots) */}
               {isThinking && (
                 <motion.div
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2.5 text-xs text-ink-soft"
                 >
                   <div className="w-7 h-7 rounded-xl bg-black text-white shrink-0 flex items-center justify-center shadow-2xs">
-                    <Sparkles size={13} className="text-quantum animate-spin" />
+                    <Sparkles size={13} className="text-quantum" />
                   </div>
-                  <div className="bg-cream-deep/50 border border-hairline px-3.5 py-2 rounded-2xl flex items-center gap-1.5">
+                  <div className="bg-cream-deep/60 border border-hairline/90 px-3.5 py-2.5 rounded-2xl flex items-center gap-1.5 shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:-0.15s]" />
                     <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:0.3s]" />
-                    <span className="text-[11px] font-mono text-ink-soft ml-1">Analyzing Quantum Pipeline &amp; DB...</span>
                   </div>
                 </motion.div>
               )}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Dynamic Suggestions Carousel */}
-            <div className="px-4 py-2 bg-cream/50 border-t border-hairline/80">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-ink-soft flex items-center gap-1.5">
-                  <SuggestionIcon size={11} className="text-quantum" />
-                  {currentSuggestions.category}
-                </span>
-                <button
-                  type="button"
-                  onClick={cycleSuggestions}
-                  className="text-[10px] font-mono text-quantum hover:underline flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Cycle to next suggestion set"
-                >
-                  <RefreshCw size={10} /> Next Topics
-                </button>
-              </div>
-
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                {currentSuggestions.prompts.map((p, idx) => (
+            {/* Simple Random Suggestions Area (No category banner, clean pills) */}
+            {suggestedPrompts.length > 0 && (
+              <div className="px-4 py-2.5 bg-cream/40 border-t border-hairline/70 flex flex-col gap-1.5">
+                {suggestedPrompts.map((p, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => handleSendMessage(p)}
-                    className="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-parchment hover:bg-cream-deep border border-hairline text-ink transition-all cursor-pointer font-medium hover:border-quantum/50 shadow-2xs"
+                    className="w-full text-left text-[11.5px] px-3.5 py-2 rounded-2xl bg-parchment hover:bg-cream-deep border border-hairline/90 text-ink transition-all cursor-pointer font-normal hover:border-quantum/50 shadow-2xs flex items-center gap-2 group"
                   >
-                    {p}
+                    <span className="text-quantum text-[11px] group-hover:scale-110 transition-transform">✦</span>
+                    <span className="truncate">{p}</span>
                   </button>
                 ))}
               </div>
-            </div>
+            )}
 
             {/* Input Bar */}
             <form
@@ -473,7 +522,7 @@ export default function QuantumChatbot() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask about patient reports, s_K formulas, ZNE, VQC..."
+                placeholder="Ask about screening, detection, API..."
                 className="flex-1 px-4 py-2.5 rounded-2xl bg-parchment border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink transition-all"
               />
               <button
