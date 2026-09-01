@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -41,7 +41,7 @@ function getRandomPrompts(count: number = 2): string[] {
 }
 
 /**
- * Lightweight inline markdown formatter that converts bold, code, bullets and headings to clean JSX
+ * Lightweight inline markdown formatter that converts **bold**, `code`, bullets and headings to clean JSX
  */
 function FormattedMessage({ text, isBot }: { text: string; isBot: boolean }) {
   const lines = text.split("\n");
@@ -58,7 +58,7 @@ function FormattedMessage({ text, isBot }: { text: string; isBot: boolean }) {
         if (trimmed.startsWith("### ")) {
           const headingText = trimmed.replace(/^###\s+/, "");
           return (
-            <h4 key={lineIdx} className="font-serif font-medium text-[13px] text-ink mt-1.5 mb-0.5">
+            <h4 key={lineIdx} className={`font-serif font-semibold text-[13px] mt-1.5 mb-0.5 ${isBot ? "text-ink" : "text-white"}`}>
               {parseInlineMarkdown(headingText, isBot)}
             </h4>
           );
@@ -87,9 +87,9 @@ function FormattedMessage({ text, isBot }: { text: string; isBot: boolean }) {
 }
 
 function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
-  // Regex to match **bold** and `code`
   const parts: React.ReactNode[] = [];
-  const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+  // Matches **bold**, `code`, or unclosed ** during streaming
+  const regex = /(\*\*[^*]+\*\*|`[^`]+`|\*\*[^*]+$)/g;
   let lastIdx = 0;
   let match: RegExpExecArray | null;
 
@@ -98,12 +98,23 @@ function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
       parts.push(text.substring(lastIdx, match.index));
     }
     const token = match[0];
-    if (token.startsWith("**") && token.endsWith("**")) {
+    if (token.startsWith("**") && token.endsWith("**") && token.length >= 4) {
       const boldText = token.slice(2, -2);
       parts.push(
         <strong
           key={`${match.index}-b`}
-          className={`font-semibold ${isBot ? "text-ink" : "text-white"}`}
+          className={`font-bold ${isBot ? "text-black drop-shadow-xs" : "text-white"}`}
+        >
+          {boldText}
+        </strong>
+      );
+    } else if (token.startsWith("**") && !token.endsWith("**")) {
+      // Halfway streaming bold
+      const boldText = token.slice(2);
+      parts.push(
+        <strong
+          key={`${match.index}-b-streaming`}
+          className={`font-bold ${isBot ? "text-black" : "text-white"}`}
         >
           {boldText}
         </strong>
@@ -113,8 +124,8 @@ function parseInlineMarkdown(text: string, isBot: boolean): React.ReactNode[] {
       parts.push(
         <code
           key={`${match.index}-c`}
-          className={`font-mono text-[11px] px-1 py-0.5 rounded ${
-            isBot ? "bg-cream-deep/90 text-ink" : "bg-white/20 text-white"
+          className={`font-mono text-[11px] px-1 py-0.5 rounded font-medium ${
+            isBot ? "bg-cream-deep/90 text-ink border border-hairline/60" : "bg-white/20 text-white"
           }`}
         >
           {codeText}
@@ -173,8 +184,7 @@ export default function QuantumChatbot() {
   }, [isOpen]);
 
   const getWelcomeText = () => {
-    const count = recentScreenings.length;
-    return `Hi ${userName}! 👋 I'm QuantumX AI, your clinical intelligence assistant.\n\nI have real-time access to your ${count} saved patient diagnostic record(s) and the ${activeBackend === "ibmq_eagle" ? "IBM Quantum Eagle 127Q" : "GPU Simulator"} backend.\n\nWhat would you like to investigate today?`;
+    return `Hi ${userName}! 👋\n\nHow can I help you with your quantum medical research or patient screening today?`;
   };
 
   const scrollToBottom = () => {
@@ -202,11 +212,11 @@ export default function QuantumChatbot() {
         };
         setMessages([welcomeMsg]);
         startTypewriter("msg-welcome", welcomeStr);
-      }, 200);
+      }, 150);
 
       return () => clearTimeout(thinkTimer);
     }
-  }, [isOpen, messages.length, userName, recentScreenings.length]);
+  }, [isOpen, messages.length, userName]);
 
   const startTypewriter = (msgId: string, fullText: string) => {
     setTypingMessageId(msgId);
@@ -214,7 +224,7 @@ export default function QuantumChatbot() {
     setDisplayedTextMap((prev) => ({ ...prev, [msgId]: "" }));
 
     const interval = setInterval(() => {
-      currIdx += 8; // Ultra-fast, responsive stream
+      currIdx += 10; // Ultra-fast streaming
       if (currIdx >= fullText.length) {
         setDisplayedTextMap((prev) => ({ ...prev, [msgId]: fullText }));
         setTypingMessageId(null);
@@ -308,7 +318,7 @@ export default function QuantumChatbot() {
       };
       setMessages([welcomeMsg]);
       startTypewriter("msg-welcome-reset", welcomeStr);
-    }, 200);
+    }, 150);
   };
 
   return (
@@ -387,8 +397,8 @@ export default function QuantumChatbot() {
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-[10px] text-ink-soft">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>Gemini 2.5 Intelligence · {recentScreenings.length} Cases Synced</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>Online</span>
                   </div>
                 </div>
               </div>
