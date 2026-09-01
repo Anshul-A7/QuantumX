@@ -21,35 +21,7 @@ import HelpTooltip from "@/components/common/HelpTooltip";
 import { showToast } from "@/components/common/ToastNotification";
 import { AuthService } from "@/services/auth.service";
 import { ScreeningService } from "@/services/screening.service";
-
-/**
- * Web Audio synthesizer that plays a crisp, gentle clinical confirmation chime.
- */
-function playClinicalChime() {
-  if (typeof window === "undefined") return;
-  try {
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.36);
-  } catch {}
-}
+import { playQuantumCompletionSound } from "@/lib/sound";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -154,11 +126,11 @@ export default function SettingsPage() {
 
   const handleToggleAudio = (val: boolean) => {
     setSoundEffects(val);
-    if (val) playClinicalChime();
+    if (val) playQuantumCompletionSound(true);
     if (typeof window !== "undefined") {
       localStorage.setItem("quantumx_setting_audio", String(val));
     }
-    triggerAutoSaveFeedback("Audio Feedback", val ? "Enabled" : "Muted");
+    triggerAutoSaveFeedback("Quantum Audio Cues", val ? "Enabled" : "Muted");
   };
 
   const handleExportAllData = async () => {
@@ -366,15 +338,15 @@ export default function SettingsPage() {
                   <span className="font-medium text-ink">Interactive Audio Feedback</span>
                   <button
                     type="button"
-                    onClick={playClinicalChime}
-                    title="Test chime sound"
-                    className="inline-flex items-center gap-1 text-[10px] font-mono text-quantum hover:underline cursor-pointer"
+                    onClick={() => playQuantumCompletionSound(true)}
+                    title="Test Quantum Completion Sound"
+                    className="inline-flex items-center gap-1 text-[10px] font-mono text-quantum hover:underline cursor-pointer font-semibold"
                   >
                     <Volume2 size={11} /> Test Sound
                   </button>
                 </div>
                 <p className="text-[11px] text-ink-soft font-light">
-                  Subtle audio cues on test completion.
+                  Plays a resonant quantum acoustic chord upon diagnostic test completion.
                 </p>
               </div>
               <input

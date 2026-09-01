@@ -392,7 +392,7 @@ function PredictPageContent() {
       actionUrl: "/history",
     }).catch(() => {});
 
-    // Trigger top-right floating toast popup
+    // Trigger top-right floating toast popup (automatically plays quantum acoustic chord)
     showToast({
       title: "Screening Completed",
       message: `${screeningPayload.patientId} · ${qLabel} (${qConf}% confidence)`,
@@ -400,27 +400,6 @@ function PredictPageContent() {
       actionUrl: "/history",
       actionLabel: "View Case Report",
     });
-
-    // Play subtle clinical audio cue if enabled in Settings
-    if (typeof window !== "undefined" && localStorage.getItem("quantumx_setting_audio") === "true") {
-      try {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.08, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.36);
-        }
-      } catch {}
-    }
 
     // Auto-generate report download if enabled in Settings
     if (typeof window !== "undefined" && localStorage.getItem("quantumx_setting_autodl") === "true") {

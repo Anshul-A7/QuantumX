@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { playQuantumCompletionSound } from "@/lib/sound";
 
 export interface ToastItem {
   id: string;
@@ -21,6 +22,7 @@ export interface ToastItem {
   actionUrl?: string;
   actionLabel?: string;
   duration?: number;
+  playAudio?: boolean;
 }
 
 // Global Event Emitter for Toast Notifications
@@ -47,6 +49,11 @@ export default function ToastContainer() {
       if (customEvent.detail) {
         const newToast = customEvent.detail;
         setToasts((prev) => [newToast, ...prev].slice(0, 4));
+
+        // Play bespoke quantum audio cue for model completion notifications
+        if (newToast.type === "quantum" || newToast.playAudio) {
+          playQuantumCompletionSound();
+        }
 
         // Auto dismiss
         const duration = newToast.duration || 5000;
