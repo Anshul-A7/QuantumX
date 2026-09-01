@@ -16,15 +16,13 @@ import {
   LogOut,
   X,
   Volume2,
-  Eye,
   ShieldAlert,
   Loader2,
-  RefreshCw,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { showToast } from "@/components/common/ToastNotification";
 import { AuthService } from "@/services/auth.service";
-import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
+import { ScreeningService } from "@/services/screening.service";
 
 /**
  * Web Audio synthesizer that plays a crisp, gentle clinical confirmation chime.
@@ -32,15 +30,17 @@ import { ScreeningService, type StoredPrediction } from "@/services/screening.se
 function playClinicalChime() {
   if (typeof window === "undefined") return;
   try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
 
     gain.gain.setValueAtTime(0.08, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
@@ -50,9 +50,7 @@ function playClinicalChime() {
 
     osc.start();
     osc.stop(ctx.currentTime + 0.36);
-  } catch {
-    // Ignore audio context autoplay limitations
-  }
+  } catch {}
 }
 
 export default function SettingsPage() {
@@ -147,7 +145,7 @@ export default function SettingsPage() {
     setSaveSuccess(true);
     showToast({
       title: "Preferences Saved",
-      message: "Workspace configurations synchronized with cloud profile.",
+      message: "Workspace configurations updated.",
       type: "success",
     });
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -187,7 +185,7 @@ export default function SettingsPage() {
       setIsClearModalOpen(false);
       showToast({
         title: "History Cleared",
-        message: "All patient screening logs deleted from Supabase cloud database.",
+        message: "All patient screening logs deleted from Supabase database.",
         type: "info",
       });
     } catch {
@@ -206,7 +204,7 @@ export default function SettingsPage() {
       await AuthService.logout();
       showToast({
         title: "Signed Out",
-        message: "Your session has been securely closed.",
+        message: "Your session has been closed.",
         type: "info",
       });
       router.push("/login");
@@ -221,8 +219,8 @@ export default function SettingsPage() {
     try {
       await AuthService.deleteAccount();
       showToast({
-        title: "Account Permanently Deleted",
-        message: "Your user account and all clinical records have been purged.",
+        title: "Account Deleted",
+        message: "Your user account and associated clinical records have been purged.",
         type: "warning",
       });
       router.push("/register");
@@ -241,9 +239,9 @@ export default function SettingsPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="space-y-6 pb-16 w-full max-w-5xl font-sans"
+      className="space-y-5 pb-12 w-full"
     >
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
         <div>
           <div className="flex items-center gap-1.5">
@@ -256,33 +254,23 @@ export default function SettingsPage() {
             Application Settings
           </h1>
           <p className="text-xs text-ink-soft font-light">
-            Configure automated screenings, clinical display modes, and manage your cloud data retention.
+            Configure screening automation, diagnostic display preferences, and local data retention.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {saveSuccess && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium"
-            >
-              <CheckCircle2 size={13} className="text-emerald-600" />
-              <span>Saved to cloud</span>
-            </motion.div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleSaveSettings}
-            className="px-4 py-2 rounded-xl bg-ink text-parchment font-medium text-xs tracking-wide hover:opacity-90 transition-all shadow-xs flex items-center gap-2 cursor-pointer"
+        {saveSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium"
           >
-            <Save size={13} /> Save Preferences
-          </button>
-        </div>
+            <CheckCircle2 size={13} className="text-emerald-600" />
+            <span>Settings saved!</span>
+          </motion.div>
+        )}
       </div>
 
-      {/* Grid of Settings Cards */}
+      {/* Grid of Settings Sections */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 1. Screening Automation */}
         <div className="p-5 rounded-2xl bg-parchment border border-hairline shadow-xs space-y-4">
@@ -292,19 +280,19 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-serif text-base font-medium text-ink">Screening Automation</h2>
-              <p className="text-[11px] text-ink-soft">Control diagnostic test pipeline behaviors</p>
+              <p className="text-[11px] text-ink-soft">Control diagnostic test behaviors</p>
             </div>
           </div>
 
           <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-cream/40 border border-hairline hover:bg-cream/60 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-cream/40 border border-hairline">
               <div className="space-y-0.5 max-w-[280px]">
                 <div className="flex items-center gap-1">
                   <span className="font-medium text-ink">Auto-Save Screening Cases</span>
-                  <HelpTooltip text="Automatically writes every patient diagnosis directly to the Supabase PostgreSQL database." />
+                  <HelpTooltip text="Automatically saves every patient diagnosis directly to the Supabase database." />
                 </div>
                 <p className="text-[11px] text-ink-soft font-light">
-                  Save test runs automatically to your cloud audit trail.
+                  Save new test runs automatically to your audit trail.
                 </p>
               </div>
               <input
@@ -315,14 +303,14 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-cream/40 border border-hairline hover:bg-cream/60 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-cream/40 border border-hairline">
               <div className="space-y-0.5 max-w-[280px]">
                 <div className="flex items-center gap-1">
                   <span className="font-medium text-ink">Auto-Generate Report File</span>
-                  <HelpTooltip text="Triggers client report packaging immediately after a quantum inference completes." />
+                  <HelpTooltip text="Generates a downloadable summary report immediately when a screening finishes." />
                 </div>
                 <p className="text-[11px] text-ink-soft font-light">
-                  Prepare medical summary export on test completion.
+                  Trigger report download on screening completion.
                 </p>
               </div>
               <input
@@ -343,19 +331,19 @@ export default function SettingsPage() {
             </div>
             <div>
               <h2 className="font-serif text-base font-medium text-ink">Interface &amp; Display</h2>
-              <p className="text-[11px] text-ink-soft">Visual contrast, audio cues, and ergonomics</p>
+              <p className="text-[11px] text-ink-soft">Visual contrast and ergonomics</p>
             </div>
           </div>
 
           <div className="space-y-3 text-xs">
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-cream/40 border border-hairline hover:bg-cream/60 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-cream/40 border border-hairline">
               <div className="space-y-0.5 max-w-[280px]">
                 <div className="flex items-center gap-1">
                   <span className="font-medium text-ink">High-Contrast Medical Mode</span>
-                  <HelpTooltip text="Increases border contrast and darkens text elements for clinical viewing workstations." />
+                  <HelpTooltip text="Increases border contrast and darkens text elements for clinical viewing environments." />
                 </div>
                 <p className="text-[11px] text-ink-soft font-light">
-                  Enhanced clarity on high-resolution clinical monitors.
+                  Enhanced clarity on bright medical displays.
                 </p>
               </div>
               <input
@@ -366,7 +354,7 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-cream/40 border border-hairline hover:bg-cream/60 transition-colors">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-cream/40 border border-hairline">
               <div className="space-y-0.5 max-w-[280px]">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-ink">Interactive Audio Feedback</span>
@@ -380,7 +368,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <p className="text-[11px] text-ink-soft font-light">
-                  Plays a subtle 880Hz medical chime on screening completion.
+                  Subtle audio cues on test completion.
                 </p>
               </div>
               <input
@@ -394,7 +382,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 3. Data Retention & Privacy */}
+      {/* Data Management Section */}
       <div className="p-5 rounded-2xl bg-parchment border border-hairline shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-hairline pb-2.5">
           <div className="flex items-center gap-2">
@@ -402,20 +390,16 @@ export default function SettingsPage() {
               <ShieldCheck size={15} />
             </div>
             <div>
-              <h2 className="font-serif text-base font-medium text-ink">Cloud Data Retention &amp; Audit Trail</h2>
-              <p className="text-[11px] text-ink-soft">
-                Manage your live screening history saved in Supabase PostgreSQL
-              </p>
+              <h2 className="font-serif text-base font-medium text-ink">Data Retention &amp; Privacy</h2>
+              <p className="text-[11px] text-ink-soft">Manage stored records and data exports</p>
             </div>
           </div>
-          <span className="text-xs font-mono text-ink-soft font-medium bg-cream px-2.5 py-1 rounded-full border border-hairline">
-            {historyCount} records stored
-          </span>
+          <span className="text-xs font-mono text-ink-soft">{historyCount} records stored</span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <p className="text-ink-soft font-light max-w-md leading-relaxed">
-            All screening data is encrypted and saved securely to the Supabase cloud database. You can export the full audit JSON or permanently wipe your screening records at any time.
+          <p className="text-ink-soft font-light max-w-md">
+            All screening data is stored securely in your database. You can export the raw audit trail or clear records at any time.
           </p>
 
           <div className="flex items-center gap-2.5 shrink-0">
@@ -429,7 +413,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setIsClearModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100/80 border border-red-200 text-red-700 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-medium text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Trash2 size={13} /> Clear Stored History
             </button>
@@ -437,7 +421,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 4. Session & Authentication Management */}
+      {/* Session & Authentication Section */}
       <div className="p-5 rounded-2xl bg-parchment border border-hairline shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-hairline pb-2.5">
           <div className="flex items-center gap-2">
@@ -470,7 +454,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 5. Danger Zone: Permanent Account Deletion */}
+      {/* Danger Zone: Permanent Account Deletion */}
       <div className="p-5 rounded-2xl bg-red-50/40 border border-red-200/90 shadow-2xs space-y-4">
         <div className="flex items-center justify-between border-b border-red-200/60 pb-2.5">
           <div className="flex items-center gap-2">
@@ -503,6 +487,17 @@ export default function SettingsPage() {
             <Trash2 size={13} /> Delete Account Permanently
           </button>
         </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          onClick={handleSaveSettings}
+          className="px-5 py-2.5 rounded-xl bg-ink text-parchment font-medium text-xs tracking-wider hover:opacity-90 transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+        >
+          <Save size={13} /> Save All Preferences
+        </button>
       </div>
 
       {/* MODAL 1: Cross-Confirmation Dialog for Clear History */}
