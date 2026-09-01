@@ -738,3 +738,20 @@ class AuthService:
 
         await db.commit()
         logger.info(f"[SECURITY] Password reset successful for {user.email}. Revoked all existing sessions.")
+
+    @staticmethod
+    async def delete_account(db: AsyncSession, user_id: int) -> None:
+        user = await AuthService.get_user_by_id(db, user_id)
+        if not user:
+            raise ValueError("User account not found.")
+
+        from app.models.screening import Screening
+        from app.models.notification import NotificationModel
+
+        await db.execute(delete(Screening).where(Screening.user_id == user_id))
+        await db.execute(delete(NotificationModel).where(NotificationModel.user_id == user_id))
+        await db.execute(delete(UserSession).where(UserSession.user_id == user_id))
+        await db.execute(delete(VerificationToken).where(VerificationToken.user_id == user_id))
+        await db.delete(user)
+        await db.commit()
+        logger.info(f"[SECURITY] User {user_id} ({user.email}) permanently deleted account and associated data.")

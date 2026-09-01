@@ -378,3 +378,26 @@ async def logout(
         message="Logged out successfully. Active session revoked.",
         success=True,
     )
+
+
+# =========================================================
+# PERMANENT ACCOUNT DELETION
+# =========================================================
+
+@router.delete(
+    "/account",
+    response_model=MessageResponse,
+)
+async def delete_account(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await AuthService.delete_account(db, current_user.id)
+    response.delete_cookie(key=REFRESH_TOKEN_COOKIE, path="/")
+    response.delete_cookie(key=ACCESS_TOKEN_COOKIE, path="/")
+
+    return MessageResponse(
+        message="Account and all associated clinical data permanently deleted.",
+        success=True,
+    )

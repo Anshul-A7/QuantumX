@@ -201,3 +201,16 @@
 .animate-rainbow-spin {
   animation: rainbow-spin 4s linear infinite;
 }
+
+/* High-Contrast Clinical Display Mode */
+.high-contrast-mode {
+  --hairline: rgba(0, 0, 0, 0.28);
+  --ink: #000000;
+  --ink-soft: #222222;
+  --cream: #f4efe6;
+  --cream-deep: #e8e0d2;
+}
+
+.high-contrast-mode * {
+  border-color: rgba(0, 0, 0, 0.22) !important;
+}

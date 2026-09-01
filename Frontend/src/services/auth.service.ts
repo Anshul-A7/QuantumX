@@ -251,6 +251,22 @@ export class AuthService {
   }
 
   /**
+   * Permanently delete user account and associated clinical data.
+   */
+  static async deleteAccount(): Promise<void> {
+    try {
+      await apiClient.delete('/auth/account');
+    } finally {
+      clearAuth();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('quantumx_prediction_history');
+        localStorage.removeItem('quantumx_notifications');
+        localStorage.removeItem('quantumx_is_new_registration');
+      }
+    }
+  }
+
+  /**
    * Check if user has an active session token.
    */
   static isAuthenticated(): boolean {
