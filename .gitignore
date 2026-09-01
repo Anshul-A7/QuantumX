@@ -35,27 +35,6 @@ node_modules/
 out/
 build/
 .vercel
-coverage/
-*.lcov
-.npm
-.eslintcache
-.stylelintcache
-
-# Quantum Models / Data
-Models/**/*.pkl
-Models/**/*.h5
-Models/**/*.pt
-Models/**/*.pth
-Models/**/*.onnx
-*.csv
-*.dat
-*.out
-*.qasm
-
-# Internal exclusions
-.agents/
-Plan/
-
 
 .offline-markdown-preview/
 
@@ -68,6 +47,7 @@ SCRATCHPAD.md
 SKILL.md
 
 # User specific ignores
+Models/
 Plan/
 Research/
 Team Data/
