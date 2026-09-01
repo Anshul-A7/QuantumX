@@ -1,8 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion, useScroll, useTransform, AnimatePresence } from "motion/react";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+  AnimatePresence,
+  useInView,
+} from "motion/react";
 import { useRef, useState, useEffect, type ReactNode } from "react";
+import {
+  ArrowUp,
+  ArrowUpRight,
+  Sparkles,
+  Cpu,
+  CircleDot,
+  Globe2,
+} from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /* Motion primitives                                                    */
@@ -487,83 +502,324 @@ function Benchmarking() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Footer                                                               */
+/* ------------------------------------------------------------------ */
+/* MoveToTop Floating Button                                            */
 /* ------------------------------------------------------------------ */
 
-const FOOTER_COLS = [
-  {
-    heading: "Platform",
-    links: ["Features", "Quantum hardware", "Explainability", "Data ingestion", "Model registry"],
-  },
-  {
-    heading: "Resources",
-    links: ["Documentation", "API reference", "Whitepapers", "Benchmark reports", "Changelog"],
-  },
-  {
-    heading: "Company",
-    links: ["About", "Research", "Careers", "Press", "Contact"],
-  },
-];
+function MoveToTop() {
+  const { scrollY } = useScroll();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    return scrollY.on("change", (latest) => {
+      setVisible(latest > 400);
+    });
+  }, [scrollY]);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.button
+          initial={{ opacity: 0, y: 20, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.8 }}
+          onClick={scrollToTop}
+          className="fixed bottom-8 left-8 z-[999] p-3.5 rounded-full bg-black text-white shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:scale-110 hover:bg-black transition-all border border-white/10"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={20} />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Big Cinematic Footer (Vocaria AI Architecture)                     */
+/* ------------------------------------------------------------------ */
 
 function Footer() {
-  return (
-    <footer id="documentation" className="border-t border-hairline bg-parchment/60 px-6 pt-20 pb-10">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-14 lg:grid-cols-[1.4fr_repeat(3,1fr)]">
-          <Reveal>
-            <div className="max-w-sm">
-              <span className="font-serif text-[20px] tracking-tight text-ink">QuantumX</span>
-              <p className="mt-4 text-[14px] leading-[1.75] text-ink-soft">
-                A research platform for hybrid quantum-classical modelling of biomedical data. Built for
-                translational teams who need results they can defend in review.
-              </p>
-              <div className="mt-6 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-quantum" />
-                Research use only
-              </div>
-            </div>
-          </Reveal>
+  const credits = [
+    "PennyLane 0.38+",
+    "Qiskit Aer",
+    "IBM Heron 133Q",
+    "PyTorch Autograd",
+    "XGBoost & LightGBM",
+    "ZNE / M3 Mitigation",
+    "KernelSHAP",
+    "McNemar's χ² Test",
+  ];
 
-          {FOOTER_COLS.map((col, i) => (
-            <Reveal key={col.heading} delay={0.05 * (i + 1)}>
-              <h3 className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink">{col.heading}</h3>
-              <ul className="mt-5 space-y-3">
-                {col.links.map((l) => (
-                  <li key={l}>
-                    <a href="#top" className="text-[14px] text-ink-soft transition-colors hover:text-ink">
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          ))}
+  const cols = [
+    {
+      title: "Platform",
+      items: [
+        { name: "Clinical Predictor", path: "/predict" },
+        { name: "Breast Cancer Pipeline", path: "/predict/breast-cancer" },
+        { name: "Hilbert Space Analysis", path: "/analysis" },
+        { name: "Live Hardware Run", path: "/hardware" },
+        { name: "Interactive Demo", path: "/predict/demo" },
+      ],
+    },
+    {
+      title: "Research & Benchmarks",
+      items: [
+        { name: "Geometric Advantage (s_K)", path: "/benchmarks" },
+        { name: "Tri-Model Protocol (BVP)", path: "/benchmarks" },
+        { name: "QXplain Gate Saliency", path: "/analysis" },
+        { name: "Classical Ensembles", path: "/benchmarks" },
+        { name: "Reproducibility Suite", path: "/benchmarks" },
+      ],
+    },
+    {
+      title: "System & Company",
+      items: [
+        { name: "Research Documentation", path: "/predict/demo" },
+        { name: "API Reference", path: "https://github.com/Anshul-A7/QuantumX" },
+        { name: "Privacy Policy", path: "#top" },
+        { name: "Clinical Disclaimer", path: "#top" },
+      ],
+    },
+  ];
+
+  /* Refs for in-view detection */
+  const heroRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const wordmarkRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  const heroInView = useInView(heroRef, { once: true, amount: 0.2 });
+  const gridInView = useInView(gridRef, { once: true, amount: 0.15 });
+  const wordmarkInView = useInView(wordmarkRef, { once: true, amount: 0.3 });
+  const barInView = useInView(barRef, { once: true, amount: 0.5 });
+
+  return (
+    <footer id="documentation" className="relative border-t border-white/10 bg-black text-white overflow-hidden">
+      {/* Top Statement Section */}
+      <div
+        ref={heroRef}
+        className="mx-auto max-w-[1400px] px-6 lg:px-10 pt-24 pb-16 grid grid-cols-12 gap-8"
+      >
+        <div className="col-span-12 md:col-span-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={heroInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5 }}
+            className="font-mono text-white/50 mb-6 flex items-center gap-3 text-[11px] uppercase tracking-widest"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="h-2 w-2 rounded-full bg-quantum animate-pulse" />
+              <span className="font-serif text-xl font-medium tracking-tight text-white">QuantumX</span>
+              <span className="text-white/40">· Enterprise Diagnostic Platform</span>
+            </div>
+          </motion.div>
+          <motion.h2
+            initial={{ clipPath: "inset(0 100% 0 0)" }}
+            animate={heroInView ? { clipPath: "inset(0 0% 0 0)" } : {}}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+            className="text-4xl md:text-5xl lg:text-[60px] font-light leading-[1.02] tracking-tight max-w-[24ch] text-[#FDFBF7] font-serif"
+          >
+            The complete quantum layer for healthcare diagnostics — screen, optimize, benchmark, and explain hybrid models from one rigorous platform.
+          </motion.h2>
         </div>
 
-        <Reveal delay={0.1}>
-          <div className="mt-16 rounded-xl border border-hairline bg-cream-deep/50 px-6 py-5">
-            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
-              <span className="text-ink">Clinical disclaimer.</span> QuantumX is an investigational research
-              tool. It is not a medical device, has not been cleared or approved by any regulatory authority,
-              and must not be used as the basis for diagnosis, prognosis, or treatment decisions. All outputs
-              require interpretation by a qualified clinician.
-            </p>
-          </div>
-        </Reveal>
+        <div className="col-span-12 md:col-span-4 flex flex-col justify-end gap-4 mt-8 md:mt-0">
+          <motion.a
+            href="https://anshul-portfolio.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            initial={{ opacity: 0, x: 30 }}
+            animate={heroInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="rounded-full px-6 h-14 flex items-center justify-between gap-3 group bg-white/[0.05] border border-white/10 hover:bg-white hover:text-black transition-colors backdrop-blur-md"
+          >
+            <span className="font-mono text-xs uppercase tracking-widest font-semibold flex items-center gap-2">
+              <Globe2 size={15} /> VISIT PORTFOLIO
+            </span>
+            <ArrowUpRight
+              size={16}
+              className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+            />
+          </motion.a>
 
-        <div className="mt-10 flex flex-col gap-4 border-t border-hairline pt-6 text-[12.5px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} QuantumX. All rights reserved.</p>
-          <div className="flex flex-wrap items-center gap-6">
-            <a href="#top" className="transition-colors hover:text-ink">
-              Terms of Service
+          <motion.a
+            href="https://aexotrex.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            initial={{ opacity: 0, x: 30 }}
+            animate={heroInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.55 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="rounded-full px-6 h-14 flex items-center justify-between gap-3 group bg-white/[0.05] border border-white/10 hover:bg-white hover:text-black transition-colors backdrop-blur-md"
+          >
+            <span className="font-mono text-xs uppercase tracking-widest font-semibold flex items-center gap-2">
+              <Sparkles size={14} className="text-quantum" /> AEXOTREX
+            </span>
+            <ArrowUpRight
+              size={16}
+              className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+            />
+          </motion.a>
+        </div>
+      </div>
+
+      {/* Meta Grid Section */}
+      <div
+        ref={gridRef}
+        className="mx-auto max-w-[1400px] px-6 lg:px-10 pb-16 grid grid-cols-2 md:grid-cols-5 gap-10 border-t border-white/10 pt-12"
+      >
+        {cols.map((c, colIdx) => (
+          <motion.div
+            key={c.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={gridInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 + colIdx * 0.1 }}
+          >
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#38bdf8] mb-5 pb-2 border-b border-white/10">
+              {c.title}
+            </div>
+            <ul className="space-y-2.5">
+              {c.items.map((it, linkIdx) => (
+                <li key={it.name}>
+                  <motion.div
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={gridInView ? { opacity: 1, x: 0 } : {}}
+                    transition={{
+                      duration: 0.4,
+                      delay: 0.2 + colIdx * 0.1 + linkIdx * 0.06,
+                    }}
+                  >
+                    {it.path.startsWith("#") || it.path.startsWith("http") ? (
+                      <a
+                        href={it.path}
+                        target={it.path.startsWith("http") ? "_blank" : undefined}
+                        rel={it.path.startsWith("http") ? "noopener noreferrer" : undefined}
+                        className="text-[15px] md:text-lg text-white/80 hover:text-white transition-colors"
+                      >
+                        {it.name}
+                      </a>
+                    ) : (
+                      <Link
+                        href={it.path}
+                        className="text-[15px] md:text-lg text-white/80 hover:text-white transition-colors"
+                      >
+                        {it.name}
+                      </Link>
+                    )}
+                  </motion.div>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        ))}
+
+        {/* Model credits */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={gridInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="col-span-2 md:col-span-2"
+        >
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#38bdf8] mb-5 pb-2 border-b border-white/10 flex items-center gap-2">
+            <Cpu size={12} /> Powered by · open quantum & ML stack
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {credits.map((c, i) => (
+              <motion.span
+                key={c}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={gridInView ? { opacity: 1, scale: 1 } : {}}
+                transition={{ duration: 0.4, delay: 0.45 + i * 0.04 }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.03] border border-white/10 text-[11px] font-medium text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <CircleDot size={9} className="text-[#38bdf8]" /> {c}
+              </motion.span>
+            ))}
+          </div>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={gridInView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="mt-6 text-xs text-white/45 leading-relaxed max-w-md"
+          >
+            QuantumX rigorously evaluates parameterized quantum circuits against classical baselines on identical stratified splits. All benchmarks, noise-mitigation protocols, and explainability attributions adhere to open research standards.
+          </motion.p>
+        </motion.div>
+      </div>
+
+      {/* Massive wordmark with character reveal */}
+      <div ref={wordmarkRef} className="border-t border-white/10 overflow-hidden">
+        <div className="mx-auto max-w-[1400px] px-6 lg:px-10 pt-10 pb-2">
+          <div
+            className="leading-[0.82] tracking-tighter select-none text-[clamp(80px,21vw,340px)] flex text-[#FDFBF7] font-serif"
+          >
+            {"QuantumX".split("").map((char, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 40 }}
+                animate={wordmarkInView ? { opacity: 1, y: 0 } : {}}
+                transition={{
+                  duration: 0.5,
+                  delay: i * 0.06,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                {char}
+              </motion.span>
+            ))}
+            <motion.span
+              initial={{ opacity: 0, scale: 0 }}
+              animate={wordmarkInView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ duration: 0.4, delay: 0.55, type: "spring", stiffness: 300 }}
+              className="text-quantum"
+            >
+              .
+            </motion.span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom bar with subtle parallax */}
+      <div ref={barRef} className="border-t border-white/10">
+        <div className="mx-auto max-w-[1400px] px-6 lg:px-10 py-6 flex flex-wrap items-center justify-between gap-4 font-mono text-[9px] uppercase tracking-[0.2em] text-white/40">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={barInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="flex items-center gap-4"
+          >
+            <span>© {new Date().getFullYear()} QUANTUMX — ALL RIGOR, ALL VERIFIABLE.</span>
+            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+              Terms
             </a>
-            <a href="#top" className="transition-colors hover:text-ink">
-              Privacy Policy
+            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+              Privacy
             </a>
-            <a href="#top" className="transition-colors hover:text-ink">
+            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
               Clinical Disclaimer
             </a>
-          </div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={barInView ? { opacity: 1 } : {}}
+            transition={{ duration: 0.6, delay: 0.25 }}
+          >
+            N 28.61 · E 77.20 · EST 2026
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={barInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.35 }}
+          >
+            BUILD · 0XQ9F4 · V3.2.0 · BVP-VERIFIED
+          </motion.div>
         </div>
       </div>
     </footer>
@@ -989,6 +1245,7 @@ function TranslationalWorkflow() {
 export default function Page() {
   return (
     <main className="min-h-screen scroll-smooth bg-cream font-sans text-ink antialiased">
+      <MoveToTop />
       <Nav />
       <Hero />
       <ClinicalReality />
