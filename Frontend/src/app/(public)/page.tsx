@@ -598,7 +598,7 @@ function Footer() {
         { name: "Research Documentation", path: "https://github.com/Anshul-A7/QuantumX" },
         {
           name: "API Reference",
-          path: `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`,
+          path: `${process.env.NEXT_PUBLIC_API_URL || "https://quantumx-34qu.onrender.com"}/docs`,
         },
         { name: "Terms of Service", path: "/terms" },
         { name: "Privacy Policy", path: "/privacy" },
