@@ -67,49 +67,59 @@ ${
 }
 `;
 
-    // If Gemini API Key is available, invoke Google Gemini 2.5 / 1.5 Flash
+    // If Gemini API Key is available, invoke Google Gemini API with multi-model resilience
     if (apiKey) {
-      try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        
-        const contents = [
-          {
-            role: "user",
-            parts: [{ text: `${SYSTEM_PROMPT}\n\n${contextSummary}` }],
-          },
-          ...conversationHistory.map((c: { sender: string; text: string }) => ({
-            role: c.sender === "assistant" ? "model" : "user",
-            parts: [{ text: c.text }],
-          })),
-          {
-            role: "user",
-            parts: [{ text: message }],
-          },
-        ];
+      const modelsToTry = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+      ];
 
-        const geminiRes = await fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents,
-            generationConfig: {
-              temperature: 0.2,
-              topP: 0.95,
-              maxOutputTokens: 1024,
+      const contents = [
+        {
+          role: "user",
+          parts: [{ text: `${SYSTEM_PROMPT}\n\n${contextSummary}` }],
+        },
+        ...conversationHistory.map((c: { sender: string; text: string }) => ({
+          role: c.sender === "assistant" ? "model" : "user",
+          parts: [{ text: c.text }],
+        })),
+        {
+          role: "user",
+          parts: [{ text: message }],
+        },
+      ];
+
+      for (const model of modelsToTry) {
+        try {
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const geminiRes = await fetch(geminiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
             },
-          }),
-        });
+            body: JSON.stringify({
+              contents,
+              generationConfig: {
+                temperature: 0.2,
+                topP: 0.95,
+                maxOutputTokens: 1024,
+              },
+            }),
+          });
 
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const replyText =
-            geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (replyText) {
-            return NextResponse.json({ reply: replyText });
+          if (geminiRes.ok) {
+            const geminiData = await geminiRes.json();
+            const replyText =
+              geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (replyText) {
+              return NextResponse.json({ reply: replyText });
+            }
           }
+        } catch (geminiErr) {
+          console.error(`Gemini API error on ${model}:`, geminiErr);
         }
-      } catch (geminiErr) {
-        console.error("Gemini API direct call error:", geminiErr);
       }
     }
 
