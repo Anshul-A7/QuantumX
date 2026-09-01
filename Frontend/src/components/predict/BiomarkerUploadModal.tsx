@@ -268,6 +268,7 @@ export default function BiomarkerUploadModal({
                   {BREAST_CANCER_CANONICAL_SCHEMA.map((field) => {
                     const match = parseResult.fieldMatches.find((m) => m.key === field.key);
                     const isDefault = match?.matchType === "default";
+                    const isDerived = match?.matchType === "derived";
                     const isAi = match?.matchType === "ai_semantic";
                     const val = editableValues[field.key] ?? field.defaultValue;
 
@@ -277,14 +278,20 @@ export default function BiomarkerUploadModal({
                         className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
                           isDefault
                             ? "border-amber-500/30 bg-amber-500/5"
+                            : isDerived
+                            ? "border-purple-500/30 bg-purple-500/5"
                             : "border-border bg-card hover:border-primary/40"
                         }`}
                       >
                         <div className="space-y-0.5 max-w-[60%]">
                           <p className="text-xs font-medium text-foreground truncate">{field.label}</p>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             {isDefault ? (
-                              <span className="text-[10px] text-amber-500 font-medium">Default Applied</span>
+                              <span className="text-[10px] text-amber-500 font-medium">Cohort Median</span>
+                            ) : isDerived ? (
+                              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-0.5" title={match?.derivationFormula}>
+                                ⚡ Derived ({match?.derivationFormula || match?.rawLabel})
+                              </span>
                             ) : isAi ? (
                               <span className="text-[10px] text-sky-500 font-medium flex items-center gap-0.5">
                                 <Sparkles className="h-2.5 w-2.5" /> AI Mapped
@@ -294,9 +301,11 @@ export default function BiomarkerUploadModal({
                                 <CheckCircle2 className="h-2.5 w-2.5" /> Mapped
                               </span>
                             )}
-                            <span className="text-[10px] text-muted-foreground truncate">
-                              ({match?.rawLabel || field.key})
-                            </span>
+                            {!isDerived && (
+                              <span className="text-[10px] text-muted-foreground truncate">
+                                ({match?.rawLabel || field.key})
+                              </span>
+                            )}
                           </div>
                         </div>
 

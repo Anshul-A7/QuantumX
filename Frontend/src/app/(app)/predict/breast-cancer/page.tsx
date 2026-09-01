@@ -19,9 +19,11 @@ import {
   Info,
   UploadCloud,
   FileSpreadsheet,
+  Calculator,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import BiomarkerDerivationModal from "@/components/predict/BiomarkerDerivationModal";
 import { showToast } from "@/components/common/ToastNotification";
 
 interface FieldConfig {
@@ -92,9 +94,12 @@ interface InferenceResult {
 
 export default function BreastCancerDetailPage() {
   const [formValues, setFormValues] = useState<Record<string, number>>({});
+  const [derivedLabels, setDerivedLabels] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
   const [patientIdInput, setPatientIdInput] = useState("");
+  
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [activeDerivationKey, setActiveDerivationKey] = useState<string | null>(null);
 
   const [isInferring, setIsInferring] = useState(false);
   const [hasInferred, setHasInferred] = useState(false);
@@ -112,11 +117,13 @@ export default function BreastCancerDetailPage() {
 
   const handleSelectPreset = (preset: typeof PRESETS[0]) => {
     setFormValues(preset.values);
+    setDerivedLabels({});
     setSelectedPresetName(preset.name);
   };
 
   const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
     setFormValues(extractedValues);
+    setDerivedLabels({});
     setSelectedPresetName(null);
     if (detectedPatientId) {
       setPatientIdInput(detectedPatientId);
@@ -124,6 +131,17 @@ export default function BreastCancerDetailPage() {
     showToast({
       title: "Medical Report Imported",
       message: "8 cellular biomarkers successfully extracted, validated, and loaded into screening studio.",
+      type: "quantum",
+    });
+  };
+
+  const handleApplyDerivedValue = (key: string, val: number, label: string) => {
+    setFormValues((prev) => ({ ...prev, [key]: val }));
+    setDerivedLabels((prev) => ({ ...prev, [key]: label }));
+    setSelectedPresetName(null);
+    showToast({
+      title: "Biomarker Computed",
+      message: `${label} (${val})`,
       type: "quantum",
     });
   };
@@ -196,7 +214,6 @@ export default function BreastCancerDetailPage() {
         };
         localStorage.setItem("quantumx_prediction_history", JSON.stringify([newRecord, ...historyList].slice(0, 50)));
 
-        // Notification logging
         const storedNotifs = localStorage.getItem("quantumx_notifications");
         const notifList = storedNotifs ? JSON.parse(storedNotifs) : [];
         const newNotif = {
@@ -258,6 +275,14 @@ ${inferenceResult.clinicalNote}
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
+      />
+
+      {/* Biomarker Derivation Modal */}
+      <BiomarkerDerivationModal
+        isOpen={!!activeDerivationKey}
+        biomarkerKey={activeDerivationKey}
+        onClose={() => setActiveDerivationKey(null)}
+        onApplyDerivedValue={handleApplyDerivedValue}
       />
 
       {/* Back Button + Title */}
@@ -365,7 +390,7 @@ ${inferenceResult.clinicalNote}
               <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                 <div>
                   <h2 className="font-serif text-base font-medium text-ink">Cellular Biomarker Parameters</h2>
-                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact readings, or import a report</p>
+                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact readings, or calculate missing metrics</p>
                 </div>
                 <button
                   type="button"
@@ -375,6 +400,7 @@ ${inferenceResult.clinicalNote}
                       initial[f.key] = f.defaultValue;
                     });
                     setFormValues(initial);
+                    setDerivedLabels({});
                     setSelectedPresetName(null);
                   }}
                   className="text-[11px] text-ink-soft hover:text-ink flex items-center gap-1 cursor-pointer"
@@ -386,6 +412,8 @@ ${inferenceResult.clinicalNote}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {FIELDS.map((field) => {
                   const val = formValues[field.key] ?? field.defaultValue;
+                  const derivationTag = derivedLabels[field.key];
+
                   return (
                     <div key={field.key} className="space-y-1.5 p-3 rounded-xl bg-cream/50 border border-hairline/60 transition-all hover:border-hairline">
                       <div className="flex items-center justify-between">
@@ -419,6 +447,24 @@ ${inferenceResult.clinicalNote}
                             {field.unit}
                           </span>
                         </div>
+                      </div>
+
+                      {/* Derivation helper button & Active Tag */}
+                      <div className="flex items-center justify-between text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDerivationKey(field.key)}
+                          className="text-purple-600 dark:text-purple-400 hover:underline font-medium flex items-center gap-1 cursor-pointer"
+                        >
+                          <Calculator size={10} />
+                          <span>Don&apos;t have this?</span>
+                        </button>
+                        
+                        {derivationTag && (
+                          <span className="text-[9px] font-mono font-medium text-purple-600 dark:text-purple-400 truncate max-w-[140px]" title={derivationTag}>
+                            {derivationTag}
+                          </span>
+                        )}
                       </div>
 
                       {/* Micro Range Slider */}
@@ -590,7 +636,7 @@ ${inferenceResult.clinicalNote}
                     <div className="space-y-1 max-w-xs mx-auto">
                       <h3 className="font-serif text-lg font-light text-ink">Ready to Analyze</h3>
                       <p className="text-xs text-ink-soft leading-relaxed">
-                        Adjust cellular measurements on the left, upload a medical lab report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
+                        Adjust cellular measurements on the left, calculate missing values, upload a medical lab report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
                       </p>
                     </div>
                   </div>

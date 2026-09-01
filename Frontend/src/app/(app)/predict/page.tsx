@@ -25,12 +25,14 @@ import {
   ShieldCheck,
   UploadCloud,
   Info,
+  Calculator,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { ScreeningService } from "@/services/screening.service";
 import { NotificationService } from "@/services/notification.service";
 import { showToast } from "@/components/common/ToastNotification";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import BiomarkerDerivationModal from "@/components/predict/BiomarkerDerivationModal";
 
 type DiseaseType = "breast_cancer" | "heart_disease" | "chronic_kidney";
 
@@ -79,7 +81,7 @@ const DISEASE_CONFIGS: Record<DiseaseType, DiseaseConfig> = {
       { key: "texture_mean", label: "Surface Texture", min: 9.0, max: 40.0, step: 0.1, defaultValue: 10.38, unit: "std", description: "Standard deviation of gray-scale values", simpleExplanation: "Variation in gray-scale texture across the cell." },
       { key: "perimeter_mean", label: "Cell Perimeter", min: 40.0, max: 190.0, step: 0.5, defaultValue: 122.8, unit: "μm", description: "Mean size of the core tumor perimeter", simpleExplanation: "Total boundary length around the cell nucleus." },
       { key: "area_mean", label: "Nuclear Area", min: 140.0, max: 2500.0, step: 1.0, defaultValue: 1001.0, unit: "μm²", description: "Mean nuclear spatial area", simpleExplanation: "Total two-dimensional area of the nucleus." },
-      { key: "smoothness_mean", label: "Edge Smoothness", min: 0.05, max: 0.25, step: 0.005, defaultValue: 0.1184, unit: "idx", description: "Local variation in radius lengths", simpleExplanation: "How smooth or jagged the cell boundary appears." },
+      { key: "smoothness_mean", label: "Border Smoothness", min: 0.05, max: 0.25, step: 0.005, defaultValue: 0.1184, unit: "idx", description: "Local variation in radius lengths", simpleExplanation: "How smooth or jagged the cell boundary appears." },
       { key: "compactness_mean", label: "Compactness", min: 0.01, max: 0.35, step: 0.005, defaultValue: 0.2776, unit: "idx", description: "Perimeter² / area - 1.0", simpleExplanation: "Measure of how dense and tightly packed the cell is." },
       { key: "concavity_mean", label: "Indentation Depth", min: 0.0, max: 0.45, step: 0.005, defaultValue: 0.3001, unit: "idx", description: "Severity of concave portions of contour", simpleExplanation: "How deep the inward curves/indentations are." },
       { key: "concave_points_mean", label: "Indentation Count", min: 0.0, max: 0.25, step: 0.005, defaultValue: 0.1471, unit: "cnt", description: "Number of concave portions of contour", simpleExplanation: "Total number of inward irregular notches on the cell." },
@@ -243,9 +245,12 @@ function PredictPageContent() {
       : "breast_cancer"
   );
   const [formValues, setFormValues] = useState<Record<string, number>>({});
+  const [derivedLabels, setDerivedLabels] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
   const [patientIdInput, setPatientIdInput] = useState("");
+  
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [activeDerivationKey, setActiveDerivationKey] = useState<string | null>(null);
 
   const [isInferring, setIsInferring] = useState(false);
   const [hasInferred, setHasInferred] = useState(false);
@@ -267,6 +272,7 @@ function PredictPageContent() {
       initial[f.key] = f.defaultValue;
     });
     setFormValues(initial);
+    setDerivedLabels({});
     setSelectedPresetName(null);
     setHasInferred(false);
     setInferenceResult(null);
@@ -293,11 +299,13 @@ function PredictPageContent() {
 
   const handleSelectPreset = (preset: DiseasePreset) => {
     setFormValues(preset.values);
+    setDerivedLabels({});
     setSelectedPresetName(preset.name);
   };
 
   const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
     setFormValues(extractedValues);
+    setDerivedLabels({});
     setSelectedPresetName(null);
     if (detectedPatientId) {
       setPatientIdInput(detectedPatientId);
@@ -305,6 +313,17 @@ function PredictPageContent() {
     showToast({
       title: "Medical Report Imported",
       message: "8 cellular biomarkers successfully extracted, validated, and loaded into screening studio.",
+      type: "quantum",
+    });
+  };
+
+  const handleApplyDerivedValue = (key: string, val: number, label: string) => {
+    setFormValues((prev) => ({ ...prev, [key]: val }));
+    setDerivedLabels((prev) => ({ ...prev, [key]: label }));
+    setSelectedPresetName(null);
+    showToast({
+      title: "Biomarker Computed",
+      message: `${label} (${val})`,
       type: "quantum",
     });
   };
@@ -415,6 +434,14 @@ function PredictPageContent() {
         onApplyData={handleApplyExtractedData}
       />
 
+      {/* Biomarker Derivation Modal */}
+      <BiomarkerDerivationModal
+        isOpen={!!activeDerivationKey}
+        biomarkerKey={activeDerivationKey}
+        onClose={() => setActiveDerivationKey(null)}
+        onApplyDerivedValue={handleApplyDerivedValue}
+      />
+
       {/* Lock Notice Modal */}
       <AnimatePresence>
         {lockedModal?.isOpen && (
@@ -441,7 +468,7 @@ function PredictPageContent() {
                 </div>
                 <button
                   onClick={() => setLockedModal(null)}
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -459,7 +486,7 @@ function PredictPageContent() {
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
                   onClick={() => setLockedModal(null)}
-                  className="px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:bg-muted"
+                  className="px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:bg-muted cursor-pointer"
                 >
                   Close
                 </button>
@@ -468,7 +495,7 @@ function PredictPageContent() {
                     setLockedModal(null);
                     setSelectedDisease("breast_cancer");
                   }}
-                  className="px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <span>Go to Breast Cancer Studio</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -651,7 +678,7 @@ function PredictPageContent() {
               <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                 <div>
                   <h2 className="font-serif text-base font-medium text-ink">Cellular Biomarker Parameters</h2>
-                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact numbers, or import a report</p>
+                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact numbers, or calculate missing metrics</p>
                 </div>
                 <button
                   type="button"
@@ -661,6 +688,7 @@ function PredictPageContent() {
                       initial[f.key] = f.defaultValue;
                     });
                     setFormValues(initial);
+                    setDerivedLabels({});
                     setSelectedPresetName(null);
                   }}
                   className="text-[11px] text-ink-soft hover:text-ink flex items-center gap-1 cursor-pointer"
@@ -672,8 +700,10 @@ function PredictPageContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {currentConfig.fields.map((field) => {
                   const val = formValues[field.key] ?? field.defaultValue;
+                  const derivationTag = derivedLabels[field.key];
+
                   return (
-                    <div key={field.key} className="space-y-1.5 p-3 rounded-xl bg-cream/50 border border-hairline/60">
+                    <div key={field.key} className="space-y-1.5 p-3 rounded-xl bg-cream/50 border border-hairline/60 transition-all hover:border-hairline">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 max-w-[130px]">
                           <label className="text-[11px] font-semibold text-ink truncate" title={field.description}>
@@ -704,6 +734,24 @@ function PredictPageContent() {
                             {field.unit}
                           </span>
                         </div>
+                      </div>
+
+                      {/* Derivation helper button & Active Tag */}
+                      <div className="flex items-center justify-between text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDerivationKey(field.key)}
+                          className="text-purple-600 dark:text-purple-400 hover:underline font-medium flex items-center gap-1 cursor-pointer"
+                        >
+                          <Calculator size={10} />
+                          <span>Don&apos;t have this?</span>
+                        </button>
+                        
+                        {derivationTag && (
+                          <span className="text-[9px] font-mono font-medium text-purple-600 dark:text-purple-400 truncate max-w-[140px]" title={derivationTag}>
+                            {derivationTag}
+                          </span>
+                        )}
                       </div>
 
                       <input
@@ -857,7 +905,7 @@ function PredictPageContent() {
                     <div className="space-y-1 max-w-xs mx-auto">
                       <h3 className="font-serif text-lg font-light text-ink">Ready to Analyze</h3>
                       <p className="text-xs text-ink-soft leading-relaxed">
-                        Adjust cellular measurements, upload a report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
+                        Adjust cellular measurements, calculate missing metrics, upload a report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
                       </p>
                     </div>
                   </div>
