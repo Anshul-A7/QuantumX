@@ -160,14 +160,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }
           setIsAuthChecking(false);
         } else {
-          // If unauthenticated or 7-day inactivity expired, redirect to login
+          // Allow seamless guest researcher access to workbench & home dashboard
+          setUserName("Clinical Researcher (Guest)");
+          setUserEmail("investigator@quantumx.health");
           setIsAuthChecking(false);
-          router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
       } catch (err) {
         if (!isMounted) return;
+        setUserName("Clinical Researcher (Guest)");
+        setUserEmail("investigator@quantumx.health");
         setIsAuthChecking(false);
-        router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
       }
     }
 

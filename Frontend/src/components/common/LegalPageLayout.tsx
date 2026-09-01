@@ -41,19 +41,19 @@ export function LegalPageLayout({
       <header className="fixed top-0 inset-x-0 z-50 px-6 lg:px-12 h-20 flex items-center justify-between border-b border-white/10 bg-black/70 backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/home"
             className="flex items-center gap-2 text-white/70 hover:text-white transition-colors p-2 -ml-2 rounded-full hover:bg-white/10"
-            aria-label="Back to Home"
+            aria-label="Back to Home Dashboard"
           >
             <ArrowLeft size={18} />
           </Link>
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href="/home" className="flex items-center gap-2.5 group">
             <span className="h-2 w-2 rounded-full bg-quantum animate-pulse" />
             <span className="font-serif text-xl font-medium tracking-tight text-white group-hover:opacity-90 transition-opacity">
               QuantumX
             </span>
             <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/40 hidden sm:inline-block">
-              · Legal & Compliance
+              · Medical Platform
             </span>
           </Link>
         </div>

@@ -6,7 +6,7 @@ interface BrandLogoProps {
   href?: string | false;
 }
 
-export default function BrandLogo({ className = "", href = "/" }: BrandLogoProps) {
+export default function BrandLogo({ className = "", href = "/home" }: BrandLogoProps) {
   const content = (
     <span className={`inline-flex items-baseline gap-2 group ${className}`}>
       <span className="font-serif text-[22px] font-medium tracking-tight text-ink group-hover:opacity-90 transition-opacity">
