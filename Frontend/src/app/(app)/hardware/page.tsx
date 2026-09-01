@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
+import { showToast } from "@/components/common/ToastNotification";
 
 export default function HardwarePage() {
   const { backend: activeBackend, setBackend: setActiveBackend } = useQuantumBackend();
@@ -47,7 +48,13 @@ export default function HardwarePage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => alert("Calibration telemetry updated successfully.")}
+            onClick={() =>
+              showToast({
+                title: "Hardware Calibrated",
+                message: "IBM Quantum Eagle telemetry & ZNE parameters updated.",
+                type: "quantum",
+              })
+            }
             className="px-3 py-1.5 rounded-lg border border-hairline bg-parchment hover:bg-cream text-ink text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <RefreshCw size={13} /> Refresh Status

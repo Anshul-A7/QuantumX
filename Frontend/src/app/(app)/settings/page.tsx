@@ -21,6 +21,7 @@ import {
   Cpu,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { showToast } from "@/components/common/ToastNotification";
 
 export default function SettingsPage() {
   const [autoSaveHistory, setAutoSaveHistory] = useState(true);
@@ -59,6 +60,11 @@ export default function SettingsPage() {
       localStorage.setItem("quantumx_setting_highcontrast", String(highContrastMode));
     }
     setSaveSuccess(true);
+    showToast({
+      title: "Preferences Saved",
+      message: "Workspace configurations updated.",
+      type: "success",
+    });
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
@@ -68,7 +74,11 @@ export default function SettingsPage() {
         localStorage.removeItem("quantumx_prediction_history");
       }
       setHistoryCount(0);
-      alert("Screening history cleared successfully.");
+      showToast({
+        title: "History Cleared",
+        message: "All patient screening logs have been deleted.",
+        type: "info",
+      });
     }
   };
 
@@ -82,6 +92,11 @@ export default function SettingsPage() {
       link.download = `quantumx_audit_export_${Date.now()}.json`;
       link.click();
       URL.revokeObjectURL(url);
+      showToast({
+        title: "Audit Export Downloaded",
+        message: "Complete diagnostic audit log exported.",
+        type: "success",
+      });
     }
   };
 

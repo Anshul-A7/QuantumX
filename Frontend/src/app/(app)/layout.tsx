@@ -31,6 +31,7 @@ import { NotificationService } from "@/services/notification.service";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 import QuantumChatbot from "@/components/chat/QuantumChatbot";
 import WelcomeModal from "@/components/common/WelcomeModal";
+import ToastContainer from "@/components/common/ToastNotification";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -975,6 +976,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
       {/* New User Registration & Onboarding Welcome Modal */}
       <WelcomeModal />
+
+      {/* Top-Right Floating Popup Toast Notifications */}
+      <ToastContainer />
     </div>
   );
 }

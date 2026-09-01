@@ -22,6 +22,7 @@ import {
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { ScreeningService } from "@/services/screening.service";
 import { NotificationService } from "@/services/notification.service";
+import { showToast } from "@/components/common/ToastNotification";
 
 type DiseaseType = "breast_cancer" | "heart_disease" | "chronic_kidney";
 
@@ -390,6 +391,15 @@ function PredictPageContent() {
       message: `${screeningPayload.diseaseType} result: ${qLabel} (${qConf}% confidence).`,
       actionUrl: "/history",
     }).catch(() => {});
+
+    // Trigger top-right floating toast popup
+    showToast({
+      title: "Screening Completed",
+      message: `${screeningPayload.patientId} · ${qLabel} (${qConf}% confidence)`,
+      type: "quantum",
+      actionUrl: "/history",
+      actionLabel: "View Case Report",
+    });
   };
 
   const getDedicatedLink = (dKey: DiseaseType) => {

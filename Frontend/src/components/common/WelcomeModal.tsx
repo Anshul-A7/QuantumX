@@ -30,10 +30,10 @@ export default function WelcomeModal() {
         setUserName(cached.fullName || cached.username || "Investigator");
       }
 
-      // Show popup if new registration or not yet dismissed
-      if (isNewReg === "true" || !dismissed) {
+      // Show modal ONLY for newly registered accounts on their very 1st arrival
+      if (isNewReg === "true" && !dismissed) {
         setIsOpen(true);
-        // Ensure welcome notifications exist in Supabase/local
+        // Ensure welcome notification exists in database
         NotificationService.createNotification({
           title: "Welcome to QuantumX Workbench",
           category: "system",
