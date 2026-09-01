@@ -595,10 +595,12 @@ function Footer() {
     {
       title: "System & Company",
       items: [
+        { name: "Terms of Service", path: "/terms" },
+        { name: "Privacy Policy", path: "/privacy" },
+        { name: "Clinical Disclaimer", path: "/disclaimer" },
+        { name: "Cookie Policy", path: "/cookies" },
         { name: "Research Documentation", path: "/predict/demo" },
         { name: "API Reference", path: "https://github.com/Anshul-A7/QuantumX" },
-        { name: "Privacy Policy", path: "#top" },
-        { name: "Clinical Disclaimer", path: "#top" },
       ],
     },
   ];
@@ -813,15 +815,18 @@ function Footer() {
             className="flex items-center gap-4"
           >
             <span>© {new Date().getFullYear()} QUANTUMX — ALL RIGOR, ALL VERIFIABLE.</span>
-            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+            <Link href="/terms" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
               Terms
-            </a>
-            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+            </Link>
+            <Link href="/privacy" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
               Privacy
-            </a>
-            <a href="#top" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
-              Clinical Disclaimer
-            </a>
+            </Link>
+            <Link href="/disclaimer" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+              Disclaimer
+            </Link>
+            <Link href="/cookies" className="hover:text-white transition-colors hidden md:inline-block border-l border-white/10 pl-4">
+              Cookies
+            </Link>
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}
