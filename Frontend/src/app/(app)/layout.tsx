@@ -124,11 +124,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     });
   };
 
-  // User state & session verification
-  const [userName, setUserName] = useState("User");
-  const [userEmail, setUserEmail] = useState("user@quantumx.io");
+  // User state & session verification (100% Real Live Auth)
+  const [userName, setUserName] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   // Hardware Selector with Global Synchronization
   const { backend: quantumBackend, setBackend: handleBackendChange } = useQuantumBackend();
@@ -146,12 +146,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     let isMounted = true;
 
-    // Check cached user synchronously to avoid flashing
+    // Check cached user synchronously to immediately display real logged-in name
     const cachedUser = AuthService.getCachedUser();
     if (cachedUser) {
-      const name = cachedUser.fullName || cachedUser.username || "User";
-      setUserName(name);
-      setUserEmail(cachedUser.email || "user@quantumx.io");
+      setUserName(cachedUser.fullName || cachedUser.username || "");
+      setUserEmail(cachedUser.email || "");
       if (cachedUser.profileImageUrl) {
         setUserAvatar(cachedUser.profileImageUrl);
       }
@@ -164,9 +163,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         if (!isMounted) return;
 
         if (user) {
-          const name = user.fullName || user.username || "User";
-          setUserName(name);
-          setUserEmail(user.email || "user@quantumx.io");
+          setUserName(user.fullName || user.username || "");
+          setUserEmail(user.email || "");
           if (user.profileImageUrl) {
             setUserAvatar(user.profileImageUrl);
           }
@@ -204,8 +202,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
           console.error("Failed to parse notifications:", e);
         }
       }
-
-      verifyAndLoadSession();
     }
 
     // Keep session active with 7-day sliding window on user interaction (throttled to 5 mins)
