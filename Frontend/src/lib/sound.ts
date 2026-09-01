@@ -75,3 +75,30 @@ export function playQuantumCompletionSound(force: boolean = false): void {
     // Graceful fallback for browser autoplay policies
   }
 }
+
+export function playSound(type: "quantum" | "click" | "success" | "error" = "quantum", force: boolean = false): void {
+  if (type === "quantum" || type === "success") {
+    playQuantumCompletionSound(force);
+  } else if (type === "click" || type === "error") {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(type === "click" ? 880 : 330, now);
+      gain.gain.setValueAtTime(0.04, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } catch {}
+  }
+}
+

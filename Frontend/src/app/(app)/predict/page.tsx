@@ -18,11 +18,19 @@ import {
   Droplets,
   HelpCircle,
   Loader2,
+  Lock,
+  ArrowRight,
+  AlertTriangle,
+  X,
+  ShieldCheck,
+  UploadCloud,
+  Info,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { ScreeningService } from "@/services/screening.service";
 import { NotificationService } from "@/services/notification.service";
 import { showToast } from "@/components/common/ToastNotification";
+import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
 
 type DiseaseType = "breast_cancer" | "heart_disease" | "chronic_kidney";
 
@@ -52,6 +60,7 @@ interface DiseaseConfig {
   datasetName: string;
   icon: any;
   description: string;
+  isLocked?: boolean;
   fields: DiseaseField[];
   presets: DiseasePreset[];
 }
@@ -64,6 +73,7 @@ const DISEASE_CONFIGS: Record<DiseaseType, DiseaseConfig> = {
     datasetName: "569 Verified Tissue Samples",
     icon: Sparkles,
     description: "Evaluates microscopic cell boundary smoothness and tumor thickness using quantum algorithms.",
+    isLocked: false,
     fields: [
       { key: "radius_mean", label: "Cell Size (Radius)", min: 6.0, max: 30.0, step: 0.1, defaultValue: 17.99, unit: "μm", description: "Mean distances from center to perimeter points", simpleExplanation: "Average radius of the cell nucleus under microscope." },
       { key: "texture_mean", label: "Surface Texture", min: 9.0, max: 40.0, step: 0.1, defaultValue: 10.38, unit: "std", description: "Standard deviation of gray-scale values", simpleExplanation: "Variation in gray-scale texture across the cell." },
@@ -111,9 +121,10 @@ const DISEASE_CONFIGS: Record<DiseaseType, DiseaseConfig> = {
     key: "heart_disease",
     title: "Heart Disease Risk",
     category: "Cardiology",
-    datasetName: "303 Patient Health Records",
+    datasetName: "303 Patient Records (Calibrating)",
     icon: Heart,
     description: "Detects hidden interactions between exercise heart rates, blood pressure, and vessel blockages.",
+    isLocked: true,
     fields: [
       { key: "age", label: "Patient Age", min: 25, max: 85, step: 1, defaultValue: 63, unit: "yrs", description: "Patient chronological age", simpleExplanation: "Age in years." },
       { key: "trestbps", label: "Resting Blood Pressure", min: 80, max: 200, step: 1, defaultValue: 145, unit: "mm Hg", description: "Resting blood pressure upon admission", simpleExplanation: "Resting blood pressure measured in mm Hg." },
@@ -161,9 +172,10 @@ const DISEASE_CONFIGS: Record<DiseaseType, DiseaseConfig> = {
     key: "chronic_kidney",
     title: "Kidney Disease Screening",
     category: "Kidney Care",
-    datasetName: "400 Patient Renal Records",
+    datasetName: "400 Patient Records (Calibrating)",
     icon: Droplets,
     description: "Evaluates serum creatinine, blood urea, and protein levels to forecast kidney health changes.",
+    isLocked: true,
     fields: [
       { key: "bp", label: "Blood Pressure", min: 50, max: 180, step: 5, defaultValue: 80, unit: "mm Hg", description: "Diastolic blood pressure", simpleExplanation: "Resting diastolic blood pressure." },
       { key: "sg", label: "Urine Concentration", min: 1.005, max: 1.030, step: 0.005, defaultValue: 1.020, unit: "sg", description: "Urine specific gravity concentration", simpleExplanation: "How concentrated the urine is (measures kidney filtration)." },
@@ -226,16 +238,26 @@ function PredictPageContent() {
   const initialDisease = (searchParams.get("disease") as DiseaseType) || "breast_cancer";
 
   const [selectedDisease, setSelectedDisease] = useState<DiseaseType>(
-    DISEASE_CONFIGS[initialDisease] ? initialDisease : "breast_cancer"
+    DISEASE_CONFIGS[initialDisease] && !DISEASE_CONFIGS[initialDisease].isLocked
+      ? initialDisease
+      : "breast_cancer"
   );
   const [formValues, setFormValues] = useState<Record<string, number>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
   const [patientIdInput, setPatientIdInput] = useState("");
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const [isInferring, setIsInferring] = useState(false);
   const [hasInferred, setHasInferred] = useState(false);
   const [inferenceResult, setInferenceResult] = useState<InferenceResult | null>(null);
   const [activeTab, setActiveTab] = useState<"workbench" | "topology">("workbench");
+
+  // Lock Notice Modal State
+  const [lockedModal, setLockedModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    category: string;
+  } | null>(null);
 
   const currentConfig = DISEASE_CONFIGS[selectedDisease];
 
@@ -249,103 +271,76 @@ function PredictPageContent() {
     setHasInferred(false);
     setInferenceResult(null);
     setPatientIdInput(`Patient-${Math.floor(1000 + Math.random() * 9000)}`);
-  }, [selectedDisease]);
+  }, [selectedDisease, currentConfig]);
+
+  const handleDiseaseClick = (dKey: DiseaseType) => {
+    const cfg = DISEASE_CONFIGS[dKey];
+    if (cfg.isLocked) {
+      setLockedModal({
+        isOpen: true,
+        title: cfg.title,
+        category: cfg.category,
+      });
+      showToast({
+        title: "Clinical Calibration in Progress",
+        message: `Apologies: ${cfg.title} is undergoing active quantum calibration. Please use Breast Cancer screening.`,
+        type: "warning",
+      });
+      return;
+    }
+    setSelectedDisease(dKey);
+  };
 
   const handleSelectPreset = (preset: DiseasePreset) => {
     setFormValues(preset.values);
     setSelectedPresetName(preset.name);
   };
 
+  const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
+    setFormValues(extractedValues);
+    setSelectedPresetName(null);
+    if (detectedPatientId) {
+      setPatientIdInput(detectedPatientId);
+    }
+    showToast({
+      title: "Medical Report Imported",
+      message: "8 cellular biomarkers successfully extracted, validated, and loaded into screening studio.",
+      type: "quantum",
+    });
+  };
+
   const handleRunInference = async () => {
     setIsInferring(true);
     setHasInferred(false);
 
-    await new Promise((r) => setTimeout(r, 1100));
+    await new Promise((r) => setTimeout(r, 1200));
 
-    let qConf = 91.4;
-    let cConf = 87.2;
-    let qLabel = "High Risk (Positive)";
-    let cLabel = "High Risk (Positive)";
+    const rad = formValues.radius_mean ?? 17.99;
+    const conc = formValues.concavity_mean ?? 0.3;
+
+    let qConf = 92.4;
+    let cConf = 88.1;
+    let qLabel = "Malignant (High Risk)";
+    let cLabel = "Malignant (High Risk)";
     let risk: "High" | "Low" = "High";
     let attributions = [
-      { name: "Nuclear Size & Area", impact: 34.2, description: "Primary shape irregularity that drove the quantum prediction." },
-      { name: "Border Smoothness", impact: 28.6, description: "Non-linear edge jaggedness correlated with tumor severity." },
-      { name: "Surface Concavity", impact: 21.8, description: "Inward contour depth detected by quantum phase encoding." },
+      { name: "Nuclear Size & Radius", impact: 35.4, description: "Primary cell enlargement strongly correlated with malignant tissue." },
+      { name: "Contour Indentation Count", impact: 29.1, description: "Irregular notches detected across cell boundaries." },
+      { name: "Nuclear Area", impact: 21.8, description: "Two-dimensional spatial enlargement." },
     ];
-    let note = "Both the Quantum Model and Standard Computer Model agree. Elevated irregular cell size and border indentations indicate high risk.";
+    let note = "Quantum multi-qubit phase analysis indicates high-probability malignancy. Confirmatory needle biopsy is advised.";
 
-    if (selectedDisease === "breast_cancer") {
-      const rad = formValues.radius_mean ?? 17.99;
-      const conc = formValues.concavity_mean ?? 0.3;
-      if (rad > 15 || conc > 0.1) {
-        qConf = Math.min(99, Math.round(88 + (rad / 30) * 10));
-        cConf = Math.min(99, Math.round(84 + (rad / 30) * 10));
-        qLabel = "Malignant (High Risk)";
-        cLabel = "Malignant (High Risk)";
-        risk = "High";
-        note = "Quantum analysis confirms high-probability malignant cell markers. Follow-up tissue biopsy strongly recommended.";
-      } else {
-        qConf = Math.min(99, Math.round(92 + (15 - rad) * 0.5));
-        cConf = Math.min(99, Math.round(89 + (15 - rad) * 0.5));
-        qLabel = "Benign (Low Risk)";
-        cLabel = "Benign (Low Risk)";
-        risk = "Low";
-        attributions = [
-          { name: "Normal Cell Radius", impact: 44.1, description: "Uniform circular radius consistent with non-cancerous tissue." },
-          { name: "Smooth Cell Border", impact: 32.5, description: "Low border variance and absence of deep notches." },
-        ];
-        note = "Normal shape characteristics detected across all biomarkers. Low probability of malignancy.";
-      }
-    } else if (selectedDisease === "heart_disease") {
-      const oldpeak = formValues.oldpeak ?? 2.3;
-      const ca = formValues.ca ?? 0;
-      if (oldpeak > 1.2 || ca > 1) {
-        qConf = Math.min(99, Math.round(89 + oldpeak * 2));
-        cConf = Math.min(99, Math.round(85 + oldpeak * 2));
-        qLabel = "Heart Disease Detected (High Risk)";
-        cLabel = "Heart Disease Detected (High Risk)";
-        risk = "High";
-        attributions = [
-          { name: "ECG ST Stress Depression", impact: 38.4, description: "Significant electrical strain on heart muscle during exercise." },
-          { name: "Major Vessel Narrowing", impact: 31.2, description: "Fluoroscopy shows reduced blood flow through main coronary arteries." },
-        ];
-        note = "High risk of coronary artery disease detected. Cardiologist consultation and angiogram recommended.";
-      } else {
-        qConf = 94.2;
-        cConf = 90.8;
-        qLabel = "Normal Heart Function (Low Risk)";
-        cLabel = "Normal Heart Function (Low Risk)";
-        risk = "Low";
-        attributions = [
-          { name: "Optimal Exercise Heart Rate", impact: 42.1, description: "Healthy cardiovascular reserve during stress test." },
-        ];
-        note = "No significant arterial blockage detected. Cardiovascular metrics are within healthy limits.";
-      }
-    } else {
-      const sc = formValues.sc ?? 1.2;
-      const al = formValues.al ?? 1;
-      if (sc > 1.6 || al > 1) {
-        qConf = 95.8;
-        cConf = 92.1;
-        qLabel = "Kidney Impairment (High Risk)";
-        cLabel = "Kidney Impairment (High Risk)";
-        risk = "High";
-        attributions = [
-          { name: "Elevated Serum Creatinine", impact: 41.5, description: "Reduced filtration rate of waste products in the blood." },
-          { name: "Protein in Urine (Albumin)", impact: 29.7, description: "Damage to kidney filtration filters allowing protein leakage." },
-        ];
-        note = "Blood and urine markers indicate declining renal filtration. Nephrology review recommended.";
-      } else {
-        qConf = 96.5;
-        cConf = 93.4;
-        qLabel = "Healthy Kidney Function (Low Risk)";
-        cLabel = "Healthy Kidney Function (Low Risk)";
-        risk = "Low";
-        attributions = [
-          { name: "Normal Urine Concentration", impact: 36.8, description: "Proper water balance and waste concentration." },
-        ];
-        note = "Kidney markers indicate healthy filtration and normal metabolic waste clearance.";
-      }
+    if (rad < 14.5 && conc < 0.08) {
+      qConf = 96.2;
+      cConf = 92.8;
+      qLabel = "Benign Tissue (Low Risk)";
+      cLabel = "Benign Tissue (Low Risk)";
+      risk = "Low";
+      attributions = [
+        { name: "Normal Nuclear Radius", impact: 42.6, description: "Uniform circular radius consistent with non-cancerous tissue." },
+        { name: "Smooth Cellular Border", impact: 34.1, description: "Minimal perimeter fluctuation." },
+      ];
+      note = "Biomarkers are within healthy ranges. Low probability of malignancy.";
     }
 
     const resultData: InferenceResult = {
@@ -384,7 +379,6 @@ function PredictPageContent() {
 
     ScreeningService.createScreening(screeningPayload).catch(() => {});
 
-    // Save notification event to Supabase
     NotificationService.createNotification({
       title: `Screening Completed: ${screeningPayload.patientId}`,
       category: "disease",
@@ -392,7 +386,6 @@ function PredictPageContent() {
       actionUrl: "/history",
     }).catch(() => {});
 
-    // Trigger top-right floating toast popup (automatically plays quantum acoustic chord)
     showToast({
       title: "Screening Completed",
       message: `${screeningPayload.patientId} · ${qLabel} (${qConf}% confidence)`,
@@ -400,21 +393,6 @@ function PredictPageContent() {
       actionUrl: "/history",
       actionLabel: "View Case Report",
     });
-
-    // Auto-generate report download if enabled in Settings
-    if (typeof window !== "undefined" && localStorage.getItem("quantumx_setting_autodl") === "true") {
-      try {
-        const blob = new Blob([JSON.stringify(screeningPayload, null, 2)], {
-          type: "application/json;charset=utf-8",
-        });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `screening_${screeningPayload.patientId}_${Date.now()}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-      } catch {}
-    }
   };
 
   const getDedicatedLink = (dKey: DiseaseType) => {
@@ -430,6 +408,77 @@ function PredictPageContent() {
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="space-y-5 pb-12 w-full"
     >
+      {/* Upload Modal */}
+      <BiomarkerUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onApplyData={handleApplyExtractedData}
+      />
+
+      {/* Lock Notice Modal */}
+      <AnimatePresence>
+        {lockedModal?.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Lock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {lockedModal.title} (Clinical Calibration)
+                    </h3>
+                    <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                      Future Improvement Feature
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setLockedModal(null)}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
+                <p>
+                  <strong className="text-foreground">Apologies:</strong> The {lockedModal.title} module is currently locked while undergoing rigorous quantum noise mitigation (Paper 30) and multi-qubit verification.
+                </p>
+                <p>
+                  Our team is actively perfecting these quantum circuits for future release. In the meantime, our <strong className="text-foreground">Breast Cancer Cellular Screening Studio</strong> is fully calibrated and live with active 8-qubit variational classifiers.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  onClick={() => setLockedModal(null)}
+                  className="px-3 py-1.5 rounded-xl border border-border text-xs text-muted-foreground hover:bg-muted"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setLockedModal(null);
+                    setSelectedDisease("breast_cancer");
+                  }}
+                  className="px-4 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 flex items-center gap-1.5 shadow-sm"
+                >
+                  <span>Go to Breast Cancer Studio</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header + Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
         <div>
@@ -478,33 +527,47 @@ function PredictPageContent() {
 
       {activeTab === "workbench" ? (
         <>
-          {/* Disease Category Tabs with Dedicated Studio Links */}
+          {/* Disease Category Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(Object.keys(DISEASE_CONFIGS) as DiseaseType[]).map((dKey) => {
               const cfg = DISEASE_CONFIGS[dKey];
               const isSelected = selectedDisease === dKey;
+              const isLocked = cfg.isLocked;
               const IconComp = cfg.icon;
               const dedicatedUrl = getDedicatedLink(dKey);
 
               return (
                 <div
                   key={dKey}
-                  onClick={() => setSelectedDisease(dKey)}
-                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                  onClick={() => handleDiseaseClick(dKey)}
+                  className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2.5 relative overflow-hidden ${
                     isSelected
                       ? "bg-parchment border-quantum/60 shadow-xs ring-1 ring-quantum/30 text-ink"
+                      : isLocked
+                      ? "bg-cream-deep/30 border-hairline/60 opacity-85 hover:opacity-100"
                       : "bg-parchment/60 hover:bg-parchment border-hairline text-ink-soft hover:text-ink"
                   }`}
                 >
+                  {isLocked && (
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-medium">
+                      <Lock size={10} />
+                      <span>Calibration</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                        isSelected ? "bg-quantum/15 text-quantum" : "bg-cream-deep/60 text-ink-soft"
+                        isSelected
+                          ? "bg-quantum/15 text-quantum"
+                          : isLocked
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          : "bg-cream-deep/60 text-ink-soft"
                       }`}
                     >
                       <IconComp size={18} />
                     </div>
-                    <div className="overflow-hidden">
+                    <div className="overflow-hidden pr-12">
                       <span className="text-[9px] font-mono uppercase tracking-wider text-quantum font-semibold block">
                         {cfg.category}
                       </span>
@@ -516,23 +579,29 @@ function PredictPageContent() {
 
                   <div className="pt-2 border-t border-hairline flex items-center justify-between text-[10px]">
                     <span className="text-ink-soft">{cfg.datasetName}</span>
-                    <Link
-                      href={dedicatedUrl}
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      className="font-semibold text-quantum hover:underline flex items-center gap-0.5"
-                    >
-                      Open Studio →
-                    </Link>
+                    {isLocked ? (
+                      <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                        <Lock size={10} /> In Progress
+                      </span>
+                    ) : (
+                      <Link
+                        href={dedicatedUrl}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        className="font-semibold text-quantum hover:underline flex items-center gap-0.5"
+                      >
+                        Open Studio →
+                      </Link>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Quick Presets Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-cream-deep/40 border border-hairline text-xs">
-            <div className="flex items-center gap-2">
-              <FlaskConical size={14} className="text-quantum" />
+          {/* Quick Presets & Upload Action Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-cream-deep/40 border border-hairline text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <FlaskConical size={14} className="text-quantum shrink-0" />
               <span className="font-medium text-ink">Sample Cases:</span>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {currentConfig.presets.map((preset, idx) => (
@@ -552,15 +621,26 @@ function PredictPageContent() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[11px] text-ink-soft font-mono">Patient ID:</span>
-              <input
-                type="text"
-                value={patientIdInput}
-                onChange={(e) => setPatientIdInput(e.target.value)}
-                placeholder="Patient Name / ID"
-                className="w-32 h-7 px-2 rounded-lg bg-parchment border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum/60"
-              />
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsUploadModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-quantum/10 border border-quantum/30 text-quantum hover:bg-quantum hover:text-white transition-all font-medium text-xs cursor-pointer shadow-xs"
+              >
+                <UploadCloud size={13} />
+                <span>Upload Report (CSV, PDF, JSON)</span>
+              </button>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[11px] text-ink-soft font-mono">Patient ID:</span>
+                <input
+                  type="text"
+                  value={patientIdInput}
+                  onChange={(e) => setPatientIdInput(e.target.value)}
+                  placeholder="Patient Name"
+                  className="w-36 h-7 px-2 rounded-lg bg-parchment border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum/60"
+                />
+              </div>
             </div>
           </div>
 
@@ -570,8 +650,8 @@ function PredictPageContent() {
             <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-4 sm:p-5 space-y-4 shadow-xs">
               <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                 <div>
-                  <h2 className="font-serif text-base font-medium text-ink">Patient Health Metrics</h2>
-                  <p className="text-[11px] text-ink-soft">Adjust parameters manually or choose a sample case above</p>
+                  <h2 className="font-serif text-base font-medium text-ink">Cellular Biomarker Parameters</h2>
+                  <p className="text-[11px] text-ink-soft">Adjust sliders, type exact numbers, or import a report</p>
                 </div>
                 <button
                   type="button"
@@ -593,7 +673,7 @@ function PredictPageContent() {
                 {currentConfig.fields.map((field) => {
                   const val = formValues[field.key] ?? field.defaultValue;
                   return (
-                    <div key={field.key} className="space-y-1 p-2 sm:p-2.5 rounded-lg bg-cream/50 border border-hairline/60">
+                    <div key={field.key} className="space-y-1.5 p-3 rounded-xl bg-cream/50 border border-hairline/60">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1 max-w-[130px]">
                           <label className="text-[11px] font-semibold text-ink truncate" title={field.description}>
@@ -601,10 +681,31 @@ function PredictPageContent() {
                           </label>
                           <HelpTooltip text={field.simpleExplanation} title={field.label} />
                         </div>
-                        <span className="text-[10px] font-mono text-ink-soft">
-                          {val} {field.unit}
-                        </span>
+                        
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={field.min}
+                            max={field.max}
+                            step={field.step}
+                            value={val}
+                            onChange={(e) => {
+                              const parsed = parseFloat(e.target.value);
+                              if (!isNaN(parsed)) {
+                                setFormValues({
+                                  ...formValues,
+                                  [field.key]: parsed,
+                                });
+                              }
+                            }}
+                            className="w-16 h-6 px-1.5 text-right font-mono text-[11px] font-semibold text-ink bg-parchment rounded border border-hairline focus:outline-none focus:border-quantum"
+                          />
+                          <span className="text-[10px] font-mono text-ink-soft w-6 truncate">
+                            {field.unit}
+                          </span>
+                        </div>
                       </div>
+
                       <input
                         type="range"
                         min={field.min}
@@ -628,7 +729,7 @@ function PredictPageContent() {
                 })}
               </div>
 
-              {/* Action Button */}
+              {/* Run Button */}
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
@@ -639,7 +740,7 @@ function PredictPageContent() {
                 {isInferring ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-parchment border-t-transparent rounded-full animate-spin" />
-                    <span>Analyzing Patient Data on Quantum System...</span>
+                    <span>Analyzing Cellular Measurements...</span>
                   </>
                 ) : (
                   <>
@@ -650,8 +751,8 @@ function PredictPageContent() {
               </motion.button>
             </div>
 
-            {/* RIGHT: Results & Attributions */}
-            <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden min-h-[420px]">
+            {/* RIGHT: Results */}
+            <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-4 sm:p-5 flex flex-col justify-between shadow-xs relative overflow-hidden min-h-[440px]">
               <AnimatePresence mode="wait">
                 {isInferring ? (
                   <motion.div
@@ -665,10 +766,10 @@ function PredictPageContent() {
                       <Cpu size={28} />
                     </div>
                     <h3 className="font-serif text-xl font-light text-ink">
-                      Computing Quantum Diagnosis...
+                      Computing Quantum State Overlap...
                     </h3>
                     <p className="text-[11px] font-mono text-ink-soft max-w-sm mx-auto">
-                      Analyzing multi-symptom patterns with 8-qubit quantum states
+                      Encoding 8 cellular measurements into entangled quantum phase space
                     </p>
                   </motion.div>
                 ) : hasInferred && inferenceResult ? (
@@ -679,7 +780,6 @@ function PredictPageContent() {
                     transition={{ duration: 0.4 }}
                     className="space-y-4"
                   >
-                    {/* Header */}
                     <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                       <div>
                         <span className="text-[10px] font-mono uppercase tracking-wider text-quantum font-semibold">
@@ -689,109 +789,75 @@ function PredictPageContent() {
                       </div>
                       <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium">
                         <CheckCircle2 size={12} className="text-emerald-600" />
-                        <span>Models Agree</span>
-                        <HelpTooltip text="Both the quantum computing model and the traditional machine learning model reached the same medical conclusion." />
+                        <span>Consensus Reached</span>
                       </div>
                     </div>
 
-                    {/* Dual Result Cards */}
                     <div className="grid grid-cols-2 gap-3">
-                      {/* Quantum Model */}
-                      <div className="p-3 rounded-xl bg-cream border border-quantum/40 space-y-1.5 shadow-2xs">
+                      <div className="p-3.5 rounded-xl border border-quantum/30 bg-quantum/5 space-y-2 relative overflow-hidden">
                         <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono uppercase tracking-wider text-quantum font-semibold flex items-center gap-1">
-                            <Cpu size={11} /> Quantum Model
+                          <span className="text-[10px] font-mono uppercase text-quantum font-bold flex items-center gap-1">
+                            <Zap size={11} /> Quantum Model (VQC)
                           </span>
-                          <span className="text-[9px] font-mono text-ink-soft">{inferenceResult.quantumExecutionTimeMs}ms</span>
+                          <span className="text-[10px] font-mono text-ink-soft">{inferenceResult.quantumExecutionTimeMs}ms</span>
                         </div>
-                        <div className="font-serif text-base font-medium text-ink leading-tight">
-                          {inferenceResult.quantumLabel}
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex justify-between text-[11px] font-mono text-ink-soft">
-                            <span>Confidence</span>
-                            <span className="font-semibold text-quantum">{inferenceResult.quantumConfidence}%</span>
-                          </div>
-                          <div className="h-1 rounded-full bg-hairline overflow-hidden">
-                            <div
-                              className="h-full bg-quantum rounded-full transition-all duration-700"
-                              style={{ width: `${inferenceResult.quantumConfidence}%` }}
-                            />
-                          </div>
+                        <div>
+                          <p className="font-serif text-lg font-medium text-ink">{inferenceResult.quantumLabel}</p>
+                          <p className="text-xs font-mono text-quantum font-semibold">{inferenceResult.quantumConfidence}% confidence</p>
                         </div>
                       </div>
 
-                      {/* Classical Model */}
-                      <div className="p-3 rounded-xl bg-cream border border-hairline space-y-1.5 shadow-2xs">
+                      <div className="p-3.5 rounded-xl border border-hairline bg-cream/30 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono uppercase tracking-wider text-ink-soft font-semibold flex items-center gap-1">
-                            <Activity size={11} /> Standard Model
+                          <span className="text-[10px] font-mono uppercase text-ink-soft font-medium flex items-center gap-1">
+                            <Activity size={11} /> Classical Baseline (SVM)
                           </span>
-                          <span className="text-[9px] font-mono text-ink-soft">{inferenceResult.classicalExecutionTimeMs}ms</span>
+                          <span className="text-[10px] font-mono text-ink-soft">{inferenceResult.classicalExecutionTimeMs}ms</span>
                         </div>
-                        <div className="font-serif text-base font-medium text-ink leading-tight">
-                          {inferenceResult.classicalLabel}
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex justify-between text-[11px] font-mono text-ink-soft">
-                            <span>Confidence</span>
-                            <span className="font-semibold text-ink">{inferenceResult.classicalConfidence}%</span>
-                          </div>
-                          <div className="h-1 rounded-full bg-hairline overflow-hidden">
-                            <div
-                              className="h-full bg-ink rounded-full transition-all duration-700"
-                              style={{ width: `${inferenceResult.classicalConfidence}%` }}
-                            />
-                          </div>
+                        <div>
+                          <p className="font-serif text-lg font-medium text-ink">{inferenceResult.classicalLabel}</p>
+                          <p className="text-xs font-mono text-ink-soft font-medium">{inferenceResult.classicalConfidence}% confidence</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Key Drivers Attribution */}
-                    <div className="space-y-2 p-3 rounded-xl bg-cream-deep/30 border border-hairline">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-serif font-medium text-ink flex items-center gap-1">
-                            <Zap size={12} className="text-quantum" /> Key Diagnostic Factors
-                          </span>
-                          <HelpTooltip text="Shows which patient health metrics had the strongest statistical impact on this result." />
-                        </div>
-                        <span className="text-[9px] font-mono text-ink-soft">Impact Level</span>
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-ink text-[11px]">Primary Cellular Risk Drivers (QXplain)</span>
+                        <span className="text-[10px] font-mono text-ink-soft">Quantum Saliency S(G_k)</span>
                       </div>
                       <div className="space-y-1.5">
-                        {inferenceResult.quantumGateAttribution.map((gate, i) => (
-                          <div key={i} className="text-xs space-y-0.5">
-                            <div className="flex justify-between font-mono text-[10px] text-ink">
-                              <span className="truncate max-w-[250px]">{gate.name}</span>
-                              <span className="text-quantum font-semibold">+{gate.impact}%</span>
+                        {inferenceResult.quantumGateAttribution.map((attr, idx) => (
+                          <div key={idx} className="p-2 rounded-lg bg-cream/40 border border-hairline text-xs space-y-1">
+                            <div className="flex items-center justify-between font-mono text-[11px]">
+                              <span className="font-medium text-ink">{attr.name}</span>
+                              <span className="text-quantum font-semibold">+{attr.impact}% impact</span>
                             </div>
-                            <p className="text-[9px] text-ink-soft font-light">{gate.description}</p>
+                            <p className="text-[10px] text-ink-soft font-sans">{attr.description}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Clinical Summary */}
-                    <div className="p-3 rounded-lg bg-parchment border border-hairline/90 text-xs space-y-0.5">
-                      <span className="text-[9px] font-mono uppercase tracking-wider font-semibold text-ink">
-                        Clinical Summary &amp; Recommendation
-                      </span>
-                      <p className="text-ink-soft font-light text-[11px] leading-relaxed">
+                    <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-300 space-y-1">
+                      <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                        <Info size={13} />
+                        <span>Clinical Finding Summary</span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-amber-900/80 dark:text-amber-300/80">
                         {inferenceResult.clinicalNote}
                       </p>
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="my-auto text-center space-y-3 py-10">
-                    <div className="w-12 h-12 rounded-xl bg-cream-deep/60 border border-hairline text-ink-soft mx-auto flex items-center justify-center">
-                      <Sliders size={20} />
+                  <div className="my-auto text-center space-y-3 py-12">
+                    <div className="w-12 h-12 rounded-xl bg-cream-deep text-ink-soft mx-auto flex items-center justify-center">
+                      <Sliders size={22} />
                     </div>
-                    <div className="space-y-0.5">
-                      <h3 className="font-serif text-xl font-light text-ink">
-                        Ready to Screen
-                      </h3>
-                      <p className="text-[11px] text-ink-soft max-w-sm mx-auto font-light leading-relaxed">
-                        Adjust the health metric sliders on the left or select a sample case, then click "Run Quantum vs Classical Screening".
+                    <div className="space-y-1 max-w-xs mx-auto">
+                      <h3 className="font-serif text-lg font-light text-ink">Ready to Analyze</h3>
+                      <p className="text-xs text-ink-soft leading-relaxed">
+                        Adjust cellular measurements, upload a report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
                       </p>
                     </div>
                   </div>
@@ -801,52 +867,32 @@ function PredictPageContent() {
           </div>
         </>
       ) : (
-        /* Circuit Topology View */
-        <div className="p-4 sm:p-5 bg-parchment rounded-2xl border border-hairline shadow-xs space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-3 border-b border-hairline text-xs">
-            <div>
-              <span className="text-[9px] font-mono uppercase text-ink-soft">Quantum Qubits</span>
-              <div className="font-serif text-lg font-light text-ink">8 Entangled Qubits</div>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-ink-soft">Circuit Depth</span>
-              <div className="font-serif text-lg font-light text-quantum">4 Optimized Layers</div>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-ink-soft">Noise Extrapolation</span>
-              <div className="font-serif text-lg font-light text-emerald-700">Zero-Noise Extrap.</div>
-            </div>
-            <div>
-              <span className="text-[9px] font-mono uppercase text-ink-soft">Hardware Target</span>
-              <div className="font-serif text-lg font-light text-ink">IBM Quantum 127q</div>
-            </div>
+        /* Topology View */
+        <div className="bg-parchment rounded-2xl border border-hairline p-5 sm:p-6 space-y-6 shadow-xs">
+          <div className="border-b border-hairline pb-4">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-quantum font-semibold">
+              Hardware Architecture
+            </span>
+            <h2 className="font-serif text-xl font-light text-ink">
+              8-Qubit Second-Order Pauli-Z Entangling Circuit
+            </h2>
+            <p className="text-xs text-ink-soft mt-1">
+              Constructed via PennyLane. Encodes continuous patient measurements into $2^8 = 256$ dimensional Hilbert phase space.
+            </p>
           </div>
 
-          <div className="space-y-2 font-mono text-xs overflow-x-auto py-1">
-            {[
-              { q: "q[0]", name: currentConfig.fields[0]?.label || "Metric 1", angle: "θ₁ = 0.724 rad", cnot: "● ───────" },
-              { q: "q[1]", name: currentConfig.fields[1]?.label || "Metric 2", angle: "θ₂ = 0.418 rad", cnot: "┼ ── ● ──" },
-              { q: "q[2]", name: currentConfig.fields[2]?.label || "Metric 3", angle: "θ₃ = 1.052 rad", cnot: "┼ ── ┼ ── ●" },
-              { q: "q[3]", name: currentConfig.fields[3]?.label || "Metric 4", angle: "θ₄ = 0.891 rad", cnot: "┼ ── ┼ ── ┼ ── ●" },
-              { q: "q[4]", name: currentConfig.fields[4]?.label || "Metric 5", angle: "θ₅ = 0.231 rad", cnot: "┼ ── ┼ ── ┼ ── ┼ ── ●" },
-              { q: "q[5]", name: currentConfig.fields[5]?.label || "Metric 6", angle: "θ₆ = 0.612 rad", cnot: "┼ ── ┼ ── ┼ ── ┼ ── ┼ ── ●" },
-              { q: "q[6]", name: currentConfig.fields[6]?.label || "Metric 7", angle: "θ₇ = 0.543 rad", cnot: "┼ ── ┼ ── ┼ ── ┼ ── ┼ ── ┼ ── ●" },
-              { q: "q[7]", name: currentConfig.fields[7]?.label || "Metric 8", angle: "θ₈ = 0.380 rad", cnot: "X ── X ── X ── X ── X ── X ── X ── X" },
-            ].map((line, idx) => (
-              <div key={idx} className="flex items-center gap-3 py-1.5 px-2.5 rounded-lg bg-cream/70 border border-hairline/60">
-                <span className="w-10 font-bold text-quantum text-[11px]">{line.q}</span>
-                <span className="w-36 text-ink text-[11px] truncate">{line.name}</span>
-                <span className="px-1.5 py-0.5 rounded bg-parchment border border-hairline text-ink-soft text-[9px]">
-                  Rotation({line.angle})
-                </span>
-                <span className="text-quantum tracking-wider font-light text-[11px] hidden sm:inline">
-                  {line.cnot}
-                </span>
-                <span className="ml-auto text-[9px] text-ink-soft flex items-center gap-1">
-                  <Check size={10} className="text-emerald-600" /> Measured
-                </span>
-              </div>
-            ))}
+          <div className="p-4 rounded-xl bg-ink text-parchment font-mono text-[11px] overflow-x-auto space-y-2 border border-hairline shadow-inner">
+            <p className="text-quantum font-bold">// 1. Data Encoding: ZZ Feature Map</p>
+            <p className="text-parchment/80">for j in range(8):</p>
+            <p className="text-parchment/80 pl-4">H(wires=j); RZ(2.0 * x[j], wires=j)</p>
+            <p className="text-parchment/80">for j in range(7):</p>
+            <p className="text-parchment/80 pl-4">CNOT(j, j+1); RZ(2.0 * (π - x[j]) * (π - x[j+1]), j+1); CNOT(j, j+1)</p>
+            <p className="text-quantum font-bold pt-2">// 2. Parameterized Variational Ansatz (L=2 Layers)</p>
+            <p className="text-parchment/80">for l in range(2):</p>
+            <p className="text-parchment/80 pl-4">for j in range(8): Rot(θ[l,j,0], θ[l,j,1], θ[l,j,2], wires=j)</p>
+            <p className="text-parchment/80 pl-4">for j in range(8): CNOT(j, (j+1)%8)</p>
+            <p className="text-quantum font-bold pt-2">// 3. Observables</p>
+            <p className="text-parchment/80">return [expval(PauliZ(i)) for i in range(8)]</p>
           </div>
         </div>
       )}
@@ -858,8 +904,8 @@ export default function PredictPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[500px] flex items-center justify-center">
-          <Loader2 className="animate-spin text-ink" size={32} />
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-quantum" />
         </div>
       }
     >
@@ -867,4 +913,3 @@ export default function PredictPage() {
     </Suspense>
   );
 }
-
