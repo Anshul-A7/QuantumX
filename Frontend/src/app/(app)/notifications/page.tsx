@@ -17,61 +17,46 @@ import {
 import Link from "next/link";
 import HelpTooltip from "@/components/common/HelpTooltip";
 
-interface NotificationItem {
-  id: string;
-  title: string;
-  category: "system" | "benchmark" | "disease";
-  time: string;
-  message: string;
-  read: boolean;
-  actionUrl?: string;
-  actionLabel?: string;
-}
+import { NotificationService, type NotificationItem } from "@/services/notification.service";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<"all" | "unread" | "system" | "disease">("all");
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("quantumx_notifications");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setNotifications(parsed);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load notifications:", err);
-      }
+  const loadNotifications = async () => {
+    try {
+      const records = await NotificationService.getNotifications();
+      setNotifications(records || []);
+    } catch {
+      setNotifications([]);
     }
+  };
+
+  useEffect(() => {
+    loadNotifications();
   }, []);
 
-  const saveNotifications = (updated: NotificationItem[]) => {
-    setNotifications(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("quantumx_notifications", JSON.stringify(updated));
-    }
-  };
-
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
     const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-    saveNotifications(updated);
+    setNotifications(updated);
+    await NotificationService.markAsRead(id);
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     const updated = notifications.map((n) => ({ ...n, read: true }));
-    saveNotifications(updated);
+    setNotifications(updated);
+    await NotificationService.markAllAsRead();
   };
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = async (id: string) => {
     const updated = notifications.filter((n) => n.id !== id);
-    saveNotifications(updated);
+    setNotifications(updated);
+    await NotificationService.deleteNotification(id);
   };
 
-  const clearAll = () => {
-    saveNotifications([]);
+  const clearAll = async () => {
+    setNotifications([]);
+    await NotificationService.clearAll();
   };
 
   const filteredNotifications = notifications.filter((n) => {

@@ -20,6 +20,8 @@ import {
   Loader2,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { ScreeningService } from "@/services/screening.service";
+import { NotificationService } from "@/services/notification.service";
 
 type DiseaseType = "breast_cancer" | "heart_disease" | "chronic_kidney";
 
@@ -361,43 +363,33 @@ function PredictPageContent() {
     setHasInferred(true);
     setIsInferring(false);
 
-    if (typeof window !== "undefined") {
-      try {
-        const storedHistory = localStorage.getItem("quantumx_prediction_history");
-        const historyList = storedHistory ? JSON.parse(storedHistory) : [];
-        const newRecord = {
-          id: `QX-${Math.floor(10000 + Math.random() * 90000)}`,
-          patientName: patientIdInput || `Patient-${Math.floor(1000 + Math.random() * 9000)}`,
-          disease: currentConfig.title.split(" (")[0],
-          quantumPrediction: qLabel,
-          quantumConfidence: qConf,
-          classicalPrediction: cLabel,
-          classicalConfidence: cConf,
-          topDriver: attributions[0]?.name || "Cell Shape Factor",
-          riskLevel: risk,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-        };
-        const updatedList = [newRecord, ...historyList].slice(0, 50);
-        localStorage.setItem("quantumx_prediction_history", JSON.stringify(updatedList));
+    // Save directly to Supabase Database
+    const screeningPayload = {
+      id: `QX-${Math.floor(10000 + Math.random() * 90000)}`,
+      patientId: patientIdInput || `Patient-${Math.floor(1000 + Math.random() * 9000)}`,
+      diseaseType: currentConfig.title.split(" (")[0],
+      quantumPrediction: qLabel,
+      quantumConfidence: qConf,
+      classicalPrediction: cLabel,
+      classicalConfidence: cConf,
+      riskLevel: risk,
+      topDriver: attributions[0]?.name || "Cell Shape Factor",
+      quantumExecutionTimeMs: resultData.quantumExecutionTimeMs,
+      classicalExecutionTimeMs: resultData.classicalExecutionTimeMs,
+      inputFeatures: formValues,
+      gateAttributions: attributions,
+      clinicalNote: note,
+    };
 
-        // Real notification logging
-        const storedNotifs = localStorage.getItem("quantumx_notifications");
-        const notifList = storedNotifs ? JSON.parse(storedNotifs) : [];
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          title: `Screening Completed: ${newRecord.patientName}`,
-          category: "disease",
-          time: "Just now",
-          message: `${newRecord.disease} result: ${qLabel} (${qConf}% confidence).`,
-          read: false,
-          actionUrl: "/history",
-          actionLabel: "View Record",
-        };
-        localStorage.setItem("quantumx_notifications", JSON.stringify([newNotif, ...notifList].slice(0, 20)));
-      } catch (err) {
-        console.error("Failed to store prediction history:", err);
-      }
-    }
+    ScreeningService.createScreening(screeningPayload).catch(() => {});
+
+    // Save notification event to Supabase
+    NotificationService.createNotification({
+      title: `Screening Completed: ${screeningPayload.patientId}`,
+      category: "disease",
+      message: `${screeningPayload.diseaseType} result: ${qLabel} (${qConf}% confidence).`,
+      actionUrl: "/history",
+    }).catch(() => {});
   };
 
   const getDedicatedLink = (dKey: DiseaseType) => {

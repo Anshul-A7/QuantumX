@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -10,7 +11,15 @@ import {
   Maximize2,
   Minimize2,
   User,
+  RefreshCw,
+  Cpu,
+  Layers,
+  FileText,
+  Activity,
 } from "lucide-react";
+import { AuthService } from "@/services/auth.service";
+import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
+import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 
 interface ChatMessage {
   id: string;
@@ -19,12 +28,49 @@ interface ChatMessage {
   timestamp: string;
 }
 
-const QUICK_PROMPTS = [
-  "How does the Quantum model detect subtle disease signs?",
-  "What is the difference between Quantum and Classical models?",
+const SUGGESTION_GROUPS = [
+  {
+    category: "Screening & Patient Reports",
+    icon: FileText,
+    prompts: [
+      "Summarize my recent patient screening records",
+      "Why was my latest patient classified as high risk?",
+      "What are the primary cellular shape drivers in breast cancer?",
+    ],
+  },
+  {
+    category: "Quantum vs Classical Benchmarks",
+    icon: Activity,
+    prompts: [
+      "What is the difference between Quantum VQC and XGBoost?",
+      "What are the McNemar χ² test results in the BVP protocol?",
+      "Explain Cohen's d effect size on WDBC classification",
+    ],
+  },
+  {
+    category: "Theoretical Advantage (s_K) & Circuits",
+    icon: Layers,
+    prompts: [
+      "How does the s_K ≥ 1.2 geometric advantage metric work?",
+      "Explain the ZZ-feature map state encoding formula",
+      "How does the Parameter-Shift rule calculate quantum gradients?",
+    ],
+  },
+  {
+    category: "Hardware & Error Mitigation",
+    icon: Cpu,
+    prompts: [
+      "How does Zero-Noise Extrapolation (ZNE) mitigate NISQ noise?",
+      "What is the difference between statevector simulation and IBM QPU?",
+      "How does QXplain calculate gate ablation saliency maps?",
+    ],
+  },
 ];
 
 export default function QuantumChatbot() {
+  const pathname = usePathname();
+  const { backend: activeBackend } = useQuantumBackend();
+
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -32,37 +78,32 @@ export default function QuantumChatbot() {
   const [isThinking, setIsThinking] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [displayedTextMap, setDisplayedTextMap] = useState<Record<string, string>>({});
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState("Investigator");
+  const [userEmail, setUserEmail] = useState("");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [recentScreenings, setRecentScreenings] = useState<StoredPrediction[]>([]);
+  const [suggestionGroupIdx, setSuggestionGroupIdx] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
 
-  // Sync user name & avatar from localStorage
+  // Sync user profile & recent screenings from Supabase
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedName = localStorage.getItem("quantumx_user_name");
-      const storedAvatar = localStorage.getItem("quantumx_user_avatar");
-      if (storedName && storedName !== "Dr. Eleanor Vance") {
-        setUserName(storedName);
-      }
-      if (storedAvatar) {
-        setUserAvatar(storedAvatar);
-      }
-
-      // Listen for profile updates
-      const handleStorage = () => {
-        const n = localStorage.getItem("quantumx_user_name");
-        const a = localStorage.getItem("quantumx_user_avatar");
-        if (n && n !== "Dr. Eleanor Vance") setUserName(n);
-        if (a) setUserAvatar(a);
-      };
-      window.addEventListener("storage", handleStorage);
-      return () => window.removeEventListener("storage", handleStorage);
+    const cachedUser = AuthService.getCachedUser();
+    if (cachedUser) {
+      setUserName(cachedUser.fullName || cachedUser.username || "Investigator");
+      setUserEmail(cachedUser.email || "");
+      if (cachedUser.profileImageUrl) setUserAvatar(cachedUser.profileImageUrl);
     }
-  }, []);
+
+    ScreeningService.getScreenings()
+      .then((records) => setRecentScreenings(records || []))
+      .catch(() => {});
+  }, [isOpen]);
 
   const getWelcomeText = () => {
-    return `Hi ${userName}! 👋 I'm QuantumX, your AI assistant.\n\nI can help you with:\n• Breast cancer, heart & kidney screening\n• Quantum vs Classical benchmarks\n• IBM Quantum hardware & ZNE mitigation\n• QXplain gate attribution & circuits\n\nWhat would you like to know?`;
+    const count = recentScreenings.length;
+    return `Hi ${userName}! 👋 I'm **QuantumX AI**, your specialized clinical intelligence assistant.\n\nI have real-time access to your **${count} saved patient diagnostic record(s)** and the **${activeBackend === "ibmq_eagle" ? "IBM Quantum Eagle 127Q" : "GPU Simulator"}** backend.\n\nWhat would you like to investigate today?`;
   };
 
   const scrollToBottom = () => {
@@ -90,11 +131,11 @@ export default function QuantumChatbot() {
         };
         setMessages([welcomeMsg]);
         startTypewriter("msg-welcome", welcomeStr);
-      }, 400);
+      }, 350);
 
       return () => clearTimeout(thinkTimer);
     }
-  }, [isOpen, messages.length, userName]);
+  }, [isOpen, messages.length, userName, recentScreenings.length]);
 
   const startTypewriter = (msgId: string, fullText: string) => {
     setTypingMessageId(msgId);
@@ -102,7 +143,7 @@ export default function QuantumChatbot() {
     setDisplayedTextMap((prev) => ({ ...prev, [msgId]: "" }));
 
     const interval = setInterval(() => {
-      currIdx += 3; // Fast, smooth streaming
+      currIdx += 4; // Fast, responsive streaming
       if (currIdx >= fullText.length) {
         setDisplayedTextMap((prev) => ({ ...prev, [msgId]: fullText }));
         setTypingMessageId(null);
@@ -113,46 +154,12 @@ export default function QuantumChatbot() {
           [msgId]: fullText.slice(0, currIdx),
         }));
       }
-    }, 12);
-  };
-
-  const generateAnswer = (query: string): string => {
-    const q = query.toLowerCase();
-
-    if (q.includes("advantage") || q.includes("better") || q.includes("difference") || q.includes("classical")) {
-      return "Traditional computer models process patient metrics independently. Quantum Variational Classifiers use entangled qubits to analyze complex, non-linear relationships across all symptoms simultaneously, yielding up to a +4.2% accuracy advantage on difficult cardiac and oncology cases.";
-    }
-
-    if (q.includes("noise") || q.includes("extrapolation") || q.includes("zne") || q.includes("mitigation")) {
-      return "Zero-Noise Extrapolation (ZNE) is our error mitigation protocol. Because quantum hardware experiences tiny thermal variations, ZNE artificially scales noise upwards in steps and calculates backward mathematically to estimate the pure, zero-noise medical reading.";
-    }
-
-    if (q.includes("zz") || q.includes("feature map") || q.includes("entangle")) {
-      return "The ZZ Feature Map encodes numeric patient test measurements into quantum rotation angles (Rz gates) and creates phase entanglement (CNOT gates) between paired qubits. This projects patient data into high-dimensional quantum Hilbert space where disease boundaries are clearly separable.";
-    }
-
-    if (q.includes("breast") || q.includes("cancer") || q.includes("tumor") || q.includes("malignant")) {
-      return "The Breast Cancer module evaluates 8 cellular characteristics: cell radius, texture, perimeter, nuclear area, smoothness, compactness, concavity depth, and concave notch count. Irregular borders and high concavity depths are the primary indicators of malignancy.";
-    }
-
-    if (q.includes("heart") || q.includes("cardio") || q.includes("vessel") || q.includes("ecg")) {
-      return "The Heart Disease module analyzes cardiovascular stress test markers: resting blood pressure, cholesterol, max exercise heart rate (thalach), ECG ST depression (oldpeak), and fluoroscopy vessel narrowing. The quantum model excels at detecting subtle multi-factor ischemia.";
-    }
-
-    if (q.includes("kidney") || q.includes("renal") || q.includes("creatinine") || q.includes("urea")) {
-      return "The Kidney Disease module screens for early renal decline using serum creatinine, urine specific gravity, albumin protein in urine, blood urea nitrogen (BUN), and blood glucose. Elevated creatinine (> 1.4 mg/dl) with proteinuria strongly flags chronic kidney disease risk.";
-    }
-
-    if (q.includes("hi") || q.includes("hello") || q.includes("help")) {
-      return `Hello ${userName}! I'm here to assist you with interpreting patient screening reports, understanding quantum gate attributions, or explaining model benchmark statistics.`;
-    }
-
-    return "Our hybrid quantum diagnostic architecture executes 8-qubit parameter circuits compiled via Qiskit Runtime. Each prediction yields a confidence score alongside QXplain gate attribution, identifying exactly which biomarkers influenced the medical recommendation.";
+    }, 10);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
-    if (!text) return;
+    if (!text || isThinking) return;
 
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
@@ -165,9 +172,29 @@ export default function QuantumChatbot() {
     if (!textToSend) setInputText("");
     setIsThinking(true);
 
-    setTimeout(() => {
-      setIsThinking(false);
-      const replyText = generateAnswer(text);
+    try {
+      const payload = {
+        message: text,
+        conversationHistory: messages.slice(-6),
+        userContext: {
+          userName,
+          userEmail,
+          activeBackend: activeBackend === "ibmq_eagle" ? "IBM Quantum Eagle (127-Qubit)" : "GPU Statevector Simulator",
+          currentPath: pathname,
+          recentScreenings: recentScreenings.slice(0, 10),
+          totalScreeningsCount: recentScreenings.length,
+        },
+      };
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      const replyText = data.reply || "QuantumX AI received your query. Please refer to the benchmark and screening dashboards.";
+
       const newBotId = `b-${Date.now()}`;
       const botMsg: ChatMessage = {
         id: newBotId,
@@ -175,9 +202,22 @@ export default function QuantumChatbot() {
         text: replyText,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
+
+      setIsThinking(false);
       setMessages((prev) => [...prev, botMsg]);
       startTypewriter(newBotId, replyText);
-    }, 550);
+    } catch {
+      setIsThinking(false);
+      const newBotId = `b-${Date.now()}`;
+      const fallbackMsg: ChatMessage = {
+        id: newBotId,
+        sender: "assistant",
+        text: "The clinical query engine is online. You can view all diagnostic details in the **[Screening History](/history)** and **[Benchmarks](/benchmarks)** dashboards.",
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, fallbackMsg]);
+      startTypewriter(newBotId, fallbackMsg.text);
+    }
   };
 
   const handleResetChat = () => {
@@ -196,13 +236,15 @@ export default function QuantumChatbot() {
       };
       setMessages([welcomeMsg]);
       startTypewriter("msg-welcome-reset", welcomeStr);
-    }, 400);
+    }, 300);
   };
 
-  // Platform Star Logo Icon
-  const QuantumStarIcon = ({ size = 14 }: { size?: number }) => (
-    <Sparkles size={size} className="text-white fill-white/10" />
-  );
+  const cycleSuggestions = () => {
+    setSuggestionGroupIdx((prev) => (prev + 1) % SUGGESTION_GROUPS.length);
+  };
+
+  const currentSuggestions = SUGGESTION_GROUPS[suggestionGroupIdx];
+  const SuggestionIcon = currentSuggestions.icon;
 
   return (
     <div className="fixed bottom-11 right-9 z-50 font-sans">
@@ -224,7 +266,7 @@ export default function QuantumChatbot() {
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Open Quantum AI Assistant"
-          title="QuantumX AI Assistant"
+          title="QuantumX Clinical AI Assistant"
           className="relative w-12 h-12 rounded-full bg-black text-white shadow-xl flex items-center justify-center cursor-pointer transition-all z-10"
         >
           <AnimatePresence mode="wait">
@@ -252,116 +294,115 @@ export default function QuantumChatbot() {
         </motion.button>
       </div>
 
-      {/* Floating Chat Window Modal (Exact UI Match) */}
+      {/* Chat Window Modal */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.85, x: 25, y: 25 }}
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, x: 25, y: 25 }}
-            transition={{ type: "spring", stiffness: 320, damping: 26 }}
-            style={{ transformOrigin: "bottom right" }}
-            className={`absolute bottom-8 right-16 ${
-              isExpanded ? "w-[380px] sm:w-[460px] h-[540px]" : "w-[330px] sm:w-[370px] h-[450px]"
-            } bg-white rounded-[26px] border border-gray-200/90 shadow-2xl flex flex-col overflow-hidden z-50 transition-all duration-200 ring-1 ring-black/5`}
+            initial={{ opacity: 0, y: 30, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 25, scale: 0.94 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className={`absolute bottom-16 right-0 ${
+              isExpanded
+                ? "w-[92vw] sm:w-[680px] h-[82vh] max-h-[820px]"
+                : "w-[92vw] sm:w-[420px] h-[580px] max-h-[75vh]"
+            } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_25px_70px_-15px_rgba(40,30,20,0.35)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
           >
-            {/* Header (Matching Reference Design) */}
-            <div className="px-4 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                {/* Squircle Quantum Star Icon */}
-                <div className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-xs shrink-0">
-                  <QuantumStarIcon size={16} />
+            {/* Window Header */}
+            <div className="px-5 py-4 border-b border-hairline bg-cream/70 backdrop-blur-md flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-black text-white flex items-center justify-center shadow-xs">
+                  <Sparkles size={16} className="text-quantum animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-gray-900 leading-tight">
-                    QuantumX
-                  </h3>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                    <span className="text-[11px] text-emerald-600 font-medium">
-                      AI Assistant
+                  <div className="flex items-center gap-2">
+                    <span className="font-serif text-sm font-medium text-ink tracking-tight">QuantumX</span>
+                    <span className="text-[9px] font-mono uppercase tracking-widest text-quantum bg-quantum/10 border border-quantum/20 px-1.5 py-0.5 rounded-full font-semibold">
+                      Clinical AI
                     </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-ink-soft">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Gemini 2.5 Intelligence · {recentScreenings.length} Cases Synced</span>
                   </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 text-ink-soft">
                 <button
                   type="button"
                   onClick={handleResetChat}
-                  title="Reset conversation"
-                  className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                  title="Clear conversation"
+                  className="p-1.5 rounded-lg hover:bg-cream-deep/70 hover:text-ink transition-colors cursor-pointer"
                 >
-                  <RotateCcw size={13} />
+                  <RotateCcw size={14} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  title={isExpanded ? "Collapse" : "Expand"}
-                  className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                  title={isExpanded ? "Collapse window" : "Expand window"}
+                  className="p-1.5 rounded-lg hover:bg-cream-deep/70 hover:text-ink transition-colors cursor-pointer"
                 >
-                  {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                  {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  title="Close chat"
-                  className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
+                  title="Close Assistant"
+                  className="p-1.5 rounded-lg hover:bg-cream-deep/70 hover:text-ink transition-colors cursor-pointer"
                 >
                   <X size={15} />
                 </button>
               </div>
             </div>
 
-            {/* Messages Scroll Area (Hidden Scrollbars) */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-3.5 no-scrollbar bg-white">
+            {/* Messages Scroll Area */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-xs font-sans">
               {messages.map((msg) => {
-                const isAssistant = msg.sender === "assistant";
-                const isStreaming = typingMessageId === msg.id;
-                const displayText = isStreaming
-                  ? displayedTextMap[msg.id] ?? ""
-                  : isAssistant
-                  ? displayedTextMap[msg.id] ?? msg.text
-                  : msg.text;
+                const isBot = msg.sender === "assistant";
+                const isTyping = typingMessageId === msg.id;
+                const displayText = displayedTextMap[msg.id] ?? msg.text;
 
                 return (
                   <motion.div
                     key={msg.id}
-                    initial={{ opacity: 0, y: 5 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-2.5 items-start ${
-                      msg.sender === "user" ? "justify-end" : "justify-start"
-                    }`}
+                    transition={{ duration: 0.2 }}
+                    className={`flex items-start gap-2.5 ${isBot ? "justify-start" : "justify-end"}`}
                   >
-                    {isAssistant && (
-                      <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                        <QuantumStarIcon size={14} />
+                    {isBot && (
+                      <div className="w-7 h-7 rounded-xl bg-black text-white shrink-0 flex items-center justify-center mt-0.5 shadow-2xs">
+                        <Sparkles size={13} className="text-quantum" />
                       </div>
                     )}
 
                     <div
-                      className={`max-w-[82%] space-y-1 ${
-                        msg.sender === "user"
-                          ? "bg-[#18181B] text-white rounded-2xl rounded-tr-xs px-3.5 py-2.5 shadow-xs"
-                          : "bg-[#F4F4F6] text-gray-800 rounded-2xl rounded-tl-xs p-3.5 shadow-2xs border border-gray-100/70"
+                      className={`max-w-[84%] rounded-2xl p-3.5 leading-relaxed ${
+                        isBot
+                          ? "bg-cream-deep/60 border border-hairline/90 text-ink shadow-2xs"
+                          : "bg-ink text-parchment font-medium shadow-xs"
                       }`}
                     >
-                      <p className="font-normal text-[12.5px] leading-relaxed whitespace-pre-line">
+                      <div className="whitespace-pre-wrap font-normal text-[12.5px] leading-relaxed">
                         {displayText}
-                        {isStreaming && (
-                          <span className="inline-block w-1 h-3 bg-emerald-500 ml-0.5 align-middle animate-pulse" />
-                        )}
-                      </p>
+                        {isTyping && <span className="inline-block w-1.5 h-3 bg-quantum ml-1 animate-pulse" />}
+                      </div>
+                      <span
+                        className={`block text-[9px] font-mono mt-1.5 ${
+                          isBot ? "text-ink-soft/70 text-left" : "text-parchment/60 text-right"
+                        }`}
+                      >
+                        {msg.timestamp}
+                      </span>
                     </div>
 
-                    {/* User Profile Avatar */}
-                    {msg.sender === "user" && (
-                      <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center shrink-0 mt-0.5 overflow-hidden shadow-2xs border border-gray-200">
+                    {!isBot && (
+                      <div className="w-7 h-7 rounded-full bg-cream-deep border border-hairline text-ink shrink-0 flex items-center justify-center mt-0.5 overflow-hidden text-[10px] font-serif font-bold">
                         {userAvatar ? (
                           <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
                         ) : (
-                          <User size={13} className="text-white" />
+                          userName.charAt(0).toUpperCase()
                         )}
                       </div>
                     )}
@@ -369,95 +410,81 @@ export default function QuantumChatbot() {
                 );
               })}
 
-              {/* Clickable Centered Suggestions (Visible only before 1st user message) */}
-              {messages.length === 1 && !isThinking && typingMessageId === null && (
+              {isThinking && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="flex flex-col items-center justify-center text-center space-y-2 pt-2 pb-1"
+                  className="flex items-center gap-2.5 text-xs text-ink-soft"
                 >
-                  <span className="text-[9.5px] text-gray-400 font-mono flex items-center justify-center gap-1 uppercase tracking-wider">
-                    <Sparkles size={10} className="text-emerald-500" />
-                    Suggested questions
-                  </span>
-                  <div className="flex flex-col items-center gap-1.5 w-full">
-                    {QUICK_PROMPTS.map((prompt, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleSendMessage(prompt)}
-                        className="w-full max-w-[94%] px-3.5 py-2 rounded-full bg-white hover:bg-emerald-50/60 border border-gray-200 hover:border-emerald-500/40 text-[11px] text-gray-700 hover:text-emerald-900 transition-all cursor-pointer font-medium text-center shadow-2xs flex items-center justify-center gap-2 group"
-                      >
-                        <span className="text-emerald-500 text-[11px] group-hover:scale-115 transition-transform">
-                          ✦
-                        </span>
-                        <span className="leading-snug">{prompt}</span>
-                      </button>
-                    ))}
+                  <div className="w-7 h-7 rounded-xl bg-black text-white shrink-0 flex items-center justify-center shadow-2xs">
+                    <Sparkles size={13} className="text-quantum animate-spin" />
+                  </div>
+                  <div className="bg-cream-deep/50 border border-hairline px-3.5 py-2 rounded-2xl flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:0.3s]" />
+                    <span className="text-[11px] font-mono text-ink-soft ml-1">Analyzing Quantum Pipeline &amp; DB...</span>
                   </div>
                 </motion.div>
               )}
-
-              {/* Thinking Indicator */}
-              {isThinking && (
-                <motion.div
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex gap-2.5 items-center"
-                >
-                  <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
-                    <QuantumStarIcon size={14} />
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-[#F4F4F6] border border-gray-100 shadow-2xs">
-                    <span className="text-[11px] text-gray-500 font-medium">Thinking</span>
-                    <div className="flex gap-0.5">
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 animate-bounce" />
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.15s]" />
-                      <span className="w-1 h-1 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.3s]" />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Footer with helper label */}
-            <div className="p-3 bg-white border-t border-gray-100 flex flex-col gap-1">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="flex items-center gap-2 bg-[#F4F4F6] rounded-2xl p-1 pl-3.5 border border-gray-200/70 focus-within:border-gray-400 focus-within:bg-white transition-all"
-              >
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  placeholder="Ask about screening, detection, API..."
-                  className="flex-1 bg-transparent text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none"
-                />
+            {/* Dynamic Suggestions Carousel */}
+            <div className="px-4 py-2 bg-cream/50 border-t border-hairline/80">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-ink-soft flex items-center gap-1.5">
+                  <SuggestionIcon size={11} className="text-quantum" />
+                  {currentSuggestions.category}
+                </span>
                 <button
-                  type="submit"
-                  disabled={!inputText.trim() || isThinking || typingMessageId !== null}
-                  className="w-8 h-8 rounded-xl bg-gray-200 hover:bg-black hover:text-white text-gray-600 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40 disabled:hover:bg-gray-200 disabled:hover:text-gray-600 shrink-0"
+                  type="button"
+                  onClick={cycleSuggestions}
+                  className="text-[10px] font-mono text-quantum hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Cycle to next suggestion set"
                 >
-                  <Send size={13} />
+                  <RefreshCw size={10} /> Next Topics
                 </button>
-              </form>
+              </div>
 
-              <span className="text-[10px] text-gray-400 text-center block pt-0.5 pb-0.5 font-light">
-                Enter to send · Shift+Enter for newline
-              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                {currentSuggestions.prompts.map((p, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendMessage(p)}
+                    className="shrink-0 text-[11px] px-3 py-1.5 rounded-full bg-parchment hover:bg-cream-deep border border-hairline text-ink transition-all cursor-pointer font-medium hover:border-quantum/50 shadow-2xs"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Input Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="p-3 bg-cream border-t border-hairline flex items-center gap-2 shrink-0"
+            >
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Ask about patient reports, s_K formulas, ZNE, VQC..."
+                className="flex-1 px-4 py-2.5 rounded-2xl bg-parchment border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink transition-all"
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim() || isThinking}
+                className="w-10 h-10 rounded-2xl bg-ink text-parchment hover:opacity-90 disabled:opacity-40 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
+                title="Send query"
+              >
+                <Send size={15} />
+              </button>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>

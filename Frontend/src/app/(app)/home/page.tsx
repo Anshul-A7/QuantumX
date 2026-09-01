@@ -23,18 +23,7 @@ import {
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 
-interface StoredPrediction {
-  id: string;
-  patientName: string;
-  disease: string;
-  quantumPrediction: string;
-  quantumConfidence: number;
-  classicalPrediction: string;
-  classicalConfidence: number;
-  topDriver: string;
-  riskLevel: "High" | "Low";
-  timestamp: string;
-}
+
 
 const DISEASE_MODULES = [
   {
@@ -78,32 +67,27 @@ const DISEASE_MODULES = [
   },
 ];
 
+import { AuthService } from "@/services/auth.service";
+import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
+
 export default function HomePage() {
   const { backend } = useQuantumBackend();
-  const [userName, setUserName] = useState("User");
+  const [userName, setUserName] = useState<string>("");
   const [recentPredictions, setRecentPredictions] = useState<StoredPrediction[]>([]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedName = localStorage.getItem("quantumx_user_name");
-      if (storedName && storedName !== "Dr. Eleanor Vance") {
-        setUserName(storedName);
-      } else {
-        setUserName("User");
-      }
-
-      try {
-        const historyRaw = localStorage.getItem("quantumx_prediction_history");
-        if (historyRaw) {
-          const parsed = JSON.parse(historyRaw);
-          if (Array.isArray(parsed)) {
-            setRecentPredictions(parsed.slice(0, 5));
-          }
-        }
-      } catch (err) {
-        console.error("Failed to parse prediction history:", err);
-      }
+    // 1. Load real user profile
+    const cachedUser = AuthService.getCachedUser();
+    if (cachedUser) {
+      setUserName(cachedUser.fullName || cachedUser.username || "Investigator");
     }
+
+    // 2. Fetch real patient screenings from Supabase DB
+    ScreeningService.getScreenings()
+      .then((records) => {
+        setRecentPredictions((records || []).slice(0, 5));
+      })
+      .catch(() => {});
   }, []);
 
   return (

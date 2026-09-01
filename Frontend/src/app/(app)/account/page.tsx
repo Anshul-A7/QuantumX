@@ -20,9 +20,12 @@ import {
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 
+import { AuthService } from "@/services/auth.service";
+import { ScreeningService } from "@/services/screening.service";
+
 export default function AccountPage() {
-  const [userName, setUserName] = useState("User");
-  const [userEmail, setUserEmail] = useState("user@quantumx.io");
+  const [userName, setUserName] = useState<string>("");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const { backend: preferredBackend, setBackend: setPreferredBackend } = useQuantumBackend();
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -31,39 +34,31 @@ export default function AccountPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedName = localStorage.getItem("quantumx_user_name");
-      const storedEmail = localStorage.getItem("quantumx_user_email");
-      const storedAvatar = localStorage.getItem("quantumx_user_avatar");
-      const historyRaw = localStorage.getItem("quantumx_prediction_history");
-
-      if (storedName && storedName !== "Dr. Eleanor Vance") {
-        setUserName(storedName);
-      } else {
-        setUserName("User");
-      }
-
-      if (storedEmail && storedEmail !== "researcher@institute.org") {
-        setUserEmail(storedEmail);
-      } else {
-        setUserEmail("user@quantumx.io");
-      }
-
-      if (storedAvatar) {
-        setUserAvatar(storedAvatar);
-      }
-
-      if (historyRaw) {
-        try {
-          const parsed = JSON.parse(historyRaw);
-          if (Array.isArray(parsed)) {
-            setScreeningCount(parsed.length);
-          }
-        } catch (e) {
-          console.error("Failed to parse history count:", e);
-        }
-      }
+    // 1. Load cached user profile immediately
+    const cached = AuthService.getCachedUser();
+    if (cached) {
+      setUserName(cached.fullName || cached.username || "");
+      setUserEmail(cached.email || "");
+      if (cached.profileImageUrl) setUserAvatar(cached.profileImageUrl);
     }
+
+    // 2. Fetch fresh profile from Supabase API
+    AuthService.getCurrentUser()
+      .then((user) => {
+        if (user) {
+          setUserName(user.fullName || user.username || "");
+          setUserEmail(user.email || "");
+          if (user.profileImageUrl) setUserAvatar(user.profileImageUrl);
+        }
+      })
+      .catch(() => {});
+
+    // 3. Fetch real screening count from Supabase
+    ScreeningService.getScreenings()
+      .then((records) => {
+        setScreeningCount((records || []).length);
+      })
+      .catch(() => {});
   }, []);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

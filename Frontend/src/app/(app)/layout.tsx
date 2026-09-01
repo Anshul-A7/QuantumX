@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import BrandLogo from "@/components/common/BrandLogo";
 import { AuthService } from "@/services/auth.service";
+import { NotificationService } from "@/services/notification.service";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 import QuantumChatbot from "@/components/chat/QuantumChatbot";
 
@@ -191,17 +192,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
         setSidebarOpen(storedSidebar === "true");
       }
 
-      const storedNotifs = localStorage.getItem("quantumx_notifications");
-      if (storedNotifs) {
-        try {
-          const parsed = JSON.parse(storedNotifs);
-          if (Array.isArray(parsed)) {
-            setNotifications(parsed);
-          }
-        } catch (e) {
-          console.error("Failed to parse notifications:", e);
-        }
-      }
+      // Fetch real notifications from Supabase
+      NotificationService.getNotifications()
+        .then((notifs) => {
+          setNotifications(
+            (notifs || []).map((n) => ({
+              id: n.id,
+              title: n.title,
+              time: n.time || "Just now",
+              message: n.message,
+              read: n.read,
+            }))
+          );
+        })
+        .catch(() => {});
     }
 
     // Keep session active with 7-day sliding window on user interaction (throttled to 5 mins)
