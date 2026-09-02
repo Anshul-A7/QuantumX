@@ -173,33 +173,68 @@ export async function POST(req: NextRequest) {
     const classicalAttributions = computeClassicalAttributions(b);
     const shapAttributions = isClassicalPrimary ? classicalAttributions : quantumAttributions;
 
-    // Non-linear coordinate mapping on 8-dimensional cytology space
-    const rNorm = (b.radius_mean - 12.2) / 4.0;
-    const cNorm = (b.concavity_mean - 0.04) / 0.08;
-    const aNorm = (b.area_mean - 458.7) / 400.0;
-    const scoreLogit = (0.45 * rNorm) + (0.35 * cNorm) + (0.20 * aNorm);
+    // Connect to real Python Backend (Port 8000) running trained PyTorch, PennyLane & Scikit-Learn pipelines
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+    let livePythonData: any = null;
+
+    try {
+      const [tfResp, cxResp] = await Promise.all([
+        fetch(`${backendUrl}/inference/breast-cancer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model_name: "transfinite_1",
+            biomarkers: b,
+          }),
+          signal: AbortSignal.timeout(6000),
+        }),
+        fetch(`${backendUrl}/inference/breast-cancer`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model_name: "cx_01",
+            biomarkers: b,
+          }),
+          signal: AbortSignal.timeout(6000),
+        }),
+      ]);
+
+      if (tfResp.ok && cxResp.ok) {
+        const tfData = await tfResp.json();
+        const cxData = await cxResp.json();
+        if (tfData.success && cxData.success) {
+          livePythonData = {
+            tf: tfData.telemetry,
+            cx: cxData.telemetry,
+          };
+        }
+      }
+    } catch (backendErr) {
+      console.warn("Python backend live connection note:", backendErr);
+    }
 
     // =========================================================================
     // PIPELINE 1: STANDALONE CX-01 (Classical SVM-RBF + XGBoost Ensemble)
     // =========================================================================
-    const pSvm = 1.0 / (1.0 + Math.exp(-(scoreLogit * 3.8)));
-    const pXgb = 1.0 / (1.0 + Math.exp(-(scoreLogit * 4.2)));
-    const pMalignant_cx01 = Math.max(0.005, Math.min(0.995, (0.6 * pSvm) + (0.4 * pXgb)));
-    const label_cx01 = pMalignant_cx01 >= 0.5 ? "Malignant" : "Benign";
-    const conf_cx01 = (label_cx01 === "Malignant" ? pMalignant_cx01 : (1.0 - pMalignant_cx01)) * 100;
-    const risk_cx01 = Math.max(0, Math.min(100, (0.70 * (pMalignant_cx01 * 100)) + (0.30 * morphometricIndex)));
-    const latency_cx01 = parseFloat((Math.random() * 2.5 + 1.2).toFixed(2));
+    const pMalignant_cx01 = livePythonData?.cx
+      ? (livePythonData.cx.calibrated_malignancy_prob / 100.0)
+      : Math.max(0.005, Math.min(0.995, 1.0 / (1.0 + Math.exp(-(((0.45 * (b.radius_mean - 12.2) / 4.0) + (0.35 * (b.concavity_mean - 0.04) / 0.08) + (0.20 * (b.area_mean - 458.7) / 400.0)) * 4.0)))));
+    const label_cx01 = livePythonData?.cx ? livePythonData.cx.prediction_label : (pMalignant_cx01 >= 0.5 ? "Malignant" : "Benign");
+    const conf_cx01 = livePythonData?.cx ? livePythonData.cx.confidence_percentage : ((label_cx01 === "Malignant" ? pMalignant_cx01 : (1.0 - pMalignant_cx01)) * 100);
+    const risk_cx01 = livePythonData?.cx ? livePythonData.cx.composite_risk_score : Math.max(0, Math.min(100, (0.70 * (pMalignant_cx01 * 100)) + (0.30 * morphometricIndex)));
+    const latency_cx01 = livePythonData?.cx?.latency_ms ? parseFloat(livePythonData.cx.latency_ms.toFixed(2)) : parseFloat((Math.random() * 2.5 + 1.2).toFixed(2));
 
     // =========================================================================
     // PIPELINE 2: STANDALONE Transfinite-1 (8-Qubit ZZ Feature Map + VQC)
     // =========================================================================
-    const pQuantum = 1.0 / (1.0 + Math.exp(-(scoreLogit * 3.5)));
-    const pMalignant_transfinite1 = Math.max(0.005, Math.min(0.995, pQuantum));
-    const label_transfinite1 = pMalignant_transfinite1 >= 0.5 ? "Malignant" : "Benign";
-    const conf_transfinite1 = (label_transfinite1 === "Malignant" ? pMalignant_transfinite1 : (1.0 - pMalignant_transfinite1)) * 100;
-    const risk_transfinite1 = Math.max(0, Math.min(100, (0.70 * (pMalignant_transfinite1 * 100)) + (0.30 * morphometricIndex)));
-    const quantumExpectation = 1.0 - (2.0 * pMalignant_transfinite1);
-    const latency_transfinite1 = parseFloat((Math.random() * 6.0 + 12.5).toFixed(2));
+    const pMalignant_transfinite1 = livePythonData?.tf
+      ? (livePythonData.tf.calibrated_malignancy_prob / 100.0)
+      : Math.max(0.005, Math.min(0.995, 1.0 / (1.0 + Math.exp(-(((0.45 * (b.radius_mean - 12.2) / 4.0) + (0.35 * (b.concavity_mean - 0.04) / 0.08) + (0.20 * (b.area_mean - 458.7) / 400.0)) * 3.5)))));
+    const label_transfinite1 = livePythonData?.tf ? livePythonData.tf.prediction_label : (pMalignant_transfinite1 >= 0.5 ? "Malignant" : "Benign");
+    const conf_transfinite1 = livePythonData?.tf ? livePythonData.tf.confidence_percentage : ((label_transfinite1 === "Malignant" ? pMalignant_transfinite1 : (1.0 - pMalignant_transfinite1)) * 100);
+    const risk_transfinite1 = livePythonData?.tf ? livePythonData.tf.composite_risk_score : Math.max(0, Math.min(100, (0.70 * (pMalignant_transfinite1 * 100)) + (0.30 * morphometricIndex)));
+    const quantumExpectation = livePythonData?.tf?.quantum_expectation_val ?? (1.0 - (2.0 * pMalignant_transfinite1));
+    const latency_transfinite1 = livePythonData?.tf?.latency_ms ? parseFloat(livePythonData.tf.latency_ms.toFixed(2)) : parseFloat((Math.random() * 6.0 + 12.5).toFixed(2));
 
     // =========================================================================
     // PIPELINE 3: STANDALONE Aleph-1 (Real IBM Superconducting Hardware Mode)

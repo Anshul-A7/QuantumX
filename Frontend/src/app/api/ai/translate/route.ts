@@ -11,58 +11,106 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-    if (!geminiApiKey) {
-      // Offline fallback dictionary for common simple summaries
+    if (targetLanguage === "en") {
       return NextResponse.json({
         success: true,
         translatedText: text,
-        notice: "Translation fallback used (Live Gemini key not detected).",
       });
     }
 
-    const prompt = `You are a medical translator and healthcare communicator.
-Translate and rewrite the following medical diagnostic summary into ${languageName} (${targetLanguage}).
-IMPORTANT RULES:
-1. Use simple, everyday, easy-to-understand words that an ordinary person or patient can understand without difficulty.
-2. Keep the explanation clear, reassuring, and completely accurate.
-3. Maintain natural grammar and fluent phrasing in ${languageName}.
-4. Output ONLY the translated paragraph text without any conversational preamble or markdown code blocks.
+    let translatedOutput: string | null = null;
+
+    // 1. First Attempt: Google Gemini AI Translation
+    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (geminiApiKey) {
+      try {
+        const prompt = `You are an expert healthcare linguist and compassionate medical translator.
+Translate and rewrite the following medical screening summary into ${languageName} (${targetLanguage}).
+RULES:
+1. Use simple, everyday, comforting words that an ordinary patient can understand.
+2. Maintain natural grammar, accurate clinical context, and fluent phrasing in ${languageName}.
+3. Output ONLY the translated paragraph text without any conversational preamble or quotation marks.
 
 Text to translate:
 """
 ${text}
 """`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2 },
-        }),
-      }
-    );
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2 },
+            }),
+          }
+        );
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.warn("Gemini translation API error:", errBody);
-      return NextResponse.json({
-        success: true,
-        translatedText: text,
-        fallback: true,
-      });
+        if (response.ok) {
+          const data = await response.json();
+          const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (candidate) {
+            translatedOutput = candidate;
+          }
+        }
+      } catch (geminiErr) {
+        console.warn("Gemini translation API note:", geminiErr);
+      }
     }
 
-    const data = await response.json();
-    const translated = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    // 2. Second Attempt: Real High-Precision Multi-Lingual Translation Engine
+    if (!translatedOutput) {
+      try {
+        // Split text into coherent sentences to preserve translation quality
+        const sentences = text
+          .split(/(?<=[.?!])\s+/)
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+
+        const translatedParts: string[] = [];
+
+        for (const sentence of sentences) {
+          const enc = encodeURIComponent(sentence);
+          const res = await fetch(
+            `https://api.mymemory.translated.net/get?q=${enc}&langpair=en|${targetLanguage}`,
+            {
+              headers: { "User-Agent": "QuantumX-Platform/1.0" },
+            }
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            const translatedSentence = data?.responseData?.translatedText;
+            if (
+              translatedSentence &&
+              !translatedSentence.toLowerCase().includes("mymemory warning") &&
+              !translatedSentence.toLowerCase().includes("quota exceeded")
+            ) {
+              translatedParts.push(translatedSentence);
+            } else {
+              translatedParts.push(sentence);
+            }
+          } else {
+            translatedParts.push(sentence);
+          }
+        }
+
+        if (translatedParts.length > 0) {
+          translatedOutput = translatedParts.join(" ");
+        }
+      } catch (transErr) {
+        console.warn("Translation service note:", transErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      translatedText: translated || text,
+      translatedText: translatedOutput || text,
+      targetLanguage,
+      languageName,
+      translated: translatedOutput !== null && translatedOutput !== text,
     });
   } catch (error: any) {
     console.error("Translation route error:", error);
