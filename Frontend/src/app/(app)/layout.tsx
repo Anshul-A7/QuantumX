@@ -272,169 +272,311 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* ========================================================================= */}
       {/* FIXED TOP HEADER */}
       {/* ========================================================================= */}
-      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-parchment/95 backdrop-blur-md border-b border-hairline flex items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left: 3-Line Toggle + Brand */}
-        <div className="flex items-center gap-3">
-          {/* 3-Line Hamburger Button */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            type="button"
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setMobileMenuOpen(!mobileMenuOpen);
-              } else {
-                toggleSidebar();
-              }
-            }}
-            aria-label="Toggle navigation sidebar"
-            title="Toggle Sidebar Menu"
-            className="w-8 h-8 rounded-lg bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors"
-          >
-            <Menu size={16} />
-          </motion.button>
-
-          <Link href="/home" className="cursor-pointer hover:opacity-85 transition-opacity flex items-center gap-3">
-            <BrandLogo href={false} />
-            <div className="hidden sm:block h-4 w-[1px] bg-hairline" />
-            <span className="hidden sm:inline text-xs font-serif tracking-tight text-ink font-medium">
-              Medical Workbench
-            </span>
-          </Link>
-        </div>
-
-        {/* Right: Quantum System Selector + Notification Icon + Account Icon */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quantum Processing System Selector (Consistent Locked Nomenclature) */}
-          <div className="flex items-center p-0.5 bg-cream-deep/60 rounded-xl border border-hairline text-xs font-sans">
-            <button
-              type="button"
-              onClick={() => handleBackendChange("gpu_simulator")}
-              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${
-                quantumBackend === "gpu_simulator"
-                  ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-bold text-quantum"
-                  : "text-ink-soft hover:text-ink"
-              }`}
-            >
-              <Sparkles size={12} className="text-quantum" />
-              <span>Transfinite-1 (Simulator)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
-              }}
-              className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-not-allowed opacity-80"
-              title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
-            >
-              <Lock size={12} className="text-amber-500" />
-              <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
-              <span className="sm:hidden">Aleph-1</span>
-              <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
-            </button>
-          </div>
-
-          {/* Notification Icon (Left of Account) */}
-          <div className="relative">
+      <header className="fixed top-0 left-0 right-0 h-14 z-50 bg-parchment/95 backdrop-blur-md border-b border-hairline px-3 sm:px-6 lg:px-8">
+        {/* --------------------------------------------------------------------- */}
+        {/* DESKTOP HEADER (MD AND ABOVE - 100% UNTOUCHED PC EXPERIENCE) */}
+        {/* --------------------------------------------------------------------- */}
+        <div className="hidden md:flex items-center justify-between w-full h-full">
+          {/* Left: 3-Line Toggle + Brand */}
+          <div className="flex items-center gap-3">
+            {/* 3-Line Hamburger Button */}
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileTap={{ scale: 0.92 }}
               type="button"
-              onClick={() => {
-                setNotificationsOpen(!notificationsOpen);
-                setAccountModalOpen(false);
-              }}
-              aria-label="Notifications"
-              title="Notifications"
-              className="w-8 h-8 rounded-full bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors relative"
+              onClick={toggleSidebar}
+              aria-label="Toggle navigation sidebar"
+              title="Toggle Sidebar Menu"
+              className="w-8 h-8 rounded-lg bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors"
             >
-              <Bell size={14} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-quantum text-parchment rounded-full text-[9px] font-mono flex items-center justify-center font-bold">
-                  {unreadCount}
-                </span>
-              )}
+              <Menu size={16} />
             </motion.button>
 
-            {/* Notification Dropdown */}
-            <AnimatePresence>
-              {notificationsOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setNotificationsOpen(false)}
-                  />
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute right-0 top-10 w-80 bg-parchment rounded-2xl border border-hairline shadow-xl z-50 p-3.5 space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between border-b border-hairline pb-2">
-                      <span className="text-xs font-serif font-medium text-ink">Notifications</span>
-                      <div className="flex items-center gap-2">
-                        {unreadCount > 0 && (
-                          <button
-                            type="button"
-                            onClick={markAllNotificationsAsRead}
-                            className="text-[10px] text-quantum hover:underline cursor-pointer font-medium"
+            <Link href="/home" className="cursor-pointer hover:opacity-85 transition-opacity flex items-center gap-3">
+              <BrandLogo href={false} />
+              <div className="h-4 w-[1px] bg-hairline" />
+              <span className="text-xs font-serif tracking-tight text-ink font-medium">
+                Medical Workbench
+              </span>
+            </Link>
+          </div>
+
+          {/* Right: Quantum System Selector + Notification Icon + Account Icon */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Quantum Processing System Selector (Consistent Locked Nomenclature) */}
+            <div className="flex items-center p-0.5 bg-cream-deep/60 rounded-xl border border-hairline text-xs font-sans">
+              <button
+                type="button"
+                onClick={() => handleBackendChange("gpu_simulator")}
+                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${
+                  quantumBackend === "gpu_simulator"
+                    ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-bold text-quantum"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                <Sparkles size={12} className="text-quantum" />
+                <span>Transfinite-1 (Simulator)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
+                }}
+                className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-not-allowed opacity-80"
+                title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
+              >
+                <Lock size={12} className="text-amber-500" />
+                <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
+                <span className="sm:hidden">Aleph-1</span>
+                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
+              </button>
+            </div>
+
+            {/* Notification Icon (Left of Account) */}
+            <div className="relative">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen(!notificationsOpen);
+                  setAccountModalOpen(false);
+                }}
+                aria-label="Notifications"
+                title="Notifications"
+                className="w-8 h-8 rounded-full bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors relative"
+              >
+                <Bell size={14} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-quantum text-parchment rounded-full text-[9px] font-mono flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </motion.button>
+
+              {/* Notification Dropdown */}
+              <AnimatePresence>
+                {notificationsOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setNotificationsOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-10 w-80 bg-parchment rounded-2xl border border-hairline shadow-xl z-50 p-3.5 space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between border-b border-hairline pb-2">
+                        <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                        <div className="flex items-center gap-2">
+                          {unreadCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={markAllNotificationsAsRead}
+                              className="text-[10px] text-quantum hover:underline cursor-pointer font-medium"
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                          <Link
+                            href="/notifications"
+                            onClick={() => setNotificationsOpen(false)}
+                            className="text-[10px] text-ink hover:underline cursor-pointer font-medium"
                           >
-                            Mark all read
-                          </button>
-                        )}
+                            View all
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                        {notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={`p-2.5 rounded-xl text-xs space-y-0.5 transition-colors ${
+                              n.read ? "bg-cream/40" : "bg-quantum/10 border border-quantum/20"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-ink text-[11px]">{n.title}</span>
+                              <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                            </div>
+                            <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-2 border-t border-hairline text-center">
                         <Link
                           href="/notifications"
                           onClick={() => setNotificationsOpen(false)}
-                          className="text-[10px] text-ink hover:underline cursor-pointer font-medium"
+                          className="text-xs font-medium text-quantum hover:underline"
                         >
-                          View all
+                          Open Notification Center →
                         </Link>
                       </div>
-                    </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
 
-                    <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                      {notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`p-2.5 rounded-xl text-xs space-y-0.5 transition-colors ${n.read ? "bg-cream/40" : "bg-quantum/10 border border-quantum/20"
-                            }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-ink text-[11px]">{n.title}</span>
-                            <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
-                          </div>
-                          <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="pt-2 border-t border-hairline text-center">
-                      <Link
-                        href="/notifications"
-                        onClick={() => setNotificationsOpen(false)}
-                        className="text-xs font-medium text-quantum hover:underline"
-                      >
-                        Open Notification Center →
-                      </Link>
-                    </div>
-                  </motion.div>
-                </>
+            {/* Account Icon in Header (Routes to /account) */}
+            <Link
+              href="/account"
+              aria-label="User Account Settings"
+              title={`Account Settings: ${userName}`}
+              className="w-8 h-8 rounded-full bg-ink text-parchment border border-hairline flex items-center justify-center cursor-pointer overflow-hidden shadow-2xs hover:ring-2 hover:ring-quantum/40 transition-all shrink-0"
+            >
+              {userAvatar ? (
+                <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <User size={14} className="text-parchment" />
               )}
-            </AnimatePresence>
+            </Link>
+          </div>
+        </div>
+
+        {/* --------------------------------------------------------------------- */}
+        {/* DEDICATED SEPARATE MOBILE HEADER (< MD) */}
+        {/* --------------------------------------------------------------------- */}
+        <div className="flex md:hidden items-center justify-between w-full h-full">
+          {/* Left: Mobile 3-Line Menu + Clean Brand */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation sidebar"
+              title="Toggle Menu"
+              className="w-8 h-8 rounded-lg bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors shrink-0"
+            >
+              <Menu size={16} />
+            </motion.button>
+
+            <Link href="/home" className="flex items-center cursor-pointer">
+              <BrandLogo href={false} />
+            </Link>
           </div>
 
-          {/* Account Icon in Header (Routes to /account) */}
-          <Link
-            href="/account"
-            aria-label="User Account Settings"
-            title={`Account Settings: ${userName}`}
-            className="w-8 h-8 rounded-full bg-ink text-parchment border border-hairline flex items-center justify-center cursor-pointer overflow-hidden shadow-2xs hover:ring-2 hover:ring-quantum/40 transition-all shrink-0"
-          >
-            {userAvatar ? (
-              <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
-            ) : (
-              <User size={14} className="text-parchment" />
-            )}
-          </Link>
+          {/* Right: Compact Quantum Badge + Notifications + Account */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Compact Mobile Simulator Mode Badge (Routes to /hardware) */}
+            <Link
+              href="/hardware"
+              title="Transfinite-1 (Quantum Simulator Active) - View Hardware Telemetry"
+              className="px-2 py-1 rounded-lg bg-cream-deep/70 hover:bg-cream border border-hairline flex items-center gap-1 text-[10px] font-mono font-semibold text-ink shadow-2xs cursor-pointer transition-colors shrink-0"
+            >
+              <Sparkles size={11} className="text-quantum shrink-0" />
+              <span>Simulator</span>
+            </Link>
+
+            {/* Mobile Notification Bell */}
+            <div className="relative">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                type="button"
+                onClick={() => {
+                  setNotificationsOpen(!notificationsOpen);
+                  setAccountModalOpen(false);
+                }}
+                aria-label="Notifications"
+                title="Notifications"
+                className="w-8 h-8 rounded-full bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors relative shrink-0"
+              >
+                <Bell size={14} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-quantum text-parchment rounded-full text-[8px] font-mono flex items-center justify-center font-bold">
+                    {unreadCount}
+                  </span>
+                )}
+              </motion.button>
+
+              {/* Mobile Notifications Dropdown (Responsive width to prevent screen edge overflow) */}
+              <AnimatePresence>
+                {notificationsOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setNotificationsOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 top-11 w-72 max-w-[calc(100vw-1.5rem)] bg-parchment rounded-2xl border border-hairline shadow-xl z-50 p-3 space-y-2"
+                    >
+                      <div className="flex items-center justify-between border-b border-hairline pb-2">
+                        <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                        <div className="flex items-center gap-2">
+                          {unreadCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={markAllNotificationsAsRead}
+                              className="text-[10px] text-quantum hover:underline cursor-pointer font-medium"
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                          <Link
+                            href="/notifications"
+                            onClick={() => setNotificationsOpen(false)}
+                            className="text-[10px] text-ink hover:underline cursor-pointer font-medium"
+                          >
+                            View all
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        {notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className={`p-2 rounded-xl text-xs space-y-0.5 transition-colors ${
+                              n.read ? "bg-cream/40" : "bg-quantum/10 border border-quantum/20"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-ink text-[11px]">{n.title}</span>
+                              <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                            </div>
+                            <p className="text-[10px] text-ink-soft font-light leading-snug">{n.message}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="pt-2 border-t border-hairline text-center">
+                        <Link
+                          href="/notifications"
+                          onClick={() => setNotificationsOpen(false)}
+                          className="text-xs font-medium text-quantum hover:underline"
+                        >
+                          Open Notification Center →
+                        </Link>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Mobile Account Avatar */}
+            <Link
+              href="/account"
+              aria-label="User Account Settings"
+              title={`Account: ${userName}`}
+              className="w-8 h-8 rounded-full bg-ink text-parchment border border-hairline flex items-center justify-center cursor-pointer overflow-hidden shadow-2xs hover:ring-2 hover:ring-quantum/40 transition-all shrink-0"
+            >
+              {userAvatar ? (
+                <img src={userAvatar} alt={userName} className="w-full h-full object-cover" />
+              ) : (
+                <span className="font-serif font-medium text-xs">
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </Link>
+          </div>
         </div>
       </header>
 
