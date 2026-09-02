@@ -24,6 +24,7 @@ import {
   HelpCircle,
   Settings,
   TrendingUp,
+  Lock,
 } from "lucide-react";
 import BrandLogo from "@/components/common/BrandLogo";
 import { AuthService } from "@/services/auth.service";
@@ -303,31 +304,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         {/* Right: Quantum System Selector + Notification Icon + Account Icon */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Quantum Processing System Selector (Clear, human-readable names) */}
-          <div className="flex items-center p-0.5 bg-cream-deep/60 rounded-lg border border-hairline text-xs font-sans">
-            <button
-              type="button"
-              onClick={() => handleBackendChange("ibmq_eagle")}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${quantumBackend === "ibmq_eagle"
-                ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
-                : "text-ink-soft hover:text-ink"
-                }`}
-            >
-              <Cpu size={12} className={quantumBackend === "ibmq_eagle" ? "text-quantum animate-pulse" : ""} />
-              <span className="hidden sm:inline">IBM Quantum (127-Qubit)</span>
-              <span className="sm:hidden">IBM Quantum</span>
-            </button>
+          {/* Quantum Processing System Selector (Consistent Locked Nomenclature) */}
+          <div className="flex items-center p-0.5 bg-cream-deep/60 rounded-xl border border-hairline text-xs font-sans">
             <button
               type="button"
               onClick={() => handleBackendChange("gpu_simulator")}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${quantumBackend === "gpu_simulator"
-                ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-semibold"
-                : "text-ink-soft hover:text-ink"
-                }`}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer text-[11px] font-medium ${
+                quantumBackend === "gpu_simulator"
+                  ? "bg-parchment text-ink shadow-2xs border border-hairline/80 font-bold text-quantum"
+                  : "text-ink-soft hover:text-ink"
+              }`}
             >
-              <Zap size={12} />
-              <span className="hidden sm:inline">Fast GPU Simulator</span>
-              <span className="sm:hidden">Simulator</span>
+              <Sparkles size={12} className="text-quantum" />
+              <span>Transfinite-1 (Simulator)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
+              }}
+              className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-not-allowed opacity-80"
+              title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
+            >
+              <Lock size={12} className="text-amber-500" />
+              <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
+              <span className="sm:hidden">Aleph-1</span>
+              <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
             </button>
           </div>
 

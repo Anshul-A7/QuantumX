@@ -553,19 +553,17 @@ export default function BreastCancerDetailPage() {
               } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
               <Sparkles size={13} />
-              <span>Simulator</span>
+              <span>Transfinite-1 (Simulator)</span>
             </button>
             <button
               disabled={hasInferred}
               onClick={() => setIsIbmModalOpen(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                executionMode === "real_ibm_qpu"
-                  ? "bg-purple-600 text-white shadow-xs font-bold"
-                  : "text-ink-soft hover:text-ink"
-              } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink cursor-pointer opacity-80"
+              title="Aleph-1 (IBM QPU) - Locked in this release"
             >
               <Lock size={12} className="text-amber-500" />
               <span>Aleph-1 (IBM QPU)</span>
+              <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
             </button>
           </div>
 
@@ -850,76 +848,206 @@ export default function BreastCancerDetailPage() {
                 </div>
 
                 {/* SIDE-BY-SIDE DUAL-ENGINE LIVE COMPARISON CARDS */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* 1. Transfinite-1 Quantum Hybrid Simulator Card */}
-                  <div className="p-4 rounded-2xl bg-white border border-quantum/40 shadow-xs space-y-3 relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-quantum/10 text-quantum border border-quantum/20">
-                        ⚡ Transfinite-1 (Quantum)
-                      </span>
-                      <span className="text-[10px] font-mono text-ink-soft font-semibold">
-                        {screeningResult.dual_comparison?.transfinite_1?.latency_ms || "14.2"} ms
-                      </span>
-                    </div>
+                  <div className="p-4.5 rounded-2xl bg-white border border-quantum/30 shadow-xs space-y-3.5 relative overflow-hidden flex flex-col justify-between">
+                    <div>
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-quantum/10 text-quantum border border-quantum/20 flex items-center gap-1.5">
+                          <Sparkles size={12} />
+                          <span>Transfinite-1 (Quantum)</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-ink-soft font-semibold">
+                          {screeningResult.dual_comparison?.transfinite_1?.latency_ms || "14.2"} ms
+                        </span>
+                      </div>
 
-                    <div className="flex items-baseline justify-between">
-                      <div>
-                        <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Risk Score</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-black font-mono text-ink">
-                            {screeningResult.dual_comparison?.transfinite_1?.risk_score ?? screeningResult.composite_risk_score}
+                      {/* Main Circular Gauge & Prediction */}
+                      <div className="py-3 flex items-center justify-around gap-3">
+                        {/* Circular Score Gauge */}
+                        {(() => {
+                          const score = Number(screeningResult.dual_comparison?.transfinite_1?.risk_score ?? screeningResult.composite_risk_score ?? 0);
+                          const strokeColor = score >= 60 ? "#ef4444" : score >= 40 ? "#f59e0b" : "#10b981";
+                          const radius = 26;
+                          const circumference = 2 * Math.PI * radius;
+                          const dashoffset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference;
+
+                          return (
+                            <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
+                              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r={radius}
+                                  stroke="#f1ede6"
+                                  strokeWidth="4.5"
+                                  fill="transparent"
+                                />
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r={radius}
+                                  stroke={strokeColor}
+                                  strokeWidth="4.5"
+                                  strokeDasharray={circumference}
+                                  strokeDashoffset={dashoffset}
+                                  strokeLinecap="round"
+                                  fill="transparent"
+                                  className="transition-all duration-700"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-base font-black font-mono text-ink leading-none">
+                                  {score.toFixed(1)}
+                                </span>
+                                <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Status & Confidence Breakdown */}
+                        <div className="space-y-1.5 text-right">
+                          <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Assessment</span>
+                          <span className={`inline-block text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
+                            screeningResult.dual_comparison?.transfinite_1?.prediction_label === "Malignant"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}>
+                            {screeningResult.dual_comparison?.transfinite_1?.prediction_label || screeningResult.prediction_label}
                           </span>
-                          <span className="text-[10px] font-mono text-ink-soft">/ 100</span>
+                          <div className="text-[11px] font-mono text-ink-soft">
+                            Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.transfinite_1?.confidence || screeningResult.confidence}%</strong>
+                          </div>
                         </div>
                       </div>
-                      <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
-                        screeningResult.dual_comparison?.transfinite_1?.prediction_label === "Malignant"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      }`}>
-                        {screeningResult.dual_comparison?.transfinite_1?.prediction_label || screeningResult.prediction_label}
-                      </span>
+
+                      {/* Model-Specific Key Factors (Quantum SHAP) */}
+                      <div className="pt-2.5 border-t border-hairline space-y-1.5">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-soft block">
+                          Quantum Key Factors (Top 3)
+                        </span>
+                        <div className="space-y-1">
+                          {((screeningResult.dual_comparison?.transfinite_1?.shap_attributions) || screeningResult.shap_attributions || []).slice(0, 3).map((attr: any, idx: number) => {
+                            const isRisk = attr.direction === "risk_elevating";
+                            return (
+                              <div key={idx} className="p-1.5 px-2 rounded-lg bg-cream/40 border border-hairline/60 text-[11px] flex items-center justify-between">
+                                <span className="text-ink font-medium truncate max-w-[140px]">{attr.featureName}</span>
+                                <span className={`font-mono font-bold text-[10px] ${isRisk ? "text-red-600" : "text-emerald-700"}`}>
+                                  {isRisk ? "+" : "-"}{attr.impactPercentage?.toFixed(1)}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="pt-2 border-t border-hairline flex justify-between text-[10px] font-mono text-ink-soft">
-                      <span>Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.transfinite_1?.confidence || screeningResult.confidence}%</strong></span>
-                      <span>8-Qubit ZZ VQC</span>
+                    <div className="pt-2 border-t border-hairline flex justify-between items-center text-[10px] font-mono text-ink-soft">
+                      <span>Engine: 8-Qubit ZZ VQC</span>
+                      <span className="text-emerald-700 font-bold">Simulator Active</span>
                     </div>
                   </div>
 
                   {/* 2. CX-01 Classical Benchmark Card */}
-                  <div className="p-4 rounded-2xl bg-white border border-blue-200 shadow-xs space-y-3 relative overflow-hidden">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                        📈 CX-01 (Classical)
-                      </span>
-                      <span className="text-[10px] font-mono text-ink-soft font-semibold">
-                        {screeningResult.dual_comparison?.cx_01?.latency_ms || "2.4"} ms
-                      </span>
-                    </div>
+                  <div className="p-4.5 rounded-2xl bg-white border border-blue-200 shadow-xs space-y-3.5 relative overflow-hidden flex flex-col justify-between">
+                    <div>
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1.5">
+                          <Activity size={12} />
+                          <span>CX-01 (Classical)</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-ink-soft font-semibold">
+                          {screeningResult.dual_comparison?.cx_01?.latency_ms || "2.4"} ms
+                        </span>
+                      </div>
 
-                    <div className="flex items-baseline justify-between">
-                      <div>
-                        <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Risk Score</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-black font-mono text-ink">
-                            {screeningResult.dual_comparison?.cx_01?.risk_score ?? screeningResult.composite_risk_score}
+                      {/* Main Circular Gauge & Prediction */}
+                      <div className="py-3 flex items-center justify-around gap-3">
+                        {/* Circular Score Gauge */}
+                        {(() => {
+                          const score = Number(screeningResult.dual_comparison?.cx_01?.risk_score ?? screeningResult.composite_risk_score ?? 0);
+                          const strokeColor = score >= 60 ? "#ef4444" : score >= 40 ? "#f59e0b" : "#10b981";
+                          const radius = 26;
+                          const circumference = 2 * Math.PI * radius;
+                          const dashoffset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference;
+
+                          return (
+                            <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
+                              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r={radius}
+                                  stroke="#f1ede6"
+                                  strokeWidth="4.5"
+                                  fill="transparent"
+                                />
+                                <circle
+                                  cx="32"
+                                  cy="32"
+                                  r={radius}
+                                  stroke={strokeColor}
+                                  strokeWidth="4.5"
+                                  strokeDasharray={circumference}
+                                  strokeDashoffset={dashoffset}
+                                  strokeLinecap="round"
+                                  fill="transparent"
+                                  className="transition-all duration-700"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <span className="text-base font-black font-mono text-ink leading-none">
+                                  {score.toFixed(1)}
+                                </span>
+                                <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Status & Confidence Breakdown */}
+                        <div className="space-y-1.5 text-right">
+                          <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Assessment</span>
+                          <span className={`inline-block text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
+                            screeningResult.dual_comparison?.cx_01?.prediction_label === "Malignant"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          }`}>
+                            {screeningResult.dual_comparison?.cx_01?.prediction_label || screeningResult.prediction_label}
                           </span>
-                          <span className="text-[10px] font-mono text-ink-soft">/ 100</span>
+                          <div className="text-[11px] font-mono text-ink-soft">
+                            Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.cx_01?.confidence || screeningResult.confidence}%</strong>
+                          </div>
                         </div>
                       </div>
-                      <span className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
-                        screeningResult.dual_comparison?.cx_01?.prediction_label === "Malignant"
-                          ? "bg-red-50 text-red-700 border-red-200"
-                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      }`}>
-                        {screeningResult.dual_comparison?.cx_01?.prediction_label || screeningResult.prediction_label}
-                      </span>
+
+                      {/* Model-Specific Key Factors (Classical SHAP) */}
+                      <div className="pt-2.5 border-t border-hairline space-y-1.5">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-soft block">
+                          Classical Key Factors (Top 3)
+                        </span>
+                        <div className="space-y-1">
+                          {((screeningResult.dual_comparison?.cx_01?.shap_attributions) || screeningResult.shap_attributions || []).slice(0, 3).map((attr: any, idx: number) => {
+                            const isRisk = attr.direction === "risk_elevating";
+                            return (
+                              <div key={idx} className="p-1.5 px-2 rounded-lg bg-cream/40 border border-hairline/60 text-[11px] flex items-center justify-between">
+                                <span className="text-ink font-medium truncate max-w-[140px]">{attr.featureName}</span>
+                                <span className={`font-mono font-bold text-[10px] ${isRisk ? "text-red-600" : "text-emerald-700"}`}>
+                                  {isRisk ? "+" : "-"}{attr.impactPercentage?.toFixed(1)}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="pt-2 border-t border-hairline flex justify-between text-[10px] font-mono text-ink-soft">
-                      <span>Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.cx_01?.confidence || screeningResult.confidence}%</strong></span>
-                      <span>SVM-RBF + XGBoost</span>
+                    <div className="pt-2 border-t border-hairline flex justify-between items-center text-[10px] font-mono text-ink-soft">
+                      <span>Engine: SVM-RBF + XGBoost</span>
+                      <span className="text-blue-700 font-bold">Classical Baseline</span>
                     </div>
                   </div>
                 </div>
@@ -935,32 +1063,6 @@ export default function BreastCancerDetailPage() {
                   <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold shrink-0">
                     Dual Verified
                   </span>
-                </div>
-
-                {/* Primary Risk Drivers */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-ink font-mono uppercase tracking-wider">
-                      Key Factors Influencing This Result
-                    </span>
-                    <HelpTooltip
-                      title="Key Factors (SHAP)"
-                      text="Shows which measured cell features contributed most to this assessment. Red indicates features that increase risk, while green indicates healthy protective features."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    {(screeningResult.shap_attributions || []).slice(0, 3).map((attr: any, idx: number) => {
-                      const isRisk = attr.direction === "risk_elevating";
-                      return (
-                        <div key={idx} className="p-2.5 rounded-xl bg-white border border-hairline text-xs flex items-center justify-between shadow-2xs">
-                          <span className="font-medium text-ink">{attr.featureName}</span>
-                          <span className={`font-mono font-bold ${isRisk ? "text-red-600" : "text-emerald-700"}`}>
-                            {isRisk ? "+" : "-"}{attr.impactPercentage?.toFixed(1)}% impact
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 {/* Clinical Finding Note */}

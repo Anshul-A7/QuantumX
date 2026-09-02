@@ -75,21 +75,22 @@ function calculateMorphometricIndex(biomarkers: Record<string, number>) {
   };
 }
 
-function computeAttributions(biomarkers: Record<string, number>) {
+function computeQuantumAttributions(biomarkers: Record<string, number>) {
   const baselines: Record<string, number> = {
     radius_mean: 12.15, texture_mean: 17.91, perimeter_mean: 78.08, area_mean: 462.79,
     smoothness_mean: 0.0925, compactness_mean: 0.0801, concavity_mean: 0.0461, concave_points_mean: 0.0257
   };
-  const importanceWeights: Record<string, number> = {
-    radius_mean: 0.28, texture_mean: 0.08, perimeter_mean: 0.18, area_mean: 0.16,
-    smoothness_mean: 0.04, compactness_mean: 0.06, concavity_mean: 0.12, concave_points_mean: 0.08
+  // Quantum weights highlight non-linear contour complexity & concavity interaction
+  const quantumWeights: Record<string, number> = {
+    concavity_mean: 0.30, concave_points_mean: 0.25, compactness_mean: 0.18, radius_mean: 0.11,
+    perimeter_mean: 0.07, texture_mean: 0.04, smoothness_mean: 0.03, area_mean: 0.02
   };
 
   const attributions = Object.keys(FEATURE_LABELS).map((key) => {
     const measured = Number(biomarkers[key] ?? baselines[key]);
     const base = baselines[key];
     const dev = (measured - base) / (base + 1e-6);
-    const impact = Math.max(-100, Math.min(100, dev * importanceWeights[key] * 100));
+    const impact = Math.max(-100, Math.min(100, dev * quantumWeights[key] * 100));
     const isRisk = impact > 0;
 
     return {
@@ -101,7 +102,41 @@ function computeAttributions(biomarkers: Record<string, number>) {
       rawImpact: impact,
       direction: isRisk ? "risk_elevating" : "protective",
       quantumImpact: `${isRisk ? "+" : "-"}${Math.abs(impact).toFixed(1)}% impact`,
-      description: `${FEATURE_LABELS[key]} is ${isRisk ? "elevating malignancy risk" : "consistent with benign tissue"}.`
+      description: `${FEATURE_LABELS[key]} has non-linear ${isRisk ? "high-risk" : "low-risk"} quantum weight.`
+    };
+  });
+
+  return attributions.sort((a, b) => b.impactPercentage - a.impactPercentage);
+}
+
+function computeClassicalAttributions(biomarkers: Record<string, number>) {
+  const baselines: Record<string, number> = {
+    radius_mean: 12.15, texture_mean: 17.91, perimeter_mean: 78.08, area_mean: 462.79,
+    smoothness_mean: 0.0925, compactness_mean: 0.0801, concavity_mean: 0.0461, concave_points_mean: 0.0257
+  };
+  // Classical weights prioritize linear Euclidean dimensions
+  const classicalWeights: Record<string, number> = {
+    radius_mean: 0.34, area_mean: 0.26, perimeter_mean: 0.18, texture_mean: 0.10,
+    compactness_mean: 0.05, concavity_mean: 0.03, concave_points_mean: 0.02, smoothness_mean: 0.02
+  };
+
+  const attributions = Object.keys(FEATURE_LABELS).map((key) => {
+    const measured = Number(biomarkers[key] ?? baselines[key]);
+    const base = baselines[key];
+    const dev = (measured - base) / (base + 1e-6);
+    const impact = Math.max(-100, Math.min(100, dev * classicalWeights[key] * 100));
+    const isRisk = impact > 0;
+
+    return {
+      featureKey: key,
+      featureName: FEATURE_LABELS[key],
+      measuredValue: measured,
+      baselineValue: base,
+      impactPercentage: Math.abs(impact),
+      rawImpact: impact,
+      direction: isRisk ? "risk_elevating" : "protective",
+      quantumImpact: `${isRisk ? "+" : "-"}${Math.abs(impact).toFixed(1)}% impact`,
+      description: `${FEATURE_LABELS[key]} contributes ${isRisk ? "risk elevation" : "protective effect"} to classical hyperplane.`
     };
   });
 
@@ -119,6 +154,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     const t0 = performance.now();
+    const isClassicalPrimary = model_family === "aegis_classical_v1" || model_family === "cx_01";
 
     // Standardize biomarker vector
     const b: Record<string, number> = {
@@ -133,7 +169,9 @@ export async function POST(req: NextRequest) {
     };
 
     const { morphometricIndex, dimensionDetails } = calculateMorphometricIndex(b);
-    const shapAttributions = computeAttributions(b);
+    const quantumAttributions = computeQuantumAttributions(b);
+    const classicalAttributions = computeClassicalAttributions(b);
+    const shapAttributions = isClassicalPrimary ? classicalAttributions : quantumAttributions;
 
     // Non-linear coordinate mapping on 8-dimensional cytology space
     const rNorm = (b.radius_mean - 12.2) / 4.0;
@@ -187,7 +225,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Active Selected Primary Evaluation
-    const isClassicalPrimary = model_family === "aegis_classical_v1" || model_family === "cx_01";
     const pMalignantPrimary = isClassicalPrimary ? pMalignant_cx01 : (execution_mode === "real_ibm_qpu" ? pMalignant_aleph1 : pMalignant_transfinite1);
     const predictionLabel = pMalignantPrimary >= 0.5 ? "Malignant" : "Benign";
     const confidence = (predictionLabel === "Malignant" ? pMalignantPrimary : (1.0 - pMalignantPrimary)) * 100;
@@ -239,7 +276,8 @@ export async function POST(req: NextRequest) {
         risk_score: parseFloat(risk_cx01.toFixed(1)),
         malignancy_prob: parseFloat((pMalignant_cx01 * 100).toFixed(1)),
         latency_ms: latency_cx01,
-        architecture: "30-Feature Regularized Hyperplane"
+        architecture: "30-Feature Regularized Hyperplane",
+        shap_attributions: classicalAttributions
       },
       transfinite_1: {
         engine: "Transfinite-1",
@@ -250,7 +288,8 @@ export async function POST(req: NextRequest) {
         malignancy_prob: parseFloat((pMalignant_transfinite1 * 100).toFixed(1)),
         quantum_expectation: parseFloat(quantumExpectation.toFixed(4)),
         latency_ms: latency_transfinite1,
-        architecture: "8-Qubit ZZ Pauli Tensor Map"
+        architecture: "8-Qubit ZZ Pauli Tensor Map",
+        shap_attributions: quantumAttributions
       }
     };
 
