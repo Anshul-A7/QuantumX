@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import BrandLogo from "@/components/common/BrandLogo";
 import { AuthService } from "@/services/auth.service";
-import { NotificationService } from "@/services/notification.service";
+import { NotificationService, type NotificationItem } from "@/services/notification.service";
 import { useQuantumBackend } from "@/hooks/useQuantumBackend";
 import QuantumChatbot from "@/components/chat/QuantumChatbot";
 import WelcomeModal from "@/components/common/WelcomeModal";
@@ -140,7 +140,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Notifications and Account Modals
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [notifications, setNotifications] = useState<{ id: string; title: string; time: string; message: string; read: boolean }[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // File upload input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -198,15 +198,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       // Fetch real notifications from Supabase
       NotificationService.getNotifications()
         .then((notifs) => {
-          setNotifications(
-            (notifs || []).map((n) => ({
-              id: n.id,
-              title: n.title,
-              time: n.time || "Just now",
-              message: n.message,
-              read: n.read,
-            }))
-          );
+          setNotifications(notifs || []);
         })
         .catch(() => {});
     }
@@ -252,8 +244,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
   };
 
-  const markAllNotificationsAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  const markAllNotificationsAsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    await NotificationService.markAllAsRead();
+  };
+
+  const handleToggleNotifications = async () => {
+    const nextState = !notificationsOpen;
+    setNotificationsOpen(nextState);
+    setAccountModalOpen(false);
+    if (nextState) {
+      try {
+        const fresh = await NotificationService.getNotifications();
+        if (fresh && fresh.length > 0) {
+          setNotifications(fresh);
+        }
+      } catch {}
+    }
   };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -336,10 +343,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="button"
-                onClick={() => {
-                  setNotificationsOpen(!notificationsOpen);
-                  setAccountModalOpen(false);
-                }}
+                onClick={handleToggleNotifications}
                 aria-label="Notifications"
                 title="Notifications"
                 className="w-8 h-8 rounded-full bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors relative"
@@ -368,9 +372,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       className="absolute right-0 top-10 w-80 bg-parchment rounded-2xl border border-hairline shadow-xl z-50 p-3.5 space-y-2.5"
                     >
                       <div className="flex items-center justify-between border-b border-hairline pb-2">
-                        <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                          {notifications.length > 0 && (
+                            <span className="text-[10px] font-mono text-ink-soft">({notifications.length})</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
-                          {unreadCount > 0 && (
+                          {unreadCount > 0 ? (
                             <button
                               type="button"
                               onClick={markAllNotificationsAsRead}
@@ -378,6 +387,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             >
                               Mark all read
                             </button>
+                          ) : (
+                            <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              All Read
+                            </span>
                           )}
                           <Link
                             href="/notifications"
@@ -390,20 +403,41 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </div>
 
                       <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                        {notifications.map((n) => (
-                          <div
-                            key={n.id}
-                            className={`p-2.5 rounded-xl text-xs space-y-0.5 transition-colors ${
-                              n.read ? "bg-cream/40" : "bg-quantum/10 border border-quantum/20"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-ink text-[11px]">{n.title}</span>
-                              <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
-                            </div>
-                            <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
+                        {notifications.length === 0 ? (
+                          <div className="py-6 text-center text-xs text-ink-soft space-y-1">
+                            <p className="font-medium text-ink">No notifications yet</p>
+                            <p className="text-[10px] text-ink-soft">Screening reports and updates will appear here.</p>
                           </div>
-                        ))}
+                        ) : (
+                          notifications.map((n) => (
+                            <Link
+                              key={n.id}
+                              href={n.actionUrl || "/notifications"}
+                              onClick={() => {
+                                if (!n.read) {
+                                  NotificationService.markAsRead(n.id);
+                                  setNotifications((prev) =>
+                                    prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                                  );
+                                }
+                                setNotificationsOpen(false);
+                              }}
+                              className={`block p-2.5 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer ${
+                                n.read
+                                  ? "bg-cream/40 border border-hairline/60 opacity-80 hover:opacity-100 hover:bg-cream"
+                                  : "bg-quantum/10 border border-quantum/20 shadow-2xs"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`text-[11px] ${n.read ? "font-medium text-ink" : "font-bold text-ink"}`}>
+                                  {n.title}
+                                </span>
+                                <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                              </div>
+                              <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
+                            </Link>
+                          ))
+                        )}
                       </div>
 
                       <div className="pt-2 border-t border-hairline text-center">
@@ -499,10 +533,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="button"
-                onClick={() => {
-                  setNotificationsOpen(!notificationsOpen);
-                  setAccountModalOpen(false);
-                }}
+                onClick={handleToggleNotifications}
                 aria-label="Notifications"
                 title="Notifications"
                 className="w-8 h-8 rounded-full bg-cream-deep/60 hover:bg-cream border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors relative shrink-0"
@@ -531,9 +562,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       className="absolute right-0 top-11 w-72 max-w-[calc(100vw-1.5rem)] bg-parchment rounded-2xl border border-hairline shadow-xl z-50 p-3 space-y-2"
                     >
                       <div className="flex items-center justify-between border-b border-hairline pb-2">
-                        <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-serif font-medium text-ink">Notifications</span>
+                          {notifications.length > 0 && (
+                            <span className="text-[10px] font-mono text-ink-soft">({notifications.length})</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
-                          {unreadCount > 0 && (
+                          {unreadCount > 0 ? (
                             <button
                               type="button"
                               onClick={markAllNotificationsAsRead}
@@ -541,6 +577,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             >
                               Mark all read
                             </button>
+                          ) : (
+                            <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              All Read
+                            </span>
                           )}
                           <Link
                             href="/notifications"
@@ -553,20 +593,41 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </div>
 
                       <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                        {notifications.map((n) => (
-                          <div
-                            key={n.id}
-                            className={`p-2 rounded-xl text-xs space-y-0.5 transition-colors ${
-                              n.read ? "bg-cream/40" : "bg-quantum/10 border border-quantum/20"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-ink text-[11px]">{n.title}</span>
-                              <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
-                            </div>
-                            <p className="text-[10px] text-ink-soft font-light leading-snug">{n.message}</p>
+                        {notifications.length === 0 ? (
+                          <div className="py-6 text-center text-xs text-ink-soft space-y-1">
+                            <p className="font-medium text-ink">No notifications yet</p>
+                            <p className="text-[10px] text-ink-soft">Screening reports and updates will appear here.</p>
                           </div>
-                        ))}
+                        ) : (
+                          notifications.map((n) => (
+                            <Link
+                              key={n.id}
+                              href={n.actionUrl || "/notifications"}
+                              onClick={() => {
+                                if (!n.read) {
+                                  NotificationService.markAsRead(n.id);
+                                  setNotifications((prev) =>
+                                    prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+                                  );
+                                }
+                                setNotificationsOpen(false);
+                              }}
+                              className={`block p-2 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer ${
+                                n.read
+                                  ? "bg-cream/40 border border-hairline/60 opacity-80 hover:opacity-100 hover:bg-cream"
+                                  : "bg-quantum/10 border border-quantum/20 shadow-2xs"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`text-[11px] ${n.read ? "font-medium text-ink" : "font-bold text-ink"}`}>
+                                  {n.title}
+                                </span>
+                                <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                              </div>
+                              <p className="text-[10px] text-ink-soft font-light leading-snug">{n.message}</p>
+                            </Link>
+                          ))
+                        )}
                       </div>
 
                       <div className="pt-2 border-t border-hairline text-center">

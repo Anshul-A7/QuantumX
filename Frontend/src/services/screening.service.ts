@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api";
+import { NotificationService } from "./notification.service";
 
 export interface StoredPrediction {
   id: string;
@@ -222,6 +223,17 @@ export class ScreeningService {
     // Try persisting to API/Supabase if available
     try {
       await apiClient.post("/screenings", newRecord);
+    } catch {}
+
+    // Dispatch real persistent clinical notification
+    try {
+      NotificationService.createNotification({
+        id: `notif-${recordId}`,
+        title: `Screening Completed: ${newRecord.patientName}`,
+        category: "disease",
+        message: `${newRecord.disease || "Breast Cancer Screening"} result: ${newRecord.quantumPrediction} (${newRecord.riskLevel} Risk) (${(newRecord.quantumConfidence || 90).toFixed(1)}% confidence).`,
+        actionUrl: "/history",
+      });
     } catch {}
 
     return newRecord;
