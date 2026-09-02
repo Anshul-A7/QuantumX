@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Activity } from "lucide-react";
+import { Activity, ShieldCheck } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 
 export interface BiomarkerReference {
@@ -139,94 +139,180 @@ export default function BiomarkerMatrixTab({ biomarkers }: BiomarkerMatrixTabPro
   };
 
   return (
-    <div className="space-y-5">
-      <div className="p-4 rounded-2xl bg-white border border-hairline flex items-start justify-between gap-4 shadow-2xs">
-        <div>
-          <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-            <Activity size={15} className="text-quantum" />
-            Biopsy Cell Measurements vs. Healthy Normal Ranges
-          </h3>
-          <p className="text-xs text-ink-soft mt-0.5">
-            Compare each measured physical feature of the patient&apos;s cells against certified clinical baselines. Hover over any (?) icon for physiological definitions.
+    /* ALL 8 CELL MEASUREMENTS CONSOLIDATED INTO A SINGLE UNIFIED CARD */
+    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      {/* Card Header */}
+      <div className="p-5 border-b border-hairline/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-cream/15">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <Activity size={16} className="text-quantum" />
+            <h3 className="text-sm font-bold text-ink">
+              Biopsy Cell Measurements vs. Certified Healthy Baselines
+            </h3>
+          </div>
+          <p className="text-xs text-ink-soft">
+            Precision laboratory cell measurements compared directly against Wisconsin Diagnostic Breast Cytology standards.
           </p>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full font-bold uppercase shrink-0">
+          <ShieldCheck size={12} />
+          <span>Certified Standard Range</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(WDBC_REFERENCE_DATA).map(([key, ref]) => {
-          const val = biomarkers[key] ?? ref.benignMed;
-          const status = getParameterStatus(key, val);
-          const pctWidth = Math.min(
-            100,
-            Math.max(10, ((val - ref.benignMed * 0.5) / (ref.maligMed * 1.5 - ref.benignMed * 0.5)) * 100)
-          );
+      {/* Unified Measurements Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-hairline">
+        {/* Column 1: Primary Dimensions */}
+        <div className="divide-y divide-hairline">
+          {Object.entries(WDBC_REFERENCE_DATA)
+            .slice(0, 4)
+            .map(([key, ref]) => {
+              const val = biomarkers[key] ?? ref.benignMed;
+              const status = getParameterStatus(key, val);
+              const pctWidth = Math.min(
+                100,
+                Math.max(10, ((val - ref.benignMed * 0.5) / (ref.maligMed * 1.5 - ref.benignMed * 0.5)) * 100)
+              );
 
-          return (
-            <div key={key} className="p-5 rounded-2xl bg-white border border-hairline shadow-xs space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-ink">{ref.label}</span>
-                    <HelpTooltip title={ref.label} text={ref.tooltip} />
+              return (
+                <div key={key} className="p-5 space-y-3 hover:bg-cream/5 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-ink">{ref.label}</span>
+                        <HelpTooltip title={ref.label} text={ref.tooltip} />
+                      </div>
+                      <p className="text-[11px] text-ink-soft leading-tight mt-0.5">{ref.simpleDesc}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.color}`}>
+                      {status.label}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-ink-soft leading-tight mt-0.5">{ref.simpleDesc}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${status.color}`}>
-                  {status.label}
-                </span>
-              </div>
 
-              {/* Value Display with Highlight */}
-              <div className="flex items-baseline justify-between pt-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span
-                    className={`text-2xl font-mono font-black ${
-                      status.status === "severe"
-                        ? "text-red-600"
-                        : status.status === "borderline"
-                        ? "text-amber-600"
-                        : "text-emerald-600"
-                    }`}
-                  >
-                    {val}
-                  </span>
-                  <span className="text-xs font-mono text-ink-soft">{ref.unit}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs font-mono text-ink-soft">
-                  <span>Deviation:</span>
-                  <strong className={status.pctDev > 0 ? "text-red-600" : "text-emerald-600"}>
-                    {status.pctDev > 0 ? `+${status.pctDev.toFixed(1)}%` : `${status.pctDev.toFixed(1)}%`}
-                  </strong>
-                  <HelpTooltip
-                    title="Deviation from Healthy"
-                    text="Shows percentage deviation of this patient's measurement from the normal healthy median."
-                  />
-                </div>
-              </div>
+                  {/* Value Display with Highlight */}
+                  <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className={`text-2xl font-mono font-black ${
+                          status.status === "severe"
+                            ? "text-red-600"
+                            : status.status === "borderline"
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {val}
+                      </span>
+                      <span className="text-xs font-mono text-ink-soft">{ref.unit}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs font-mono text-ink-soft">
+                      <span>Deviation:</span>
+                      <strong className={status.pctDev > 0 ? "text-red-600" : "text-emerald-600"}>
+                        {status.pctDev > 0 ? `+${status.pctDev.toFixed(1)}%` : `${status.pctDev.toFixed(1)}%`}
+                      </strong>
+                    </div>
+                  </div>
 
-              {/* Distribution Comparison Gauge */}
-              <div className="space-y-1 pt-1">
-                <div className="w-full bg-cream-deep h-2 rounded-full overflow-hidden flex">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      status.status === "severe"
-                        ? "bg-red-500"
-                        : status.status === "borderline"
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${pctWidth}%` }}
-                  />
+                  {/* Distribution Gauge */}
+                  <div className="space-y-1">
+                    <div className="w-full bg-cream-deep h-1.5 rounded-full overflow-hidden flex">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          status.status === "severe"
+                            ? "bg-red-500"
+                            : status.status === "borderline"
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`}
+                        style={{ width: `${pctWidth}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-mono text-ink-muted">
+                      <span>Healthy Avg: {ref.benignMed}</span>
+                      <span>Limit: {ref.normalMax}</span>
+                      <span>High-Risk: {ref.maligMed}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between text-[10px] font-mono text-ink-soft">
-                  <span>Healthy Avg: {ref.benignMed} {ref.unit}</span>
-                  <span>Normal Limit: {ref.normalMax} {ref.unit}</span>
-                  <span>High-Risk Avg: {ref.maligMed} {ref.unit}</span>
+              );
+            })}
+        </div>
+
+        {/* Column 2: Contour & Morphological Metrics */}
+        <div className="divide-y divide-hairline">
+          {Object.entries(WDBC_REFERENCE_DATA)
+            .slice(4, 8)
+            .map(([key, ref]) => {
+              const val = biomarkers[key] ?? ref.benignMed;
+              const status = getParameterStatus(key, val);
+              const pctWidth = Math.min(
+                100,
+                Math.max(10, ((val - ref.benignMed * 0.5) / (ref.maligMed * 1.5 - ref.benignMed * 0.5)) * 100)
+              );
+
+              return (
+                <div key={key} className="p-5 space-y-3 hover:bg-cream/5 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-ink">{ref.label}</span>
+                        <HelpTooltip title={ref.label} text={ref.tooltip} />
+                      </div>
+                      <p className="text-[11px] text-ink-soft leading-tight mt-0.5">{ref.simpleDesc}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.color}`}>
+                      {status.label}
+                    </span>
+                  </div>
+
+                  {/* Value Display with Highlight */}
+                  <div className="flex items-baseline justify-between">
+                    <div className="flex items-baseline gap-1.5">
+                      <span
+                        className={`text-2xl font-mono font-black ${
+                          status.status === "severe"
+                            ? "text-red-600"
+                            : status.status === "borderline"
+                            ? "text-amber-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {val}
+                      </span>
+                      <span className="text-xs font-mono text-ink-soft">{ref.unit}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs font-mono text-ink-soft">
+                      <span>Deviation:</span>
+                      <strong className={status.pctDev > 0 ? "text-red-600" : "text-emerald-600"}>
+                        {status.pctDev > 0 ? `+${status.pctDev.toFixed(1)}%` : `${status.pctDev.toFixed(1)}%`}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Distribution Gauge */}
+                  <div className="space-y-1">
+                    <div className="w-full bg-cream-deep h-1.5 rounded-full overflow-hidden flex">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          status.status === "severe"
+                            ? "bg-red-500"
+                            : status.status === "borderline"
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`}
+                        style={{ width: `${pctWidth}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-mono text-ink-muted">
+                      <span>Healthy Avg: {ref.benignMed}</span>
+                      <span>Limit: {ref.normalMax}</span>
+                      <span>High-Risk: {ref.maligMed}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
+        </div>
       </div>
     </div>
   );
