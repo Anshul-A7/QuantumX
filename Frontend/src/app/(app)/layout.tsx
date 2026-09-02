@@ -459,17 +459,40 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </Link>
           </div>
 
-          {/* Right: Compact Quantum Badge + Notifications + Account */}
+          {/* Right: Toggleable Model Selector (Transfinite-1 / Aleph-1) + Notifications + Account */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Compact Mobile Simulator Mode Badge (Routes to /hardware) */}
-            <Link
-              href="/hardware"
-              title="Transfinite-1 (Quantum Simulator Active) - View Hardware Telemetry"
-              className="px-2 py-1 rounded-lg bg-cream-deep/70 hover:bg-cream border border-hairline flex items-center gap-1 text-[10px] font-mono font-semibold text-ink shadow-2xs cursor-pointer transition-colors shrink-0"
-            >
-              <Sparkles size={11} className="text-quantum shrink-0" />
-              <span>Simulator</span>
-            </Link>
+            {/* Mobile Model Toggle Selector */}
+            <div className="flex items-center p-0.5 bg-cream-deep/60 rounded-lg border border-hairline text-[10px] font-mono shrink-0">
+              {/* Transfinite-1 (Simulator Active) */}
+              <button
+                type="button"
+                onClick={() => handleBackendChange("gpu_simulator")}
+                className={`px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 font-semibold cursor-pointer ${
+                  quantumBackend === "gpu_simulator"
+                    ? "bg-parchment text-quantum shadow-2xs border border-hairline/80 font-bold"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+                title="Transfinite-1 (Quantum Simulator Active)"
+              >
+                <Sparkles size={10} className="text-quantum shrink-0" />
+                <span className="hidden xs:inline">Transfinite-1</span>
+                <span className="xs:hidden">TF-1</span>
+              </button>
+
+              {/* Aleph-1 (IBM QPU Locked) */}
+              <button
+                type="button"
+                onClick={() => {
+                  alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
+                }}
+                className="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 text-ink-soft hover:text-ink font-medium cursor-not-allowed opacity-80"
+                title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
+              >
+                <Lock size={10} className="text-amber-500 shrink-0" />
+                <span>Aleph-1</span>
+                <span className="hidden xs:inline text-[8px] font-mono text-amber-700 bg-amber-50 px-0.5 py-0.1 rounded border border-amber-200">Locked</span>
+              </button>
+            </div>
 
             {/* Mobile Notification Bell */}
             <div className="relative">
