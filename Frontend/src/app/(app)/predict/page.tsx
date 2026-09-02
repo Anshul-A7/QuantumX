@@ -32,6 +32,7 @@ interface DiseaseModule {
   status: "active" | "beta_locked";
   statusLabel: string;
   icon: any;
+  image: string;
   description: string;
   targetUrl?: string;
   metrics: {
@@ -50,6 +51,7 @@ const DISEASE_MODULES: DiseaseModule[] = [
     status: "active",
     statusLabel: "Ready (v1.0-PROD)",
     icon: Microscope,
+    image: "/images/disease-breast-cancer.jpg",
     description: "Evaluates 8 fine-needle biopsy cellular morphometric biomarkers (cell radius, perimeter, concavity, and texture) using 8-qubit variational quantum circuits and classical ensembles.",
     targetUrl: "/predict/breast-cancer",
     metrics: {
@@ -66,6 +68,7 @@ const DISEASE_MODULES: DiseaseModule[] = [
     status: "beta_locked",
     statusLabel: "Beta / Calibrating",
     icon: Heart,
+    image: "/images/disease-cardiovascular.jpg",
     description: "Evaluates non-linear correlations between exercise ECG ST wave depression, resting systolic pressure, and fluoroscopy vessel constriction markers.",
     metrics: {
       cohortSize: "303 Clinical Records",
@@ -81,6 +84,7 @@ const DISEASE_MODULES: DiseaseModule[] = [
     status: "beta_locked",
     statusLabel: "Beta / Calibrating",
     icon: Droplets,
+    image: "/images/disease-kidney-neural.jpg",
     description: "Evaluates serum creatinine clearance decay, blood urea nitrogen retention, and neurological signaling anomalies to forecast acute filtration loss.",
     metrics: {
       cohortSize: "400 Renal Records",
@@ -208,7 +212,7 @@ export default function PredictHubPage() {
         </div>
       </div>
 
-      {/* 3 DISEASE MODULE SELECTION CARDS */}
+      {/* 3 DISEASE MODULE SELECTION CARDS WITH VISUAL ARTWORK */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
         {DISEASE_MODULES.map((mod) => {
           const isActive = mod.status === "active";
@@ -218,51 +222,61 @@ export default function PredictHubPage() {
             <div
               key={mod.key}
               onClick={() => handleModuleClick(mod)}
-              className={`rounded-2xl border p-5.5 flex flex-col justify-between transition-all relative overflow-hidden cursor-pointer shadow-xs ${
+              className={`group rounded-2xl border p-4.5 sm:p-5 flex flex-col justify-between transition-all relative overflow-hidden cursor-pointer shadow-xs ${
                 isActive
                   ? "bg-white border-quantum/40 hover:border-quantum hover:shadow-md ring-1 ring-quantum/20"
-                  : "bg-parchment border-hairline opacity-85 hover:opacity-100 hover:border-amber-300"
+                  : "bg-parchment border-hairline opacity-90 hover:opacity-100 hover:border-amber-300"
               }`}
             >
-              {/* Card Top: Icon, Category & Status Badge */}
+              {/* Card Top: Visual Art Banner + Badges */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                      isActive
-                        ? "bg-quantum/10 text-quantum border border-quantum/20"
-                        : "bg-amber-50 text-amber-600 border border-amber-200"
-                    }`}
-                  >
-                    <IconComp size={22} />
+                <div className="relative w-full h-40 rounded-xl overflow-hidden border border-hairline bg-cream/30">
+                  <img
+                    src={mod.image}
+                    alt={mod.title}
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                  
+                  {/* Status Badge */}
+                  <div className="absolute top-2.5 right-2.5">
+                    {isActive ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white/95 text-emerald-800 border border-emerald-300 shadow-2xs backdrop-blur-xs">
+                        ● READY (v1.0-PROD)
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-white/95 text-amber-800 border border-amber-300 shadow-2xs backdrop-blur-xs flex items-center gap-1">
+                        <Lock size={10} /> BETA (LOCKED)
+                      </span>
+                    )}
                   </div>
-                  {isActive ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      ● READY (v1.0-PROD)
+
+                  {/* Bottom Category Tag */}
+                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shadow-xs backdrop-blur-xs ${
+                      isActive ? "bg-white/95 text-quantum border border-quantum/30" : "bg-white/95 text-amber-700 border border-amber-300"
+                    }`}>
+                      <IconComp size={15} />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-white font-bold drop-shadow-sm">
+                      {mod.category}
                     </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                      <Lock size={10} /> BETA (LOCKED)
-                    </span>
-                  )}
+                  </div>
                 </div>
 
                 {/* Module Details */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft font-semibold block">
-                    {mod.category}
-                  </span>
-                  <h3 className="font-serif text-lg font-medium text-ink leading-tight">
+                  <h3 className="font-serif text-lg font-medium text-ink leading-tight group-hover:text-quantum transition-colors">
                     {mod.title}
                   </h3>
-                  <p className="text-xs text-ink-soft leading-relaxed">
+                  <p className="text-xs text-ink-soft leading-relaxed line-clamp-3">
                     {mod.description}
                   </p>
                 </div>
               </div>
 
               {/* Card Bottom: Metrics & Action */}
-              <div className="pt-4 border-t border-hairline mt-5 space-y-3">
+              <div className="pt-3.5 border-t border-hairline mt-4 space-y-3">
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-ink-soft">
                   <div>
                     <span className="block text-[9px] uppercase font-semibold text-ink-soft/70">Cohort</span>
@@ -280,10 +294,10 @@ export default function PredictHubPage() {
                   <Link
                     href={mod.targetUrl!}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full py-2.5 px-3 rounded-xl bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold flex items-center justify-between transition-all"
+                    className="w-full py-2.5 px-3 rounded-xl bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold flex items-center justify-between transition-all shadow-2xs group-hover:shadow-xs"
                   >
                     <span>Open Clinical Studio</span>
-                    <ArrowRight size={13} className="text-quantum" />
+                    <ArrowRight size={13} className="text-quantum group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 ) : (
                   <button
