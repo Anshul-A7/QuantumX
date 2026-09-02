@@ -1,2 +1,0 @@
-patient_id	patient_name	age	gender	accession_number	collection_date	specimen_type	radius_mean	texture_mean	perimeter_mean	area_mean	smoothness_mean	compactness_mean	concavity_mean	concave_points_mean	ground_truth	clinical_impression	notes	signed_by
-Patient-BC-105	Mei Lin	38	Female	ACC-2026-0805	2026-08-18	Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)	9.5	12.44	60.34	273.9	0.1024	0.0649	0.0295	0.0207	Benign	Benign (Benign Non-neoplastic lesion)	Simple fibrocystic benign breast lesion with small uniform nuclear boundaries.	Dr. Marcus Vance, MD, FCAP

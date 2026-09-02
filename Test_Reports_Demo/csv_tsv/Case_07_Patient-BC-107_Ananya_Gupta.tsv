@@ -1,2 +1,0 @@
-patient_id	patient_name	age	gender	accession_number	collection_date	specimen_type	radius_mean	texture_mean	perimeter_mean	area_mean	smoothness_mean	compactness_mean	concavity_mean	concave_points_mean	ground_truth	clinical_impression	notes	signed_by
-Patient-BC-107	Ananya Gupta	45	Female	ACC-2026-0807	2026-08-20	Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)	12.89	15.7	84.08	515.9	0.0681	0.049	0.0231	0.0196	Benign	Benign (Benign Non-neoplastic lesion)	Sclerosing adenosis showing minimal surface roughness and preserved cell architecture.	Dr. Marcus Vance, MD, FCAP

@@ -37,8 +37,6 @@ build/
 .vercel
 
 .offline-markdown-preview/
-
-Team Data/No Github Push
 .offline-markdown-preview
 .agents
 Plan/Notes (Personal)
@@ -56,8 +54,11 @@ PPT/
 .remember/
 Notes on Model Pipeline.md
 QuantumX_Final_Architecture_v3.md
-PROBLEM.md
 Ruthless Audit.md
 Thoughts.md
-SCRATCHPAD.md
 
+# Benchmark & Export Artifacts (Ignored from GitHub)
+QuantumX_v1_Benchmark_Artifacts/
+Test_Reports_Demo/
+artifacts_v1/
+*.zip

@@ -1,2 +1,0 @@
-patient_id,patient_name,age,gender,accession_number,collection_date,specimen_type,radius_mean,texture_mean,perimeter_mean,area_mean,smoothness_mean,compactness_mean,concavity_mean,concave_points_mean,ground_truth,clinical_impression,notes,signed_by
-Patient-BC-103,Priya Sharma,49,Female,ACC-2026-0803,2026-08-16,Fine Needle Aspiration Biopsy (Right/Left Breast Lesion),13.54,14.36,87.46,566.3,0.0977,0.0812,0.0666,0.0338,Benign,Benign (Benign Non-neoplastic lesion),High cellularity benign adenoma. Borderline density but low structural concavity.,"Dr. Marcus Vance, MD, FCAP"
