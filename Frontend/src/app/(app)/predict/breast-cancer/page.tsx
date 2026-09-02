@@ -26,9 +26,12 @@ import {
   RefreshCw,
   Phone,
   FileCheck2,
+  ChevronRight,
+  Eye,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import ComprehensiveResultModal from "@/components/predict/ComprehensiveResultModal";
 import { PatientMetadata } from "@/lib/medicalReportParser";
 import { showToast } from "@/components/common/ToastNotification";
 
@@ -120,6 +123,7 @@ export default function BreastCancerDetailPage() {
   const [isPatientIntakeOpen, setIsPatientIntakeOpen] = useState(true);
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isDetailedModalOpen, setIsDetailedModalOpen] = useState(false);
   const [linkGeometry, setLinkGeometry] = useState(false);
   const [inlineHelperKey, setInlineHelperKey] = useState<string | null>(null);
 
@@ -406,6 +410,26 @@ Generated via QuantumX Clinical Engine (SIH26139 Compliance Validated)
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
       />
+
+      {/* Comprehensive Full Result & Telemetry Modal */}
+      {inferenceResult && (
+        <ComprehensiveResultModal
+          isOpen={isDetailedModalOpen}
+          onClose={() => setIsDetailedModalOpen(false)}
+          patientData={{
+            patientName,
+            patientId,
+            patientAge,
+            patientGender,
+            intakeDate,
+            accessionNumber,
+            contactNumber,
+          }}
+          formValues={formValues}
+          derivedNotes={derivedNotes}
+          inferenceResult={inferenceResult}
+        />
+      )}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
@@ -985,15 +1009,33 @@ Generated via QuantumX Clinical Engine (SIH26139 Compliance Validated)
                       </p>
                     </div>
 
-                    {/* Download button */}
-                    <button
-                      type="button"
-                      onClick={handleDownloadReport}
-                      className="w-full py-2 px-3 rounded-xl border border-hairline bg-parchment hover:bg-cream text-ink text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Download size={13} />
-                      <span>Download Clinical Screening Summary ({patientId}.txt)</span>
-                    </button>
+                    {/* Action Buttons: Hero View More + Quick Summary */}
+                    <div className="space-y-2 pt-1">
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="button"
+                        onClick={() => {
+                          setIsDetailedModalOpen(true);
+                        }}
+                        className="w-full py-2.5 px-4 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-medium text-xs flex items-center justify-between transition-all cursor-pointer shadow-sm border border-ink"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Eye size={14} className="text-quantum" />
+                          <span className="font-semibold">View Complete Diagnostic Analysis & Telemetry</span>
+                        </div>
+                        <ChevronRight size={14} className="text-parchment/60" />
+                      </motion.button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadReport}
+                        className="w-full py-2 px-3 rounded-xl border border-hairline bg-parchment hover:bg-cream text-ink text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Download size={13} />
+                        <span>Download Quick Clinical Summary ({patientId}.txt)</span>
+                      </button>
+                    </div>
                   </motion.div>
                 ) : (
                   /* Initial Empty State */
