@@ -38,29 +38,26 @@ export async function POST(req: NextRequest) {
 
     if (geminiApiKey) {
       try {
-        const prompt = `You are a healthcare specialist explaining breast biopsy screening results clearly and compassionately to a patient and their doctor.
-CRITICAL MANDATE:
-- Use simple, plain, everyday words that a normal person can easily understand.
-- DO NOT use heavy, complicated, or scary medical jargon.
-- Explain what the numbers and measurements mean in clear, reassuring terms.
+        const prompt = `You are a healthcare specialist explaining breast biopsy screening results to a patient in simple everyday words.
+CRITICAL RULES:
+- Write exactly ONE cohesive, compassionate, and clear paragraph (3 to 4 sentences).
+- Use simple, everyday words that any normal person can easily understand.
+- DO NOT use complicated medical jargon, scary terms, or technical abbreviations.
+- Explain what the test result means in plain words (whether the sample looks healthy and normal, or if a doctor needs to check it further).
+- Explain what the cell size and cell edges mean in simple terms (e.g. smooth and normal size vs. enlarged with uneven edges).
+- Give a reassuring and clear next step (like routine periodic checkups or showing the results to a doctor for a follow-up check).
+- DO NOT mention AI, Gemini, models, algorithms, or prompts. Write as a caring health specialist.
 
-PATIENT: ${patientName} (${patientId}), Age ${age}, Gender ${gender}
-OVERALL RESULT: ${prediction} (${confidence}% Certainty)
-RISK LEVEL: ${risk_score} / 100.0 (${risk_tier})
-MEASURED CELL SIZES & SHAPES:
-- Cell Size (Radius): ${biomarkers.radius_mean} μm
-- Surface Texture: ${biomarkers.texture_mean} std
-- Cell Perimeter: ${biomarkers.perimeter_mean} μm
-- Cell Center Area: ${biomarkers.area_mean} μm²
-- Edge Smoothness: ${biomarkers.smoothness_mean}
-- Edge Indentations (Concavity): ${biomarkers.concavity_mean}
-- Number of Indentations: ${biomarkers.concave_points_mean}
+PATIENT: ${patientName}, Age ${age}, Gender ${gender}
+RESULT: ${prediction} (${confidence}% Certainty)
+RISK SCORE: ${risk_score} out of 100 (${risk_tier})
+CELL MEASUREMENTS:
+- Average Cell Size: ${biomarkers.radius_mean} micrometers
+- Cell Area: ${biomarkers.area_mean} square micrometers
+- Cell Edge Smoothness: ${biomarkers.smoothness_mean}
+- Cell Border Indentations: ${biomarkers.concavity_mean}
 
-Structure your response in valid JSON with exactly these 4 keys:
-1. "executive_summary": A clear 2-sentence summary in simple everyday language explaining whether the sample looks healthy/benign, borderline, or higher risk.
-2. "morphological_breakdown": An easy-to-read paragraph explaining whether the cells look normal or unusually enlarged, and whether the cell boundaries are smooth or irregular, in terms any person can understand.
-3. "engine_telemetry_insight": A simple 1-2 sentence explanation of how the screening models checked these features.
-4. "actionable_recommendations": Clear, practical recommended next steps (like routine checkups or doctor follow-up).`;
+Respond with valid JSON containing a single key "summary_paragraph" containing the cohesive explanation paragraph.`;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
@@ -78,7 +75,8 @@ Structure your response in valid JSON with exactly these 4 keys:
           const geminiData = await response.json();
           const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawText) {
-            aiSynthesis = JSON.parse(rawText);
+            const parsed = JSON.parse(rawText);
+            aiSynthesis = parsed.summary_paragraph || parsed.executive_summary || rawText;
           }
         }
       } catch (geminiErr) {
@@ -86,41 +84,34 @@ Structure your response in valid JSON with exactly these 4 keys:
       }
     }
 
-    // High-Signal Simple Plain Language Fallback
+    // High-Signal Simple Plain Everyday Language Fallback Paragraph
     if (!aiSynthesis) {
       const isMalignant = prediction === "Malignant";
       const isBorderline = risk_tier.includes("BORDERLINE") || risk_tier.includes("INDETERMINATE");
 
       if (isMalignant) {
-        aiSynthesis = {
-          executive_summary: `The biopsy screening for ${patientName} shows elevated risk (${confidence}% certainty) with a Risk Score of ${risk_score}/100. The cells show notable changes in shape and size that need prompt medical attention.`,
-          morphological_breakdown: `The measured cells are noticeably larger than normal (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²), and their edges are uneven rather than smooth. These irregular boundaries and textured surfaces indicate unusual cell growth that warrants a closer look by a doctor.`,
-          engine_telemetry_insight: `Both screening models concorded on this assessment, flagging cell enlargement and uneven edges as the primary factors.`,
-          actionable_recommendations: `We strongly recommend discussing these results with your doctor promptly for a targeted follow-up test (such as an ultrasound or core biopsy) to confirm the diagnosis and plan appropriate care.`
-        };
+        aiSynthesis = `The biopsy screening for ${patientName} shows an elevated risk score of ${risk_score} out of 100 with ${confidence}% certainty. The examined cells are noticeably enlarged with uneven and irregular edges, which indicates unusual cell changes that need prompt medical attention. We strongly recommend sharing these findings with your doctor for a follow-up ultrasound or consultation so they can guide the right next steps.`;
       } else if (isBorderline) {
-        aiSynthesis = {
-          executive_summary: `The biopsy screening for ${patientName} is in a borderline zone with a moderate Risk Score of ${risk_score}/100. The cells show mild irregularity that is not clearly dangerous, but not completely typical either.`,
-          morphological_breakdown: `The cells have moderate size measurements (Radius: ${biomarkers.radius_mean} μm) with slight unevenness along the cell borders. While they do not show severe changes, their slight variations suggest mild cellular changes that are often non-cancerous but worth double-checking.`,
-          engine_telemetry_insight: `The screening models detected borderline measurements that sit between typical healthy cells and elevated risk cells.`,
-          actionable_recommendations: `A routine follow-up check (such as a follow-up ultrasound in a few months) is recommended to ensure the tissue remains stable.`
-        };
+        aiSynthesis = `The biopsy screening for ${patientName} shows borderline measurements with a moderate risk score of ${risk_score} out of 100. The cells show mild variations in size and slightly uneven borders, which are often non-cancerous but benefit from a routine follow-up check. We advise checking in with your doctor to consider a repeat checkup or ultrasound in a few months to ensure the tissue stays stable.`;
       } else {
-        aiSynthesis = {
-          executive_summary: `Good news: the biopsy sample for ${patientName} shows reassuring, healthy results (${confidence}% certainty) with a low Risk Score of ${risk_score}/100. The cells appear normal and benign.`,
-          morphological_breakdown: `The cells are of normal, healthy size (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²) with smooth, even borders and regular textures. These are classic signs of normal, non-cancerous breast tissue.`,
-          engine_telemetry_insight: `All screening models confirmed that the cell measurements align closely with typical healthy tissue baselines.`,
-          actionable_recommendations: `No special treatment or extra procedures are needed. Continue with your regular routine health screenings and periodic checkups.`
-        };
+        aiSynthesis = `Good news: the biopsy test for ${patientName} shows reassuring and healthy results (${confidence}% certainty) with a low risk score of ${risk_score} out of 100. The examined cells are of standard, healthy size with smooth, even borders characteristic of typical, non-cancerous breast tissue. No urgent steps are needed, and continuing with your regular periodic checkups is recommended.`;
       }
     }
+
+    const summaryParagraph = typeof aiSynthesis === "string" ? aiSynthesis : (aiSynthesis.summary_paragraph || aiSynthesis.executive_summary || "");
 
     return NextResponse.json({
       success: true,
       patient_id: patientId,
       patient_name: patientName,
       model_engine,
-      synthesis: aiSynthesis,
+      summary: summaryParagraph,
+      synthesis: {
+        summary_paragraph: summaryParagraph,
+        executive_summary: summaryParagraph,
+        morphological_breakdown: summaryParagraph,
+        actionable_recommendations: "Follow up with your healthcare provider for routine care."
+      },
       generated_at: new Date().toISOString()
     });
   } catch (error: any) {

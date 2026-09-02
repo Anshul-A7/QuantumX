@@ -298,14 +298,20 @@ export default function BreastCancerDetailPage() {
 
     let fullText = "";
     if (aiSynthesis) {
-      const parts = [
-        aiSynthesis.executive_summary,
-        aiSynthesis.morphological_breakdown,
-        aiSynthesis.actionable_recommendations ? `Recommended Action: ${aiSynthesis.actionable_recommendations}` : ""
-      ].filter(Boolean);
-      fullText = parts.join("\n\n");
+      if (typeof aiSynthesis === "string") {
+        fullText = aiSynthesis;
+      } else if (aiSynthesis.summary_paragraph) {
+        fullText = aiSynthesis.summary_paragraph;
+      } else {
+        const parts = [
+          aiSynthesis.executive_summary,
+          aiSynthesis.morphological_breakdown,
+          aiSynthesis.actionable_recommendations ? `Recommended Action: ${aiSynthesis.actionable_recommendations}` : ""
+        ].filter(Boolean);
+        fullText = parts.join("\n\n");
+      }
     } else if (!isLoadingAi) {
-      fullText = `The biopsy screening for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% certainty, yielding a continuous Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCell measurements show nuclear area of ${formValues.area_mean || 458.7} μm² with mean cell radius of ${formValues.radius_mean || 12.2} μm and concavity index of ${formValues.concavity_mean || 0.037}. ${screeningResult.clinical_action || "Routine checkup and clinical follow-up is advised."}`;
+      fullText = `The biopsy test for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% certainty, yielding a continuous Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCell measurements show average cell size of ${formValues.radius_mean || 12.2} micrometers and smoothness of ${formValues.smoothness_mean || 0.1}. ${screeningResult.clinical_action || "Routine checkup and clinical follow-up is advised."}`;
     }
 
     if (!fullText) return;
@@ -529,7 +535,7 @@ export default function BreastCancerDetailPage() {
           .then((res) => res.json())
           .then((aiData) => {
             if (aiData.success) {
-              setAiSynthesis(aiData.synthesis);
+              setAiSynthesis(aiData.summary || aiData.synthesis);
             }
             setIsLoadingAi(false);
           })
