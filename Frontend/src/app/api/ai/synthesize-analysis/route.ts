@@ -60,7 +60,7 @@ CELL MEASUREMENTS:
 Respond with valid JSON containing a single key "summary_paragraph" containing the cohesive explanation paragraph.`;
 
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
