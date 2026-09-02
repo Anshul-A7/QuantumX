@@ -639,9 +639,8 @@ function PredictPageContent() {
                   }`}
                 >
                   {isLocked && (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-medium">
-                      <Lock size={10} />
-                      <span>Calibration</span>
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold tracking-wider">
+                      <span>BETA</span>
                     </div>
                   )}
 

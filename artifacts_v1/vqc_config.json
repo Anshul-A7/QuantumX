@@ -1,0 +1,10 @@
+{
+  "model_name": "QuantumX-8Qubit-VQC",
+  "version": "1.0.0-PROD",
+  "n_qubits": 8,
+  "n_layers": 2,
+  "param_count": 48,
+  "feature_map": "Second-Order Pauli-Z (ZZ Feature Map)",
+  "ansatz": "Strongly Entangling Layers (All-to-All CNOTs)",
+  "loss_function": "Cross-Entropy (Adjoint Analytical Gradient)"
+}

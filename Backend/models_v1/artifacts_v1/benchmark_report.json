@@ -1,0 +1,49 @@
+{
+  "protocol": "QuantumX TM-BVP",
+  "dataset": "WDBC",
+  "selected_biomarkers": [
+    "mean perimeter",
+    "worst radius",
+    "mean area",
+    "worst concavity",
+    "worst concave points",
+    "mean compactness",
+    "worst area",
+    "mean concavity"
+  ],
+  "geometric_difference_s_K": 2.079027600193139,
+  "summary": [
+    {
+      "Model": "XGBoost",
+      "Accuracy (%)": "95.61 \u00b1 1.84",
+      "AUROC": "0.9901 \u00b1 0.0070",
+      "Sensitivity (%)": "92.48 \u00b1 5.40",
+      "F1-Score": "0.9395 \u00b1 0.0267"
+    },
+    {
+      "Model": "SVM-RBF",
+      "Accuracy (%)": "98.24 \u00b1 0.96",
+      "AUROC": "0.9954 \u00b1 0.0055",
+      "Sensitivity (%)": "96.21 \u00b1 3.56",
+      "F1-Score": "0.9757 \u00b1 0.0140"
+    },
+    {
+      "Model": "RandomForest",
+      "Accuracy (%)": "95.43 \u00b1 1.28",
+      "AUROC": "0.9899 \u00b1 0.0074",
+      "Sensitivity (%)": "93.41 \u00b1 5.43",
+      "F1-Score": "0.9381 \u00b1 0.0186"
+    },
+    {
+      "Model": "8-Qubit VQC (Quantum)",
+      "Accuracy (%)": "87.87 \u00b1 0.85",
+      "AUROC": "0.9850 \u00b1 0.0060",
+      "Sensitivity (%)": "80.19 \u00b1 1.20",
+      "F1-Score": "0.8313 \u00b1 0.0080"
+    }
+  ],
+  "mcnemar_test": {
+    "chi2": 28.890625,
+    "p_value": 7.658268208476926e-08
+  }
+}
