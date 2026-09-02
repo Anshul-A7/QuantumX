@@ -555,56 +555,10 @@ export default function BreastCancerDetailPage() {
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          {hasInferred && (
-            <button
-              onClick={handleStartNewScreening}
-              className="px-3.5 py-2 rounded-xl bg-parchment hover:bg-cream border border-hairline text-ink text-xs font-semibold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
-            >
-              <RotateCcw size={13} className="text-quantum" />
-              <span>Start New Patient</span>
-            </button>
-          )}
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            disabled={hasInferred}
-            className="px-3.5 py-2 rounded-xl bg-parchment hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-          >
-            <UploadCloud size={14} className="text-quantum" />
-            <span>Import Lab Report / JSON</span>
-          </button>
-        </div>
-      </div>
-
-      {/* DUAL-ENGINE ARCHITECTURE BAR (SIMULTANEOUS INFERENCE) */}
-      <div className="bg-parchment rounded-2xl border border-hairline p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider font-mono">
-            Pipeline Architecture:
-          </span>
-          <div className="inline-flex p-1 rounded-xl bg-cream border border-hairline items-center gap-1.5 flex-wrap">
-            <div className="px-3 py-1.5 rounded-lg text-xs font-bold bg-ink text-parchment shadow-xs flex items-center gap-1.5">
-              <Zap size={13} className="text-quantum" />
-              <span>Transfinite-1 (Quantum)</span>
-            </div>
-            <span className="text-xs text-ink-soft font-mono font-bold">&</span>
-            <div className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-ink border border-hairline shadow-2xs flex items-center gap-1.5">
-              <Activity size={13} className="text-blue-500" />
-              <span>CX-01 (Classical)</span>
-            </div>
-          </div>
-          <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-            Simultaneous Parallel Run
-          </span>
-        </div>
-
-        {/* Real IBM QPU Hardware Target Option */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider font-mono">
-            Hardware Acceleration:
-          </span>
-          <div className="inline-flex p-1 rounded-xl bg-cream border border-hairline">
+        {/* Action Controls & Hardware Selector */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Compact Hardware Selector */}
+          <div className="inline-flex p-1 rounded-xl bg-cream border border-hairline shadow-2xs">
             <button
               disabled={hasInferred}
               onClick={() => setExecutionMode("simulator")}
@@ -630,6 +584,16 @@ export default function BreastCancerDetailPage() {
               <span>Aleph-1 (IBM QPU)</span>
             </button>
           </div>
+
+          {hasInferred && (
+            <button
+              onClick={handleStartNewScreening}
+              className="px-3.5 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              <RotateCcw size={13} className="text-quantum" />
+              <span>Start New Patient</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -726,7 +690,7 @@ export default function BreastCancerDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT: Parameter Sliders */}
         <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-5 space-y-5 shadow-xs">
-          <div className="flex items-center justify-between border-b border-hairline pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-3">
             <div>
               <div className="flex items-center gap-1.5">
                 <h2 className="font-serif text-lg font-medium text-ink">8 Biopsy Cell Measurements</h2>
@@ -735,16 +699,31 @@ export default function BreastCancerDetailPage() {
                   text="These 8 microscopic metrics are calculated from a Fine-Needle Aspiration (FNA) biopsy to evaluate cell nucleus shape, size irregularity, and surface roughness."
                 />
               </div>
-              <p className="text-xs text-ink-soft">Adjust measured values from biopsy report or lab results</p>
+              <p className="text-xs text-ink-soft">Adjust measured values or import lab report</p>
             </div>
-            {!hasInferred && (
+            
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
-                onClick={handleReset}
-                className="text-xs font-mono text-ink-soft hover:text-ink flex items-center gap-1 transition-colors cursor-pointer"
+                type="button"
+                onClick={() => setIsUploadModalOpen(true)}
+                disabled={hasInferred}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
               >
-                <RotateCcw size={12} /> Reset
+                <UploadCloud size={13} className="text-quantum" />
+                <span>Upload Report / JSON</span>
               </button>
-            )}
+
+              {!hasInferred && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="px-2.5 py-1.5 rounded-xl hover:bg-cream text-xs font-mono text-ink-soft hover:text-ink flex items-center gap-1 transition-colors cursor-pointer border border-transparent hover:border-hairline"
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Locked Notice Banner if Inferred */}
