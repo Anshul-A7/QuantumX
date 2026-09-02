@@ -11,24 +11,21 @@ import {
   Download,
   BarChart3,
   Layers,
-  Zap,
   Microscope,
-  Target,
   User,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 
-import BiomarkerMatrixTab, { WDBC_REFERENCE_DATA } from "./components/BiomarkerMatrixTab";
+import KeyRiskFactorsTab, { COMBINED_BIOMARKER_DATA } from "./components/KeyRiskFactorsTab";
 import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
-import KeyRiskFactorsTab from "./components/KeyRiskFactorsTab";
 import ModelComparisonTab from "./components/ModelComparisonTab";
-import QuantumCircuitTab from "./components/QuantumCircuitTab";
 
 export default function BreastCancerAnalysisPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<
-    "biomarker_matrix" | "ai_synthesis" | "shap_telemetry" | "model_comparison" | "quantum_hardware"
-  >("biomarker_matrix");
+  // 3 Focused Tabs: 1. Key Risk Factors, 2. QuantumX AI, 3. Model Comparison
+  const [activeTab, setActiveTab] = useState<"key_risk_factors" | "quantumx_ai" | "model_comparison">(
+    "key_risk_factors"
+  );
 
   // Model selection switch: "transfinite_1" (Hybrid Quantum) vs "cx_01" (Classical Baseline)
   const [selectedModel, setSelectedModel] = useState<"transfinite_1" | "cx_01">("transfinite_1");
@@ -112,10 +109,6 @@ export default function BreastCancerAnalysisPage() {
   const tfCalculatedProb = Math.max(
     0.5,
     Math.min(99.5, (1.0 / (1.0 + Math.exp(-(scoreLogit * 3.5)))) * 100.0)
-  );
-  const aleph1Prob = Math.max(
-    0.5,
-    Math.min(99.5, tfCalculatedProb + Math.sin(rVal * 2.0) * 1.2)
   );
 
   // ACTIVE MODEL SELECTION
@@ -207,8 +200,8 @@ Overall Risk Score: ${activeRiskScore.toFixed(1)} / 100.0
 Risk Category:      ${currentBadge.label}
 Cell Abnormality:   ${screeningResult.morphometric_index?.toFixed(1) ?? "0.0"} / 100.0
 
-MEASURED CELL VALUES:
-${Object.entries(WDBC_REFERENCE_DATA)
+MEASURED CELL VALUES & RISK FACTORS:
+${Object.entries(COMBINED_BIOMARKER_DATA)
   .map(([k, ref]) => {
     const val = biomarkers[k] ?? ref.benignMed;
     return `- ${ref.label}: ${val} ${ref.unit} (Healthy Avg: ${ref.benignMed} | Normal Limit: ${ref.normalMax})`;
@@ -219,7 +212,7 @@ DUAL-ENGINE BENCHMARK COMPARISON:
 - Classical Baseline (CX-01):         ${(cxData?.risk_score ?? cx01CalculatedProb).toFixed(1)}% Risk | Conf: ${(cxData?.confidence ?? 70.5).toFixed(1)}%
 - Quantum Simulator (Transfinite-1): ${(tfData?.risk_score ?? tfCalculatedProb).toFixed(1)}% Risk | Conf: ${(tfData?.confidence ?? 50.6).toFixed(1)}%
 
-DOCTOR'S AI CLINICAL SUMMARY:
+QUANTUMX AI CLINICAL SUMMARY:
 ${aiSynthesis?.summary_paragraph || aiSynthesis?.executive_summary || "Automated cell morphology evaluation based on verified clinical database standards."}
 
 RECOMMENDED NEXT MEDICAL STEPS:
@@ -265,7 +258,7 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
                 </span>
               </div>
               <p className="text-xs text-ink-soft font-light">
-                Comprehensive biopsy cell analysis, doctor&apos;s AI summary, and multi-engine diagnostic comparison.
+                Comprehensive biopsy cell analysis, QuantumX AI summary, and multi-engine diagnostic comparison.
               </p>
             </div>
           </div>
@@ -286,7 +279,7 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
       <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
         {/* Top Section: Patient Identity & Engine Switch Button */}
         <div className="p-5 border-b border-hairline/70 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Patient Details in clear, dignified terms */}
+          {/* Patient Details */}
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-cream border border-hairline flex items-center justify-center text-ink shrink-0 shadow-2xs">
               <User size={18} />
@@ -431,88 +424,67 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
           </div>
         </div>
 
-        {/* Bottom Section: Attached Navigation Tabs */}
-        <div className="border-t border-hairline bg-cream/30 px-3 py-2 flex flex-wrap items-center gap-1.5">
+        {/* Bottom Section: Attached Navigation Tabs (Consolidated to 3 Genuine Tabs) */}
+        <div className="border-t border-hairline bg-cream/30 px-3 py-2 flex flex-wrap items-center gap-2">
+          {/* Tab 1: Key Risk Factors & Cell Measurements */}
           <button
-            onClick={() => setActiveTab("biomarker_matrix")}
-            className={`py-2 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "biomarker_matrix"
+            onClick={() => setActiveTab("key_risk_factors")}
+            className={`py-2 px-4 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === "key_risk_factors"
                 ? "bg-white text-ink font-bold shadow-xs border border-hairline"
                 : "text-ink-soft hover:text-ink"
             }`}
           >
-            <Target size={14} className={activeTab === "biomarker_matrix" ? "text-quantum" : ""} />
-            <span>🔬 1. Cell Measurements</span>
+            <BarChart3 size={14} className={activeTab === "key_risk_factors" ? "text-quantum" : ""} />
+            <span>📊 1. Key Risk Factors</span>
           </button>
+
+          {/* Tab 2: QuantumX AI */}
           <button
-            onClick={() => setActiveTab("ai_synthesis")}
-            className={`py-2 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "ai_synthesis"
+            onClick={() => setActiveTab("quantumx_ai")}
+            className={`py-2 px-4 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === "quantumx_ai"
                 ? "bg-white text-ink font-bold shadow-xs border border-hairline"
                 : "text-ink-soft hover:text-ink"
             }`}
           >
-            <Sparkles size={14} className={activeTab === "ai_synthesis" ? "text-quantum" : ""} />
-            <span>✨ 2. Doctor&apos;s AI Second Opinion</span>
+            <Sparkles size={14} className={activeTab === "quantumx_ai" ? "text-quantum" : ""} />
+            <span>✨ 2. QuantumX AI</span>
           </button>
-          <button
-            onClick={() => setActiveTab("shap_telemetry")}
-            className={`py-2 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "shap_telemetry"
-                ? "bg-white text-ink font-bold shadow-xs border border-hairline"
-                : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            <BarChart3 size={14} className={activeTab === "shap_telemetry" ? "text-quantum" : ""} />
-            <span>📊 3. Key Risk Factors ({isHybrid ? "Quantum Saliency" : "SHAP"})</span>
-          </button>
+
+          {/* Tab 3: Model Comparison */}
           <button
             onClick={() => setActiveTab("model_comparison")}
-            className={`py-2 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`py-2 px-4 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === "model_comparison"
                 ? "bg-white text-ink font-bold shadow-xs border border-hairline"
                 : "text-ink-soft hover:text-ink"
             }`}
           >
             <Layers size={14} className={activeTab === "model_comparison" ? "text-quantum" : ""} />
-            <span>⚖️ 4. Model Comparison</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("quantum_hardware")}
-            className={`py-2 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTab === "quantum_hardware"
-                ? "bg-white text-ink font-bold shadow-xs border border-hairline"
-                : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            <Zap size={14} className={activeTab === "quantum_hardware" ? "text-quantum" : ""} />
-            <span>⚡ 5. Quantum Circuit Code</span>
+            <span>⚖️ 3. Model Comparison</span>
           </button>
         </div>
       </div>
 
       {/* 3. MODULAR ACTIVE TAB CONTENTS */}
       <div className="space-y-6">
-        {activeTab === "biomarker_matrix" && (
-          <BiomarkerMatrixTab biomarkers={biomarkers} />
+        {activeTab === "key_risk_factors" && (
+          <KeyRiskFactorsTab
+            isHybrid={isHybrid}
+            activeEngineName={activeEngineName}
+            activeAttributions={activeAttributions}
+            biomarkers={biomarkers}
+          />
         )}
 
-        {activeTab === "ai_synthesis" && (
+        {activeTab === "quantumx_ai" && (
           <AiDoctorConsultationTab
             patientInfo={patientInfo}
             biomarkers={biomarkers}
             screeningResult={screeningResult}
             activeEngine={activeEngineName}
             aiSynthesis={aiSynthesis}
-          />
-        )}
-
-        {activeTab === "shap_telemetry" && (
-          <KeyRiskFactorsTab
-            isHybrid={isHybrid}
-            activeEngineName={activeEngineName}
-            activeAttributions={activeAttributions}
-            biomarkers={biomarkers}
           />
         )}
 
@@ -524,13 +496,8 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
             tfData={tfData}
             cx01CalculatedProb={cx01CalculatedProb}
             tfCalculatedProb={tfCalculatedProb}
-            aleph1Prob={aleph1Prob}
             activePrediction={activePrediction}
           />
-        )}
-
-        {activeTab === "quantum_hardware" && (
-          <QuantumCircuitTab biomarkers={biomarkers} />
         )}
       </div>
     </motion.div>

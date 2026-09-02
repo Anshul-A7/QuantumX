@@ -23,7 +23,7 @@ interface Message {
 }
 
 // QuantumX Nexus Website Logo Icon
-function QuantumXLogo({ size = 28 }: { size?: number }) {
+function QuantumXLogo({ size = 26 }: { size?: number }) {
   return (
     <div
       style={{ width: size, height: size }}
@@ -133,7 +133,7 @@ export default function AiDoctorConsultationTab({
       aiSynthesis?.summary_paragraph ||
       aiSynthesis?.executive_summary ||
       (isMalignant
-        ? `Biopsy screening for ${patientInfo.name} shows noticeable cell enlargement with a mean radius of ${rVal} μm and indentation count of ${biomarkers.concave_points_mean || 0.14}. This pattern suggests atypical proliferation requiring clinical follow-up.`
+        ? `Biopsy screening for ${patientInfo.name} shows noticeable cell enlargement with a mean radius of ${rVal} μm and indentation count of ${biomarkers.concave_points_mean || 0.14}. This pattern indicates cellular atypical proliferation requiring clinical follow-up.`
         : `The biopsy screening for ${patientInfo.name} shows reassuring and healthy measurements with a low risk score. The cells are of standard size with smooth, uniform borders typical of healthy non-cancerous breast tissue.`);
 
     const morphologyText =
@@ -257,82 +257,84 @@ ${recommendationText}`;
   return (
     <div className="w-full bg-white rounded-2xl border border-hairline shadow-xs flex flex-col h-[650px] overflow-hidden">
       {/* Header: Strictly "QuantumX AI" with Website Logo */}
-      <div className="px-5 py-3.5 border-b border-hairline/80 flex items-center gap-3 bg-cream/15">
-        <QuantumXLogo size={28} />
+      <div className="px-5 py-3.5 border-b border-hairline/80 flex items-center gap-2.5 bg-cream/15">
+        <QuantumXLogo size={26} />
         <h3 className="text-sm font-bold text-ink tracking-tight font-serif">QuantumX AI</h3>
       </div>
 
-      {/* Conversation Stream */}
+      {/* Conversation Stream Container (Clean & Centered) */}
       <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-cream/5">
-        {messages.map((msg, index) => {
-          const isAssistant = msg.role === "assistant";
-          return (
-            <div
-              key={index}
-              className={`flex items-start gap-2.5 ${
-                isAssistant ? "justify-start" : "justify-end"
-              }`}
-            >
-              {/* Left Side: QuantumX AI Logo */}
-              {isAssistant && <QuantumXLogo size={26} />}
-
-              {/* Message Bubble (Left-aligned & compact for AI, Right-aligned for User) */}
+        <div className="max-w-3xl mx-auto space-y-4">
+          {messages.map((msg, index) => {
+            const isAssistant = msg.role === "assistant";
+            return (
               <div
-                className={`rounded-2xl p-4 shadow-2xs ${
-                  isAssistant
-                    ? "max-w-[70%] sm:max-w-[62%] bg-white border border-hairline text-ink"
-                    : "max-w-[70%] sm:max-w-[58%] bg-ink text-parchment font-medium"
+                key={index}
+                className={`flex items-start gap-2.5 ${
+                  isAssistant ? "justify-start" : "justify-end"
                 }`}
               >
-                {isAssistant ? (
-                  <FormattedMessageContent content={msg.content} />
-                ) : (
-                  <div className="whitespace-pre-line text-xs leading-relaxed">{msg.content}</div>
-                )}
-                <span
-                  className={`text-[9px] font-mono block mt-1.5 text-right ${
-                    isAssistant ? "text-ink-muted" : "text-parchment/60"
+                {/* Left Side: QuantumX AI Logo */}
+                {isAssistant && <QuantumXLogo size={24} />}
+
+                {/* Message Bubble: Snug, readable width wrapping into next lines */}
+                <div
+                  className={`rounded-2xl p-4 shadow-2xs ${
+                    isAssistant
+                      ? "w-fit max-w-[480px] sm:max-w-[500px] bg-white border border-hairline text-ink"
+                      : "w-fit max-w-[380px] sm:max-w-[420px] bg-ink text-parchment font-medium"
                   }`}
                 >
-                  {msg.timestamp}
-                </span>
-              </div>
-
-              {/* Right Side: User Profile Avatar */}
-              {!isAssistant && (
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-ink text-parchment flex items-center justify-center shrink-0 text-xs shadow-2xs border border-hairline mt-0.5">
-                  {userAvatar ? (
-                    <img
-                      src={userAvatar}
-                      alt="User Profile"
-                      className="w-full h-full object-cover"
-                    />
+                  {isAssistant ? (
+                    <FormattedMessageContent content={msg.content} />
                   ) : (
-                    <UserIcon size={14} className="text-parchment" />
+                    <div className="whitespace-pre-line text-xs leading-relaxed">{msg.content}</div>
                   )}
+                  <span
+                    className={`text-[9px] font-mono block mt-1.5 text-right ${
+                      isAssistant ? "text-ink-muted" : "text-parchment/60"
+                    }`}
+                  >
+                    {msg.timestamp}
+                  </span>
                 </div>
-              )}
-            </div>
-          );
-        })}
 
-        {/* Thinking Indicator */}
-        {isLoading && (
-          <div className="flex items-center gap-2.5">
-            <QuantumXLogo size={26} />
-            <div className="bg-white border border-hairline rounded-2xl px-3.5 py-2 text-xs text-ink-soft flex items-center gap-2 shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-pulse" />
-              <span className="font-mono text-xs text-ink-soft">thinking...</span>
+                {/* Right Side: User Profile Avatar */}
+                {!isAssistant && (
+                  <div className="w-6 h-6 rounded-full overflow-hidden bg-ink text-parchment flex items-center justify-center shrink-0 text-xs shadow-2xs border border-hairline mt-0.5">
+                    {userAvatar ? (
+                      <img
+                        src={userAvatar}
+                        alt="User Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <UserIcon size={13} className="text-parchment" />
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Thinking Indicator */}
+          {isLoading && (
+            <div className="flex items-center gap-2.5">
+              <QuantumXLogo size={24} />
+              <div className="bg-white border border-hairline rounded-2xl px-3.5 py-2 text-xs text-ink-soft flex items-center gap-2 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-pulse" />
+                <span className="font-mono text-xs text-ink-soft">thinking...</span>
+              </div>
             </div>
-          </div>
-        )}
-        <div ref={chatBottomRef} />
+          )}
+          <div ref={chatBottomRef} />
+        </div>
       </div>
 
-      {/* Floating Centered Typing Bar (No Extra Double Borders or Heavy Cards) */}
+      {/* Floating Centered Typing Bar */}
       <div className="p-3 bg-white">
-        <div className="max-w-xl mx-auto space-y-1.5">
-          <div className="flex items-center gap-2 bg-cream/40 border border-hairline rounded-xl px-3.5 py-2 focus-within:border-quantum focus-within:ring-2 focus-within:ring-quantum/10 transition-all shadow-2xs">
+        <div className="max-w-lg mx-auto space-y-1.5">
+          <div className="flex items-center gap-2 bg-cream/40 border border-hairline rounded-xl px-3 py-2 focus-within:border-quantum focus-within:ring-2 focus-within:ring-quantum/10 transition-all shadow-2xs">
             <input
               type="text"
               value={inputValue}
@@ -351,7 +353,6 @@ ${recommendationText}`;
             </button>
           </div>
 
-          {/* Minimalist Medical Disclaimer */}
           <p className="text-[10px] text-ink-muted text-center leading-relaxed">
             <ShieldAlert size={10} className="inline mr-1 text-amber-600 align-sub" />
             AI interpretations are for reference only. Please verify diagnostic decisions with a qualified healthcare professional.
