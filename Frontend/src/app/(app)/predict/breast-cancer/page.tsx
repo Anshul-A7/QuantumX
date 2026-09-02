@@ -232,6 +232,8 @@ export default function BreastCancerDetailPage() {
   const [screeningResult, setScreeningResult] = useState<any>(null);
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [typedSummaryText, setTypedSummaryText] = useState("");
+  const [isTypingSummary, setIsTypingSummary] = useState(false);
 
   const generateNewPatientIdentity = () => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -248,6 +250,49 @@ export default function BreastCancerDetailPage() {
     setFormValues(initial);
     generateNewPatientIdentity();
   }, []);
+
+  // Real-time typewriter effect for clinical diagnostic summary
+  useEffect(() => {
+    if (!screeningResult) {
+      setTypedSummaryText("");
+      setIsTypingSummary(false);
+      return;
+    }
+
+    let fullText = "";
+    if (aiSynthesis) {
+      const parts = [
+        aiSynthesis.executive_summary,
+        aiSynthesis.morphological_breakdown,
+        aiSynthesis.actionable_recommendations ? `Recommended Next Step: ${aiSynthesis.actionable_recommendations}` : ""
+      ].filter(Boolean);
+      fullText = parts.join("\n\n");
+    } else if (!isLoadingAi) {
+      fullText = `Fine-needle aspiration (FNA) cytology for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% diagnostic certainty, yielding a composite Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCellular morphometry shows nuclear area of ${formValues.area_mean || 458.7} μm² with mean cell radius of ${formValues.radius_mean || 12.2} μm and concavity index of ${formValues.concavity_mean || 0.037}. ${screeningResult.clinical_action || "Routine clinical follow-up is advised."}`;
+    }
+
+    if (!fullText) return;
+
+    setIsTypingSummary(true);
+    setTypedSummaryText("");
+
+    let currentIdx = 0;
+    const speed = 12; // ms
+    const chunkSize = 2; // chars per tick
+
+    const interval = setInterval(() => {
+      currentIdx += chunkSize;
+      if (currentIdx >= fullText.length) {
+        setTypedSummaryText(fullText);
+        setIsTypingSummary(false);
+        clearInterval(interval);
+      } else {
+        setTypedSummaryText(fullText.slice(0, currentIdx));
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [aiSynthesis, isLoadingAi, screeningResult, patientName, formValues]);
 
   const handleNavigateToAnalysis = () => {
     try {
@@ -293,6 +338,8 @@ export default function BreastCancerDetailPage() {
     setHasInferred(false);
     setScreeningResult(null);
     setAiSynthesis(null);
+    setTypedSummaryText("");
+    setIsTypingSummary(false);
     setIsPatientIntakeOpen(true);
     showToast({
       title: "New Patient Intake Initialized",
@@ -1059,91 +1106,50 @@ export default function BreastCancerDetailPage() {
                   </div>
                 </div>
 
-                {/* LIVE REAL-TIME GEMINI PATHOLOGIST AI ANALYSIS */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-white border border-quantum/30 shadow-xs space-y-3.5 relative overflow-hidden">
-                  {/* Top Accent Gradient Line */}
-                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-quantum via-blue-500 to-purple-500" />
-
-                  {/* Header Row */}
-                  <div className="flex items-center justify-between border-b border-hairline pb-3">
+                {/* PATHOLOGIST DIAGNOSTIC SUMMARY (PARAGRAPH FORMAT WITH TYPEWRITER ANIMATION) */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white border border-hairline shadow-xs space-y-3 relative overflow-hidden">
+                  {/* Header Row - Clean & Medical */}
+                  <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-quantum/10 border border-quantum/20 flex items-center justify-center text-quantum shadow-2xs">
-                        <Sparkles size={16} />
+                        <FileText size={15} />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
-                            Live Pathologist AI Synthesis
-                          </h4>
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-quantum/10 text-quantum font-bold border border-quantum/20">
-                            Gemini 2.5 Flash
-                          </span>
-                        </div>
+                        <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                          Pathologist Diagnostic Summary
+                        </h4>
                         <p className="text-[11px] text-ink-soft">
-                          Real-time clinical consultation for {patientName || "Patient"}
+                          Clinical evaluation for {patientName || "Patient"} ({patientId})
                         </p>
                       </div>
                     </div>
 
-                    {isLoadingAi ? (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-quantum/10 text-quantum text-[11px] font-mono font-medium animate-pulse">
-                        <Loader2 size={12} className="animate-spin" />
-                        <span>Synthesizing...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-mono font-bold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span>Live Generated</span>
-                      </div>
+                    {(isLoadingAi || isTypingSummary) && (
+                      <span className="text-[10px] font-mono text-quantum flex items-center gap-1 font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-ping" />
+                        {isLoadingAi ? "Thinking..." : "Synthesizing..."}
+                      </span>
                     )}
                   </div>
 
-                  {/* Body: Live Gemini Synthesis */}
-                  {isLoadingAi ? (
-                    <div className="py-4 space-y-2.5 animate-pulse">
-                      <div className="h-3.5 bg-cream-deep/60 rounded-md w-full" />
-                      <div className="h-3.5 bg-cream-deep/60 rounded-md w-5/6" />
-                      <div className="h-3.5 bg-cream-deep/60 rounded-md w-4/6" />
-                      <p className="text-[11px] font-mono text-ink-soft/70 pt-1 text-center">
-                        Gemini is evaluating 8 cell morphometry parameters and dual model consensus...
-                      </p>
+                  {/* Body: Thinking State or Typed Paragraph */}
+                  {isLoadingAi && !typedSummaryText ? (
+                    <div className="py-3 px-3.5 rounded-xl bg-parchment/40 border border-hairline flex items-center gap-2.5 text-xs text-ink-soft font-mono">
+                      <div className="flex items-center gap-1 text-quantum shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:-0.3s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:-0.15s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce" />
+                      </div>
+                      <span className="italic">Thinking... evaluating cytomorphology and compiling diagnostic summary</span>
                     </div>
                   ) : (
-                    <div className="space-y-3 text-xs leading-relaxed">
-                      {/* 1. Clinical Summary */}
-                      <div className="p-3 rounded-xl bg-parchment/60 border border-hairline space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-ink text-[11px] uppercase tracking-wider">
-                          <FileText size={13} className="text-quantum" />
-                          <span>1. Clinical Assessment &amp; Findings</span>
-                        </div>
-                        <p className="text-xs text-ink leading-relaxed">
-                          {aiSynthesis?.executive_summary ||
-                            `${patientName || "Patient"}'s FNA biopsy cell features were evaluated with high confidence (${screeningResult.confidence?.toFixed(1)}%). The computed clinical risk index is ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${screeningResult.risk_tier}).`}
-                        </p>
-                      </div>
-
-                      {/* 2. Key Morphological Drivers */}
-                      <div className="p-3 rounded-xl bg-parchment/60 border border-hairline space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-ink text-[11px] uppercase tracking-wider">
-                          <Activity size={13} className="text-blue-600" />
-                          <span>2. Cell Membrane &amp; Nuclear Structure</span>
-                        </div>
-                        <p className="text-xs text-ink-soft leading-relaxed">
-                          {aiSynthesis?.morphological_breakdown ||
-                            `Nuclear area is measured at ${formValues.area_mean} μm² with a cell radius of ${formValues.radius_mean} μm and border smoothness index of ${formValues.smoothness_mean}. Contour concavity is registered at ${formValues.concavity_mean}.`}
-                        </p>
-                      </div>
-
-                      {/* 3. Actionable Next Steps */}
-                      <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200 text-ink space-y-1">
-                        <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-[11px] uppercase tracking-wider">
-                          <CheckCircle2 size={13} className="text-emerald-700" />
-                          <span>3. Doctor&apos;s Recommended Action</span>
-                        </div>
-                        <p className="text-xs text-emerald-950 font-medium leading-relaxed">
-                          {aiSynthesis?.actionable_recommendations || screeningResult.clinical_action}
-                        </p>
-                      </div>
+                    <div className="p-3.5 rounded-xl bg-parchment/50 border border-hairline">
+                      <p className="text-xs sm:text-[13px] text-ink leading-relaxed whitespace-pre-line font-normal">
+                        {typedSummaryText}
+                        {isTypingSummary && (
+                          <span className="inline-block w-1.5 h-3.5 ml-1 bg-quantum animate-pulse align-middle" />
+                        )}
+                      </p>
                     </div>
                   )}
                 </div>
