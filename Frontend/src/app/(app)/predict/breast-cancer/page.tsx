@@ -499,9 +499,15 @@ export default function BreastCancerDetailPage() {
   };
 
   const getRiskColor = (tier: string) => {
-    if (tier?.includes("HIGH")) return "text-red-700 bg-red-50 border-red-200";
-    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE")) return "text-amber-700 bg-amber-50 border-amber-200";
+    if (tier?.includes("HIGH") || tier?.includes("MALIGNANT")) return "text-red-700 bg-red-50 border-red-200";
+    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE") || tier?.includes("ATYPICAL")) return "text-amber-700 bg-amber-50 border-amber-200";
     return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  };
+
+  const getEssentialRiskLabel = (tier: string) => {
+    if (tier?.includes("HIGH") || tier?.includes("MALIGNANT")) return "High Risk (Malignant)";
+    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE") || tier?.includes("ATYPICAL")) return "Borderline Risk (Atypical)";
+    return "Low Risk (Benign)";
   };
 
   return (
@@ -580,20 +586,20 @@ export default function BreastCancerDetailPage() {
         </div>
       </div>
 
-      {/* PATIENT INTAKE ACCORDION (INPUTABLE, NOT PRE-FILLED) */}
-      <div className="bg-parchment rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      {/* PATIENT INTAKE ACCORDION (INPUTABLE, NOT PRE-FILLED, CLEAN WHITE CARD) */}
+      <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
         <button
           type="button"
           onClick={() => setIsPatientIntakeOpen(!isPatientIntakeOpen)}
-          className="w-full px-5 py-3.5 bg-cream/30 hover:bg-cream/60 flex items-center justify-between text-left transition-colors cursor-pointer border-b border-hairline"
+          className="w-full px-5 py-3.5 bg-white hover:bg-cream/40 flex items-center justify-between text-left transition-colors cursor-pointer border-b border-hairline"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-ink/5 border border-hairline flex items-center justify-center text-ink">
+            <div className="w-8 h-8 rounded-lg bg-quantum/10 border border-quantum/20 flex items-center justify-center text-quantum">
               <User size={15} />
             </div>
             <div>
               <h3 className="font-serif text-sm font-medium text-ink">
-                Patient Demographics & Clinical Intake Metadata
+                Patient Demographics &amp; Clinical Intake Metadata
               </h3>
               <p className="text-[11px] font-mono text-ink-soft">
                 {patientName ? `${patientName} (${patientId})` : "New Patient Intake (Ready for Input)"} • {patientAge ? `Age: ${patientAge}` : "Age: Not Specified"} • Cohort: {patientGender}
@@ -606,7 +612,7 @@ export default function BreastCancerDetailPage() {
         </button>
 
         {isPatientIntakeOpen && (
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-parchment">
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-white">
             {/* 1. Patient Name (Inputable) */}
             <div className="space-y-1">
               <label className="text-[11px] font-mono text-ink-soft font-medium block">
@@ -618,7 +624,7 @@ export default function BreastCancerDetailPage() {
                 placeholder="e.g. Elena Vance"
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
-                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-medium focus:outline-none focus:border-quantum ${
+                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/20 hover:bg-cream/30 text-ink text-xs font-medium focus:bg-white focus:outline-none focus:border-quantum ${
                   hasInferred ? "opacity-75 cursor-not-allowed bg-cream/30" : ""
                 }`}
               />
@@ -651,7 +657,7 @@ export default function BreastCancerDetailPage() {
                 max="110"
                 value={patientAge}
                 onChange={(e) => setPatientAge(e.target.value ? parseInt(e.target.value) : "")}
-                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-mono focus:outline-none focus:border-quantum ${
+                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/20 hover:bg-cream/30 text-ink text-xs font-mono focus:bg-white focus:outline-none focus:border-quantum ${
                   hasInferred ? "opacity-75 cursor-not-allowed bg-cream/30" : ""
                 }`}
               />
@@ -660,7 +666,7 @@ export default function BreastCancerDetailPage() {
             {/* 4. Gender (Fixed Standard for Breast Cancer) */}
             <div className="space-y-1">
               <label className="text-[11px] font-mono text-ink-soft font-medium">Biological Cohort</label>
-              <div className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/30 text-ink text-xs font-medium flex items-center justify-between">
+              <div className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/20 text-ink text-xs font-medium flex items-center justify-between">
                 <span>Female (FNA WDBC)</span>
                 <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Validated</span>
               </div>
@@ -833,18 +839,18 @@ export default function BreastCancerDetailPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
               >
-                {/* Result Header */}
+                {/* Result Header - Clean & Essential */}
                 <div className="flex items-center justify-between border-b border-hairline pb-3">
                   <div>
                     <span className="text-[10px] font-mono uppercase tracking-wider text-quantum font-bold">
-                      Simultaneous Dual-Engine Live Benchmark
+                      Screening Assessment
                     </span>
                     <h3 className="font-serif text-xl font-medium text-ink">
-                      {patientName} ({patientId})
+                      {patientName || "Patient"} <span className="text-xs font-mono text-ink-soft">({patientId})</span>
                     </h3>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-bold border ${getRiskColor(screeningResult.risk_tier)}`}>
-                    {screeningResult.risk_tier}
+                  <span className={`text-xs px-3 py-1 rounded-full font-bold border shadow-2xs ${getRiskColor(screeningResult.risk_tier)}`}>
+                    {getEssentialRiskLabel(screeningResult.risk_tier)}
                   </span>
                 </div>
 
