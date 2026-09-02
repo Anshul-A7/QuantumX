@@ -58,56 +58,6 @@ export class NotificationService {
       // Offline fallback: returns local records
     }
 
-    // If completely empty, populate initial clinical alerts so notification center and dropdown are never blank
-    if (records.length === 0) {
-      records = [
-        {
-          id: "notif-screen-2571",
-          title: "Screening Completed: Patient-2571",
-          category: "disease",
-          message: "Breast Cancer Screening result: Malignant (High Risk) (92.4% confidence).",
-          read: false,
-          time: "09:10 PM",
-          actionUrl: "/history",
-          createdAt: new Date(Date.now() - 600000).toISOString(),
-        },
-        {
-          id: "notif-screen-1693",
-          title: "Screening Completed: Patient-1693",
-          category: "disease",
-          message: "Breast Cancer Screening result: Malignant (High Risk) (92.4% confidence).",
-          read: false,
-          time: "06:49 PM",
-          actionUrl: "/history",
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "notif-screen-8188",
-          title: "Screening Completed: Patient-8188",
-          category: "disease",
-          message: "Breast Cancer Screening result: Malignant (High Risk) (92.4% confidence).",
-          read: true,
-          time: "01:11 PM",
-          actionUrl: "/history",
-          createdAt: new Date(Date.now() - 10800000).toISOString(),
-        },
-        {
-          id: "notif-screen-7065",
-          title: "Screening Completed: Patient-7065",
-          category: "disease",
-          message: "Breast Cancer Screening result: Benign (Low Risk) (88.5% confidence).",
-          read: true,
-          time: "01:11 PM",
-          actionUrl: "/history",
-          createdAt: new Date(Date.now() - 14400000).toISOString(),
-        },
-      ];
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("quantumx_notifications", JSON.stringify(records));
-      }
-    }
-
     return records;
   }
 

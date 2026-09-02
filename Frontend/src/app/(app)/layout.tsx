@@ -403,40 +403,37 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </div>
 
                       <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                        {notifications.length === 0 ? (
+                        {unreadCount === 0 ? (
                           <div className="py-6 text-center text-xs text-ink-soft space-y-1">
-                            <p className="font-medium text-ink">No notifications yet</p>
-                            <p className="text-[10px] text-ink-soft">Screening reports and updates will appear here.</p>
+                            <p className="font-medium text-ink">No unread notifications</p>
+                            <p className="text-[10px] text-ink-soft">You are all caught up. Patient reports will appear here.</p>
                           </div>
                         ) : (
-                          notifications.map((n) => (
-                            <Link
-                              key={n.id}
-                              href={n.actionUrl || "/notifications"}
-                              onClick={() => {
-                                if (!n.read) {
+                          notifications
+                            .filter((n) => !n.read)
+                            .map((n) => (
+                              <Link
+                                key={n.id}
+                                href={n.actionUrl || "/notifications"}
+                                onClick={() => {
                                   NotificationService.markAsRead(n.id);
                                   setNotifications((prev) =>
                                     prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
                                   );
-                                }
-                                setNotificationsOpen(false);
-                              }}
-                              className={`block p-2.5 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer ${
-                                n.read
-                                  ? "bg-cream/40 border border-hairline/60 opacity-80 hover:opacity-100 hover:bg-cream"
-                                  : "bg-quantum/10 border border-quantum/20 shadow-2xs"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className={`text-[11px] ${n.read ? "font-medium text-ink" : "font-bold text-ink"}`}>
-                                  {n.title}
-                                </span>
-                                <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
-                              </div>
-                              <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
-                            </Link>
-                          ))
+                                  setNotificationsOpen(false);
+                                }}
+                                className="block p-2.5 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer bg-quantum/10 border border-quantum/20 shadow-2xs hover:bg-quantum/15"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-quantum shrink-0" />
+                                    {n.title}
+                                  </span>
+                                  <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                                </div>
+                                <p className="text-[11px] text-ink-soft font-light leading-snug">{n.message}</p>
+                              </Link>
+                            ))
                         )}
                       </div>
 
@@ -593,40 +590,37 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </div>
 
                       <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                        {notifications.length === 0 ? (
+                        {unreadCount === 0 ? (
                           <div className="py-6 text-center text-xs text-ink-soft space-y-1">
-                            <p className="font-medium text-ink">No notifications yet</p>
-                            <p className="text-[10px] text-ink-soft">Screening reports and updates will appear here.</p>
+                            <p className="font-medium text-ink">No unread notifications</p>
+                            <p className="text-[10px] text-ink-soft">You are all caught up. Patient reports will appear here.</p>
                           </div>
                         ) : (
-                          notifications.map((n) => (
-                            <Link
-                              key={n.id}
-                              href={n.actionUrl || "/notifications"}
-                              onClick={() => {
-                                if (!n.read) {
+                          notifications
+                            .filter((n) => !n.read)
+                            .map((n) => (
+                              <Link
+                                key={n.id}
+                                href={n.actionUrl || "/notifications"}
+                                onClick={() => {
                                   NotificationService.markAsRead(n.id);
                                   setNotifications((prev) =>
                                     prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
                                   );
-                                }
-                                setNotificationsOpen(false);
-                              }}
-                              className={`block p-2 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer ${
-                                n.read
-                                  ? "bg-cream/40 border border-hairline/60 opacity-80 hover:opacity-100 hover:bg-cream"
-                                  : "bg-quantum/10 border border-quantum/20 shadow-2xs"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className={`text-[11px] ${n.read ? "font-medium text-ink" : "font-bold text-ink"}`}>
-                                  {n.title}
-                                </span>
-                                <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
-                              </div>
-                              <p className="text-[10px] text-ink-soft font-light leading-snug">{n.message}</p>
-                            </Link>
-                          ))
+                                  setNotificationsOpen(false);
+                                }}
+                                className="block p-2 rounded-xl text-xs space-y-0.5 transition-colors cursor-pointer bg-quantum/10 border border-quantum/20 shadow-2xs hover:bg-quantum/15"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] font-bold text-ink flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-quantum shrink-0" />
+                                    {n.title}
+                                  </span>
+                                  <span className="text-[9px] text-ink-soft font-mono">{n.time}</span>
+                                </div>
+                                <p className="text-[10px] text-ink-soft font-light leading-snug">{n.message}</p>
+                              </Link>
+                            ))
                         )}
                       </div>
 

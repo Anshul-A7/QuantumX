@@ -226,21 +226,23 @@ export default function AccountPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
-                onClick={() => setPreferredBackend("ibmq_eagle")}
-                className={`p-3.5 rounded-xl border cursor-pointer transition-all space-y-1 ${
+                onClick={() => {
+                  alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
+                }}
+                className={`p-3.5 rounded-xl border cursor-not-allowed transition-all space-y-1 ${
                   preferredBackend === "ibmq_eagle"
                     ? "bg-cream border-quantum/60 shadow-xs ring-1 ring-quantum/30"
-                    : "bg-cream/40 hover:bg-cream border-hairline"
+                    : "bg-cream/40 hover:bg-cream border-hairline opacity-80"
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-sm font-medium text-ink flex items-center gap-1.5">
-                    <Cpu size={14} className="text-quantum" /> IBM Quantum (127-Qubit Eagle)
+                    <Cpu size={14} className="text-quantum" /> Aleph-1 (IBM Quantum Hardware)
                   </span>
-                  {preferredBackend === "ibmq_eagle" && <CheckCircle2 size={13} className="text-quantum" />}
+                  <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
                 </div>
                 <p className="text-[11px] text-ink-soft font-light leading-snug">
-                  Real superconducting quantum processor with physical entanglement.
+                  127-Qubit superconducting quantum processor (Reserved for clinical partner access).
                 </p>
               </div>
 
@@ -254,12 +256,12 @@ export default function AccountPage() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-sm font-medium text-ink flex items-center gap-1.5">
-                    <Zap size={14} className="text-blue-700" /> High-Speed GPU Simulator
+                    <Zap size={14} className="text-blue-700" /> Transfinite-1 (Quantum Simulator)
                   </span>
                   {preferredBackend === "gpu_simulator" && <CheckCircle2 size={13} className="text-quantum" />}
                 </div>
                 <p className="text-[11px] text-ink-soft font-light leading-snug">
-                  Instantaneous, zero-noise statevector matrix calculation.
+                  8-Qubit VQC continuous statevector simulation with 0.00% decoherence noise.
                 </p>
               </div>
             </div>
