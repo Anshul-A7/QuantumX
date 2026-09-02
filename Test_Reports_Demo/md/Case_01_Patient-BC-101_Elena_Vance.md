@@ -29,6 +29,6 @@
 ---
 
 ### 📋 Pathologist Findings & Impression
-* **Clinical Impression:** 🔴 **Malignant (High-Risk Infiltrating Ductal Carcinoma)**
-* **Cytological Notes:** Fine needle aspirate cytology reveals marked cellular enlargement, hyperchromatic nuclei, and frequent nuclear contour irregularities consistent with invasive malignancy.
+* **Clinical Impression:** 🔴 **Malignant (Malignant Infiltrating Carcinoma)**
+* **Cytological Notes:** Infiltrating ductal carcinoma with marked nuclear enlargement and high spatial area.
 * **Attending Pathologist:** Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)

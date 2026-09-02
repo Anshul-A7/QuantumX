@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-104",
+  "patient_name": "Rachel Adams",
+  "age": 61,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0804",
+  "collection_date": "2026-08-17",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 16.13,
+    "texture_mean": 17.88,
+    "perimeter_mean": 107.0,
+    "area_mean": 807.2,
+    "smoothness_mean": 0.104,
+    "compactness_mean": 0.1559,
+    "concavity_mean": 0.1354,
+    "concave_points_mean": 0.0775
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Malignant (Malignant Infiltrating Carcinoma)",
+    "ground_truth": "Malignant",
+    "notes": "Early-stage lobular carcinoma with pronounced boundary irregularity and elevated notch count.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

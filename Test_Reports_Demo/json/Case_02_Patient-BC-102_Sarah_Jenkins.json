@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-102",
+  "patient_name": "Sarah Jenkins",
+  "age": 42,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0802",
+  "collection_date": "2026-08-15",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 11.42,
+    "texture_mean": 13.25,
+    "perimeter_mean": 73.34,
+    "area_mean": 399.8,
+    "smoothness_mean": 0.0785,
+    "compactness_mean": 0.0402,
+    "concavity_mean": 0.0135,
+    "concave_points_mean": 0.0112
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Benign (Benign Non-neoplastic lesion)",
+    "ground_truth": "Benign",
+    "notes": "Uniform tubular fibroadenoma with smooth circular contours and low cellular density.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

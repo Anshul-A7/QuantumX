@@ -17,8 +17,9 @@
     "concave_points_mean": 0.0702
   },
   "pathologist_findings": {
-    "clinical_impression": "Malignant (High-Risk Infiltrating Ductal Carcinoma)",
-    "notes": "Fine needle aspirate cytology reveals marked cellular enlargement, hyperchromatic nuclei, and frequent nuclear contour irregularities consistent with invasive malignancy.",
+    "clinical_impression": "Malignant (Malignant Infiltrating Carcinoma)",
+    "ground_truth": "Malignant",
+    "notes": "Infiltrating ductal carcinoma with marked nuclear enlargement and high spatial area.",
     "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
     "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
   }

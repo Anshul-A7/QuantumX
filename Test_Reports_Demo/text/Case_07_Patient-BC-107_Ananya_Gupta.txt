@@ -2,30 +2,30 @@
 ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY
 FINE NEEDLE ASPIRATION (FNA) CYTOPATHOLOGY REPORT
 ================================================================================
-Patient ID:        Patient-BC-101
-Patient Name:      Elena Vance
-Age / Gender:      54 Yrs / Female
-Accession Number:  ACC-2026-0801
-Collection Date:   2026-08-14
+Patient ID:        Patient-BC-107
+Patient Name:      Ananya Gupta
+Age / Gender:      45 Yrs / Female
+Accession Number:  ACC-2026-0807
+Collection Date:   2026-08-20
 Specimen Type:     Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)
 
 --------------------------------------------------------------------------------
 AUTOMATED DIGITAL CYTOMETRY MEASUREMENTS:
 --------------------------------------------------------------------------------
-Cell Size (Radius Mean):         20.57 um
-Surface Texture (Texture Mean):   17.77 std
-Cell Perimeter (Perimeter Mean): 132.90 um
-Nuclear Area (Area Mean):        1326.0 um2
-Border Smoothness (Smoothness):  0.0847 idx
-Cell Compactness (Compactness):  0.0786 idx
-Indentation Depth (Concavity):   0.0869 idx
-Indentation Count (Points):      0.0702 cnt
+Cell Size (Radius Mean):         12.89 um
+Surface Texture (Texture Mean):   15.70 std
+Cell Perimeter (Perimeter Mean): 84.08 um
+Nuclear Area (Area Mean):        515.9 um2
+Border Smoothness (Smoothness):  0.0681 idx
+Cell Compactness (Compactness):  0.0490 idx
+Indentation Depth (Concavity):   0.0231 idx
+Indentation Count (Points):      0.0196 cnt
 
 --------------------------------------------------------------------------------
 PATHOLOGIST FINDINGS & DIAGNOSTIC IMPRESSION:
 --------------------------------------------------------------------------------
-Clinical Impression: Malignant (Malignant Infiltrating Carcinoma)
-Notes: Infiltrating ductal carcinoma with marked nuclear enlargement and high spatial area.
+Clinical Impression: Benign (Benign Non-neoplastic lesion)
+Notes: Sclerosing adenosis showing minimal surface roughness and preserved cell architecture.
 
 Signed by: Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)
 ================================================================================
