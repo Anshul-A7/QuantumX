@@ -322,7 +322,7 @@ export default function QuantumChatbot() {
   };
 
   return (
-    <div className="fixed bottom-11 right-9 z-50 font-sans">
+    <div className="fixed bottom-6 right-5 md:bottom-11 md:right-9 z-50 font-sans">
       {/* Floating Trigger Button with Rotating Rainbow Border */}
       <div className="relative group flex items-center justify-center">
         <div className="absolute -inset-[2.5px] rounded-full overflow-hidden opacity-90 group-hover:opacity-100 transition-opacity">
@@ -377,10 +377,10 @@ export default function QuantumChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 25, scale: 0.94 }}
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className={`absolute bottom-16 right-0 ${
+            className={`fixed inset-x-3.5 bottom-20 top-auto h-[540px] max-h-[75vh] md:static md:h-auto md:max-h-none md:absolute md:inset-auto md:bottom-16 md:right-0 ${
               isExpanded
-                ? "w-[92vw] sm:w-[680px] h-[82vh] max-h-[820px]"
-                : "w-[92vw] sm:w-[420px] h-[580px] max-h-[75vh]"
+                ? "md:w-[680px] md:h-[82vh] md:max-h-[820px]"
+                : "md:w-[420px] md:h-[580px] md:max-h-[75vh]"
             } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_25px_70px_-15px_rgba(40,30,20,0.35)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
           >
             {/* Window Header */}

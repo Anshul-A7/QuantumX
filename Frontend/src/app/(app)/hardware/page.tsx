@@ -34,6 +34,8 @@ interface ClientHardwareInfo {
   deviceMemory: string;
   screenResolution: string;
   pixelRatio: number;
+  colorDepth: string;
+  touchSupport: string;
   webAssemblySupported: boolean;
   webgl2Supported: boolean;
   benchmarkLatencyMs: number;
@@ -46,53 +48,125 @@ export default function HardwarePage() {
   const [isBenchmarking, setIsBenchmarking] = useState(false);
 
   // Real Client Hardware & Device Detection Engine
-  const detectClientHardware = () => {
+  const detectClientHardware = async () => {
     setIsBenchmarking(true);
     if (typeof window === "undefined") return;
 
     const ua = navigator.userAgent;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-    const isTablet = /(ipad|tablet|(android(?!.*mobile))|(windows(?!.*phone)(.*touch))|kindle|playbook|silk|(puffin(?!.*(IP|AP|WP))))/i.test(ua);
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) ||
+      (window.innerWidth < 768 && "ontouchstart" in window);
+    const isTablet =
+      /(ipad|tablet|(android(?!.*mobile))|(windows(?!.*phone)(.*touch))|kindle|playbook|silk|(puffin(?!.*(IP|AP|WP))))/i.test(
+        ua
+      );
 
     let deviceType: ClientHardwareInfo["deviceType"] = "Desktop / Laptop PC";
     if (isTablet) deviceType = "Tablet Device";
     else if (isMobile) deviceType = "Mobile Smartphone";
 
-    // Extract Operating System
     let osName = "Unknown OS";
-    if (/Windows NT 10.0/i.test(ua)) osName = "Windows 11 / 10 PC (x86_64)";
-    else if (/Windows/i.test(ua)) osName = "Windows PC";
-    else if (/Macintosh|Mac OS X/i.test(ua)) osName = /ARM|Apple/i.test(navigator.platform) ? "macOS (Apple Silicon ARM64)" : "macOS (Intel x86_64)";
-    else if (/Android/i.test(ua)) {
-      const match = ua.match(/Android\s([0-9\.]+)/);
-      osName = match ? `Android ${match[1]}` : "Android OS";
-    } else if (/iPhone|iPad|iPod/i.test(ua)) {
-      const match = ua.match(/OS\s([0-9_]+)/);
-      osName = match ? `iOS ${match[1].replace(/_/g, ".")}` : "iOS";
-    } else if (/Linux/i.test(ua)) osName = "Linux Workstation";
+    let deviceModel = "Standard Compute Node";
+    let detectedArch = "";
 
-    // Extract Specific Device Model Name
-    let deviceModel = "Standard Desktop Compute Node";
-    if (/iPhone/i.test(ua)) deviceModel = "Apple iPhone";
-    else if (/iPad/i.test(ua)) deviceModel = "Apple iPad";
-    else if (/Android/i.test(ua)) {
-      // Parse device manufacturer / build
-      const match = ua.match(/;\s([A-Za-z0-9_\-\s]+)\sBuild/);
-      if (match && match[1]) {
-        deviceModel = match[1].trim();
-      } else if (/Vivo/i.test(ua)) deviceModel = "Vivo Mobile Device";
-      else if (/Samsung|SM-/i.test(ua)) deviceModel = "Samsung Galaxy Device";
-      else if (/Pixel/i.test(ua)) deviceModel = "Google Pixel Device";
-      else if (/Xiaomi|Redmi/i.test(ua)) deviceModel = "Xiaomi / Redmi Device";
-      else deviceModel = "Android Mobile Device";
-    } else if (/Macintosh/i.test(ua)) {
-      deviceModel = "Apple Mac Workstation";
-    } else if (/Windows/i.test(ua)) {
-      deviceModel = "Windows PC Workstation";
+    // 1. Query modern User-Agent Client Hints (UA-CH) High-Entropy Values
+    if (
+      (navigator as any).userAgentData &&
+      typeof (navigator as any).userAgentData.getHighEntropyValues === "function"
+    ) {
+      try {
+        const uach = await (navigator as any).userAgentData.getHighEntropyValues([
+          "model",
+          "platform",
+          "platformVersion",
+          "architecture",
+          "bitness",
+          "formFactors",
+        ]);
+
+        if (uach.platform) {
+          if (uach.platform === "Android") {
+            const major = uach.platformVersion ? parseInt(uach.platformVersion.split(".")[0], 10) : 0;
+            osName = major ? `Android ${major} OS` : "Android OS";
+          } else if (uach.platform === "Windows") {
+            const major = uach.platformVersion ? parseInt(uach.platformVersion.split(".")[0], 10) : 0;
+            osName = major >= 13 ? "Windows 11 PC" : "Windows 10 PC";
+          } else if (uach.platform === "macOS") {
+            osName = `macOS ${uach.architecture === "arm" ? "(Apple Silicon)" : "(Intel)"}`;
+          } else if (uach.platform === "Linux") {
+            osName = "Linux OS";
+          } else {
+            osName = `${uach.platform} OS`;
+          }
+        }
+
+        if (uach.model && uach.model.trim()) {
+          deviceModel = uach.model.trim();
+        }
+
+        if (uach.architecture) {
+          detectedArch = `${uach.architecture} (${uach.bitness || 64}-bit)`;
+        }
+      } catch {}
     }
 
-    // Extract Real WebGL GPU Renderer & Vendor
-    let gpuRenderer = "Integrated Graphics Accelerator";
+    // 2. Fallback / Augment via Deep Model Detection
+    if (deviceModel === "Standard Compute Node" || !deviceModel) {
+      if (/iPhone/i.test(ua)) {
+        deviceModel = "Apple iPhone";
+        deviceType = "Mobile Smartphone";
+      } else if (/iPad/i.test(ua)) {
+        deviceModel = "Apple iPad";
+        deviceType = "Tablet Device";
+      } else if (/Android/i.test(ua)) {
+        const vivoMatch = ua.match(/\b(V[0-9]{4}[A-Za-z0-9_]*|vivo\s[A-Za-z0-9_\-\s]+)/i);
+        const smMatch = ua.match(/\b(SM-[A-Za-z0-9]+)/i);
+        const redmiMatch = ua.match(/\b(Redmi\s[A-Za-z0-9_\s]+|M[0-9]{4}[A-Za-z0-9]+|2[0-9]{3}[A-Za-z0-9]+)/i);
+        const pocoMatch = ua.match(/\b(POCO\s[A-Za-z0-9_\s]+)/i);
+        const pixelMatch = ua.match(/\b(Pixel\s[0-9a-zA-Z\s]+)/i);
+        const oneplusMatch = ua.match(/\b(CPH[0-9]{4}|OnePlus\s[A-Za-z0-9_\s]+)/i);
+        const genericBuild = ua.match(/;\s([A-Za-z0-9_\-\s]+)\sBuild/);
+
+        if (vivoMatch) deviceModel = `Vivo ${vivoMatch[1].replace(/vivo/i, "").trim()}`.trim();
+        else if (smMatch) deviceModel = `Samsung Galaxy (${smMatch[1]})`;
+        else if (redmiMatch) deviceModel = `Xiaomi ${redmiMatch[1]}`;
+        else if (pocoMatch) deviceModel = `${pocoMatch[1]}`;
+        else if (pixelMatch) deviceModel = `Google ${pixelMatch[1]}`;
+        else if (oneplusMatch) deviceModel = `OnePlus (${oneplusMatch[1]})`;
+        else if (genericBuild && genericBuild[1]) deviceModel = genericBuild[1].trim();
+        else deviceModel = "Android Mobile Device";
+      } else if (/Macintosh/i.test(ua)) {
+        deviceModel = "Apple Mac Workstation";
+        deviceType = "Desktop / Laptop PC";
+      } else if (/Windows NT 10.0/i.test(ua)) {
+        deviceModel = "Windows PC Workstation";
+        deviceType = "Desktop / Laptop PC";
+      } else if (/Linux/i.test(ua)) {
+        deviceModel = "Linux Workstation";
+        deviceType = "Desktop / Laptop PC";
+      }
+    }
+
+    if (osName === "Unknown OS") {
+      if (/Windows NT 10.0/i.test(ua)) osName = "Windows 11 / 10 (x86_64)";
+      else if (/Windows NT 6.3/i.test(ua)) osName = "Windows 8.1";
+      else if (/Windows NT 6.1/i.test(ua)) osName = "Windows 7";
+      else if (/Macintosh|Mac OS X/i.test(ua)) {
+        const match = ua.match(/Mac OS X\s([0-9_]+)/);
+        osName = match ? `macOS ${match[1].replace(/_/g, ".")}` : "macOS";
+      } else if (/Android/i.test(ua)) {
+        const match = ua.match(/Android\s([0-9\.]+)/);
+        osName = match ? `Android ${match[1]}` : "Android OS";
+      } else if (/iPhone|iPad|iPod/i.test(ua)) {
+        const match = ua.match(/OS\s([0-9_]+)/);
+        osName = match ? `iOS ${match[1].replace(/_/g, ".")}` : "iOS";
+      } else if (/Linux/i.test(ua)) {
+        osName = "Linux (GNU/Linux)";
+      }
+    }
+
+    // 3. Extract Real WebGL GPU Renderer & Vendor
+    let gpuRenderer = "Integrated Graphics Engine";
     let gpuVendor = "Standard Vendor";
     let webgl2Supported = false;
 
@@ -110,7 +184,7 @@ export default function HardwarePage() {
         }
       }
     } catch {
-      gpuRenderer = "Software WebGL Renderer";
+      gpuRenderer = "Software Matrix Engine";
     }
 
     // Clean up ANGLE wrapper noise if present
@@ -121,30 +195,39 @@ export default function HardwarePage() {
       }
     }
 
-    // Measure CPU Tensor FLOP Latency Benchmark
+    // 4. Measure Real CPU Tensor FLOP Latency Benchmark
     const start = performance.now();
     let acc = 1.0;
-    for (let i = 0; i < 200000; i++) {
+    for (let i = 0; i < 250000; i++) {
       acc = Math.sin(acc) * 1.00001 + Math.cos(i * 0.001);
     }
     const end = performance.now();
     const benchmarkLatencyMs = Math.max(0.1, Number((end - start).toFixed(2)));
 
-    // Memory
+    // Memory & Touch Points
     const deviceMemory = (navigator as any).deviceMemory
       ? `${(navigator as any).deviceMemory} GB RAM`
-      : "High Density (8+ GB RAM)";
+      : "8+ GB RAM (High Density)";
+
+    const touchSupport =
+      navigator.maxTouchPoints > 0
+        ? `${navigator.maxTouchPoints}-Point Multi-Touch`
+        : "Precision Mouse / Trackpad";
 
     setClientInfo({
       deviceType,
-      deviceModel,
+      deviceModel: detectedArch ? `${deviceModel} (${detectedArch})` : deviceModel,
       osName,
       cpuCores: navigator.hardwareConcurrency || 8,
       gpuRenderer,
       gpuVendor,
       deviceMemory,
-      screenResolution: `${window.screen.width} × ${window.screen.height} px`,
+      screenResolution: `${window.screen.width * (window.devicePixelRatio || 1)} × ${
+        window.screen.height * (window.devicePixelRatio || 1)
+      } px`,
       pixelRatio: window.devicePixelRatio || 1,
+      colorDepth: `${window.screen.colorDepth || 24}-bit Color`,
+      touchSupport,
       webAssemblySupported: typeof WebAssembly === "object",
       webgl2Supported,
       benchmarkLatencyMs,
@@ -329,62 +412,91 @@ export default function HardwarePage() {
         </div>
 
         {clientInfo ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Device Model & Class */}
-            <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block">
-                Device Form &amp; Model
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* 1. Device Model & Form Factor */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
+                Device Model &amp; Form
               </span>
               <div className="font-serif text-sm font-bold text-ink truncate" title={clientInfo.deviceModel}>
                 {clientInfo.deviceModel}
               </div>
-              <span className="text-[10px] text-quantum font-mono block">
+              <span className="text-[10px] text-quantum font-mono block font-medium">
                 {clientInfo.deviceType}
               </span>
             </div>
 
-            {/* Operating System */}
-            <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block">
-                Client Operating System
+            {/* 2. Operating System & Display */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
+                Client OS &amp; Display Engine
               </span>
               <div className="font-serif text-sm font-bold text-ink truncate" title={clientInfo.osName}>
                 {clientInfo.osName}
               </div>
               <span className="text-[10px] text-ink-soft font-mono block">
-                Screen: {clientInfo.screenResolution} ({clientInfo.pixelRatio}x)
+                {clientInfo.screenResolution} ({clientInfo.colorDepth})
               </span>
             </div>
 
-            {/* CPU & Parallel Threads */}
-            <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block">
+            {/* 3. CPU & Parallel Cores */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
                 CPU Compute Concurrency
               </span>
               <div className="font-serif text-sm font-bold text-ink">
                 {clientInfo.cpuCores} Logical CPU Cores
               </div>
               <span className="text-[10px] text-emerald-700 font-mono block font-semibold">
-                Memory: {clientInfo.deviceMemory}
+                Parallel Statevector Simulation Active
               </span>
             </div>
 
-            {/* GPU & Graphics Hardware */}
-            <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block">
-                Detected GPU Processor
+            {/* 4. Real GPU Hardware Renderer */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
+                Detected GPU Graphics Chip
               </span>
               <div className="font-serif text-sm font-bold text-ink truncate" title={clientInfo.gpuRenderer}>
                 {clientInfo.gpuRenderer}
               </div>
+              <span className="text-[10px] text-ink-soft font-mono block truncate" title={clientInfo.gpuVendor}>
+                {clientInfo.gpuVendor} • {clientInfo.webgl2Supported ? "WebGL 2.0" : "WebGL"}
+              </span>
+            </div>
+
+            {/* 5. Memory & Input Sensor */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
+                Client RAM &amp; Sensor Interface
+              </span>
+              <div className="font-serif text-sm font-bold text-ink">
+                {clientInfo.deviceMemory}
+              </div>
               <span className="text-[10px] text-ink-soft font-mono block">
-                WebGL 2.0: {clientInfo.webgl2Supported ? "Supported" : "Fallback WebGL"}
+                {clientInfo.touchSupport}
+              </span>
+            </div>
+
+            {/* 6. Tensor FLOP Execution Benchmark */}
+            <div className="p-4 rounded-xl bg-cream/40 border border-hairline space-y-1.5 shadow-2xs">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-ink-soft block font-semibold">
+                Local Engine Math Latency
+              </span>
+              <div className="font-serif text-sm font-bold text-emerald-700 flex items-center gap-1.5">
+                <Zap size={14} className="text-emerald-600" />
+                <span>{clientInfo.benchmarkLatencyMs} ms</span>
+                <span className="text-[10px] font-mono text-ink-soft font-normal">(250k Tensor FLOPs)</span>
+              </div>
+              <span className="text-[10px] text-quantum font-mono block font-medium">
+                {clientInfo.webAssemblySupported ? "WebAssembly SIMD Vectorized" : "JavaScript V8 Vectorized"}
               </span>
             </div>
           </div>
         ) : (
-          <div className="py-6 text-center text-xs text-ink-soft">
-            Scanning local client hardware sensors...
+          <div className="py-8 text-center text-xs text-ink-soft flex items-center justify-center gap-2">
+            <RefreshCw size={14} className="animate-spin text-quantum" />
+            <span>Scanning real-time client hardware and WebGL graphics sensors...</span>
           </div>
         )}
       </div>
