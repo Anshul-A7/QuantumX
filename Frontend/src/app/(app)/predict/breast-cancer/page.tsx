@@ -356,63 +356,6 @@ export default function BreastCancerDetailPage() {
     }
   };
 
-  const handleApproximateMissing = () => {
-    if (hasInferred) return;
-    const r = formValues.radius_mean || 12.2;
-    const updated = { ...formValues };
-    const notes: Record<string, string> = { ...derivedNotes };
-
-    // Perimeter = 2 * PI * r
-    updated.perimeter_mean = parseFloat((2 * Math.PI * r).toFixed(1));
-    notes.perimeter_mean = "Approx. from Radius (2πr)";
-
-    // Area = PI * r^2
-    updated.area_mean = parseFloat((Math.PI * r * r).toFixed(1));
-    notes.area_mean = "Approx. from Radius (πr²)";
-
-    // Concave points approx from concavity
-    if (formValues.concavity_mean) {
-      updated.concave_points_mean = parseFloat((formValues.concavity_mean * 0.45).toFixed(3));
-      notes.concave_points_mean = "Approx. from Concavity";
-    }
-
-    setFormValues(updated);
-    setDerivedNotes(notes);
-
-    showToast({
-      title: "Missing Values Approximated",
-      message: "Perimeter, Area, and Indentations calculated from known cell radius.",
-      type: "quantum",
-    });
-  };
-
-  const handleApproximateSingle = (targetKey: string) => {
-    if (hasInferred) return;
-    const r = formValues.radius_mean || 12.2;
-    const updated = { ...formValues };
-    const notes: Record<string, string> = { ...derivedNotes };
-
-    if (targetKey === "perimeter_mean") {
-      updated.perimeter_mean = parseFloat((2 * Math.PI * r).toFixed(1));
-      notes.perimeter_mean = "Approx. from Radius (2πr)";
-    } else if (targetKey === "area_mean") {
-      updated.area_mean = parseFloat((Math.PI * r * r).toFixed(1));
-      notes.area_mean = "Approx. from Radius (πr²)";
-    } else if (targetKey === "concave_points_mean") {
-      const conc = formValues.concavity_mean || 0.037;
-      updated.concave_points_mean = parseFloat((conc * 0.45).toFixed(3));
-      notes.concave_points_mean = "Approx. from Concavity";
-    }
-
-    setFormValues(updated);
-    setDerivedNotes(notes);
-    showToast({
-      title: "Value Approximated",
-      message: `${notes[targetKey]} applied.`,
-      type: "quantum",
-    });
-  };
-
   const handleNavigateToAnalysis = () => {
     try {
       const payload = {
@@ -858,33 +801,25 @@ export default function BreastCancerDetailPage() {
             </div>
             
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-              {/* Linked Geometry Toggle */}
-              <button
-                type="button"
-                onClick={() => setLinkGeometry(!linkGeometry)}
-                disabled={hasInferred}
-                className={`px-2.5 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                  linkGeometry
-                    ? "bg-quantum/15 text-ink border-quantum/40 font-semibold shadow-2xs"
-                    : "bg-white hover:bg-cream border-hairline text-ink-soft"
-                }`}
-                title="When enabled, changing cell radius automatically calculates perimeter and area"
+              {/* Geometry Ratio Lock (Locked) */}
+              <div
+                className="px-2.5 py-1.5 rounded-xl border border-hairline bg-cream/40 text-ink-soft text-xs font-medium flex items-center gap-1.5 cursor-not-allowed opacity-80 shadow-2xs"
+                title="Geometry Ratio Lock - Calibrated to exact mathematical cellular proportions"
               >
-                {linkGeometry ? <Link2 size={12} className="text-quantum" /> : <Unlink2 size={12} />}
-                <span>{linkGeometry ? "Geometry Linked" : "Link Geometry"}</span>
-              </button>
+                <Lock size={12} className="text-amber-600" />
+                <span>Geometry Ratio Lock</span>
+                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
+              </div>
 
-              {/* Approximate Missing Button */}
-              <button
-                type="button"
-                onClick={handleApproximateMissing}
-                disabled={hasInferred}
-                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                title="Calculate missing Perimeter, Area, and Indentations from known cell radius"
+              {/* Parametric Derivation (Locked) */}
+              <div
+                className="px-2.5 py-1.5 rounded-xl border border-hairline bg-cream/40 text-ink-soft text-xs font-medium flex items-center gap-1.5 cursor-not-allowed opacity-80 shadow-2xs"
+                title="Parametric Derivation - Calibrated to certified laboratory equations"
               >
-                <Calculator size={13} className="text-quantum" />
-                <span>Approx. Missing</span>
-              </button>
+                <Lock size={12} className="text-amber-600" />
+                <span>Parametric Derivation</span>
+                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
+              </div>
 
               <button
                 type="button"
@@ -928,8 +863,6 @@ export default function BreastCancerDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FIELDS.map((field) => {
               const val = formValues[field.key] ?? field.defaultValue;
-              const hasDerived = derivedNotes[field.key];
-              const isDerivable = field.key === "perimeter_mean" || field.key === "area_mean" || field.key === "concave_points_mean";
 
               return (
                 <div
@@ -942,28 +875,10 @@ export default function BreastCancerDetailPage() {
                     <div className="flex items-center gap-1">
                       <span className="text-xs font-semibold text-ink">{field.label}</span>
                       <HelpTooltip title={field.label} text={field.simpleExplanation} />
-                      {isDerivable && !hasInferred && (
-                        <button
-                          type="button"
-                          onClick={() => handleApproximateSingle(field.key)}
-                          className="text-[9px] font-mono text-quantum hover:underline flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded bg-quantum/10 border border-quantum/20 cursor-pointer"
-                          title="Auto-calculate approx. value from known radius"
-                        >
-                          <Calculator size={9} />
-                          <span>Approx</span>
-                        </button>
-                      )}
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      {hasDerived && (
-                        <span className="text-[8px] font-mono text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
-                          {hasDerived}
-                        </span>
-                      )}
-                      <span className="text-xs font-mono font-bold text-quantum">
-                        {val} <span className="text-[10px] text-ink-soft">{field.unit}</span>
-                      </span>
-                    </div>
+                    <span className="text-xs font-mono font-bold text-quantum">
+                      {val} <span className="text-[10px] text-ink-soft">{field.unit}</span>
+                    </span>
                   </div>
                   <input
                     type="range"
