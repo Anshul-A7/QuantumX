@@ -38,31 +38,29 @@ export async function POST(req: NextRequest) {
 
     if (geminiApiKey) {
       try {
-        const prompt = `You are a Senior Computational Cytopathologist consulting on a breast cancer fine-needle aspiration (FNA) screening.
-Review the following patient data, quantum-classical machine learning telemetry, and SHAP explainability values:
+        const prompt = `You are a healthcare specialist explaining breast biopsy screening results clearly and compassionately to a patient and their doctor.
+CRITICAL MANDATE:
+- Use simple, plain, everyday words that a normal person can easily understand.
+- DO NOT use heavy, complicated, or scary medical jargon.
+- Explain what the numbers and measurements mean in clear, reassuring terms.
 
 PATIENT: ${patientName} (${patientId}), Age ${age}, Gender ${gender}
-INFERENCE ENGINE: ${model_engine} [Execution Mode: ${execution_mode}]
-PREDICTION: ${prediction} (${confidence}% Confidence)
-CONTINUOUS RISK SCORE: ${risk_score} / 100.0 [Category: ${risk_tier}]
-MEASURED BIOMARKERS:
-- Cell Size (Radius): ${biomarkers.radius_mean} um
+OVERALL RESULT: ${prediction} (${confidence}% Certainty)
+RISK LEVEL: ${risk_score} / 100.0 (${risk_tier})
+MEASURED CELL SIZES & SHAPES:
+- Cell Size (Radius): ${biomarkers.radius_mean} μm
 - Surface Texture: ${biomarkers.texture_mean} std
-- Cell Perimeter: ${biomarkers.perimeter_mean} um
-- Nuclear Area: ${biomarkers.area_mean} um2
-- Border Smoothness: ${biomarkers.smoothness_mean} idx
-- Compactness: ${biomarkers.compactness_mean} idx
-- Indentation Depth (Concavity): ${biomarkers.concavity_mean} idx
-- Indentation Count: ${biomarkers.concave_points_mean} cnt
+- Cell Perimeter: ${biomarkers.perimeter_mean} μm
+- Cell Center Area: ${biomarkers.area_mean} μm²
+- Edge Smoothness: ${biomarkers.smoothness_mean}
+- Edge Indentations (Concavity): ${biomarkers.concavity_mean}
+- Number of Indentations: ${biomarkers.concave_points_mean}
 
-KEY RISK-ELEVATING ATTRIBUTIONS: ${topRiskDrivers || "None (All within benign baseline)"}
-PROTECTIVE BENIGN ATTRIBUTIONS: ${protectiveFactors || "None"}
-
-Please generate an intellectual, human-readable cytopathology consultation narrative explaining why this model arrived at this decision. Structure your response in valid JSON with exactly these 4 keys:
-1. "executive_summary": A concise 2-sentence clinical summary of the findings.
-2. "morphological_breakdown": An analytical paragraph detailing nuclear size, chromatin heterogeneity, and contour irregularity.
-3. "engine_telemetry_insight": A 2-sentence explanation of how the ${model_engine} (and its feature map/hyperplane) detected these patterns.
-4. "actionable_recommendations": Specific clinical follow-up recommendations (e.g., routine mammography, ultrasound, or core biopsy).`;
+Structure your response in valid JSON with exactly these 4 keys:
+1. "executive_summary": A clear 2-sentence summary in simple everyday language explaining whether the sample looks healthy/benign, borderline, or higher risk.
+2. "morphological_breakdown": An easy-to-read paragraph explaining whether the cells look normal or unusually enlarged, and whether the cell boundaries are smooth or irregular, in terms any person can understand.
+3. "engine_telemetry_insight": A simple 1-2 sentence explanation of how the screening models checked these features.
+4. "actionable_recommendations": Clear, practical recommended next steps (like routine checkups or doctor follow-up).`;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
@@ -88,31 +86,31 @@ Please generate an intellectual, human-readable cytopathology consultation narra
       }
     }
 
-    // High-Signal Deterministic Fallback if API key not available or offline
+    // High-Signal Simple Plain Language Fallback
     if (!aiSynthesis) {
       const isMalignant = prediction === "Malignant";
       const isBorderline = risk_tier.includes("BORDERLINE") || risk_tier.includes("INDETERMINATE");
 
       if (isMalignant) {
         aiSynthesis = {
-          executive_summary: `FNA morphometry for ${patientName} reveals high-probability malignancy (${confidence}% confidence) with a continuous Risk Score of ${risk_score}/100. Pronounced nuclear pleomorphism and extensive contour irregularity indicate high suspicion of invasive ductal neoplasm.`,
-          morphological_breakdown: `Nuclear dimensions are significantly enlarged (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²), markedly exceeding the empirical 90th percentile of benign cytology. Increased concavity (${biomarkers.concavity_mean}) and elevated chromatin texture (${biomarkers.texture_mean} std) reflect substantial nuclear membrane deformation and DNA aneuploidy.`,
-          engine_telemetry_insight: `${model_engine} identified strong non-linear boundary correlations across the second-order Pauli-Z feature map. ${topRiskDrivers || "Nuclear enlargement and perimeter distortion"} acted as the primary mathematical drivers elevating the risk score.`,
-          actionable_recommendations: `Urgent recommendation for image-guided core needle biopsy (CNB) with immunohistochemistry (ER/PR/HER2/Ki-67 profiling) and referral to a breast surgical oncologist within 5-7 business days.`
+          executive_summary: `The biopsy screening for ${patientName} shows elevated risk (${confidence}% certainty) with a Risk Score of ${risk_score}/100. The cells show notable changes in shape and size that need prompt medical attention.`,
+          morphological_breakdown: `The measured cells are noticeably larger than normal (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²), and their edges are uneven rather than smooth. These irregular boundaries and textured surfaces indicate unusual cell growth that warrants a closer look by a doctor.`,
+          engine_telemetry_insight: `Both screening models concorded on this assessment, flagging cell enlargement and uneven edges as the primary factors.`,
+          actionable_recommendations: `We strongly recommend discussing these results with your doctor promptly for a targeted follow-up test (such as an ultrasound or core biopsy) to confirm the diagnosis and plan appropriate care.`
         };
       } else if (isBorderline) {
         aiSynthesis = {
-          executive_summary: `Specimen for ${patientName} occupies the empirical diagnostic boundary zone (Risk Score: ${risk_score}/100). The cytomorphology exhibits intermediate atypia that is neither clearly benign nor overtly malignant.`,
-          morphological_breakdown: `Cellular measurements sit in the empirical overlap interval (Radius: ${biomarkers.radius_mean} μm, Concavity: ${biomarkers.concavity_mean}). While nuclear area remains under the malignant median, subtle chromatin texture elevation (${biomarkers.texture_mean} std) creates diagnostic equivocation suggestive of atypical ductal hyperplasia (ADH) or sclerosing adenosis.`,
-          engine_telemetry_insight: `${model_engine} registered high decision entropy with split ensemble projections. Quantum Pauli-Z interference patterns flagged subtle membrane indentations that warrant histological confirmation.`,
-          actionable_recommendations: `Short-interval follow-up recommended: high-resolution diagnostic ultrasound combined with a targeted vacuum-assisted core biopsy to definitively rule out non-palpable micro-invasion.`
+          executive_summary: `The biopsy screening for ${patientName} is in a borderline zone with a moderate Risk Score of ${risk_score}/100. The cells show mild irregularity that is not clearly dangerous, but not completely typical either.`,
+          morphological_breakdown: `The cells have moderate size measurements (Radius: ${biomarkers.radius_mean} μm) with slight unevenness along the cell borders. While they do not show severe changes, their slight variations suggest mild cellular changes that are often non-cancerous but worth double-checking.`,
+          engine_telemetry_insight: `The screening models detected borderline measurements that sit between typical healthy cells and elevated risk cells.`,
+          actionable_recommendations: `A routine follow-up check (such as a follow-up ultrasound in a few months) is recommended to ensure the tissue remains stable.`
         };
       } else {
         aiSynthesis = {
-          executive_summary: `FNA cytopathology for ${patientName} demonstrates a reassuring benign morphologic profile (${confidence}% confidence) with a minimal Risk Score of ${risk_score}/100. Cellular dimensions remain well within healthy reference baselines.`,
-          morphological_breakdown: `Nuclei exhibit small, uniform dimensions (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²) with smooth, intact borders (Concavity: ${biomarkers.concavity_mean}). Chromatin distribution is homogeneous with low texture variation (${biomarkers.texture_mean} std), consistent with a stable non-neoplastic fibroadenoma or fibrocystic state.`,
-          engine_telemetry_insight: `${model_engine} confirmed that all 8 biomarker vectors converge near the benign empirical centroid. Protective factors including ${protectiveFactors || "compact nuclear area and smooth boundaries"} strongly offset malignant suspicion.`,
-          actionable_recommendations: `No invasive intervention required. Recommend routine annual screening mammography and standard clinical breast examination per national oncology guidelines.`
+          executive_summary: `Good news: the biopsy sample for ${patientName} shows reassuring, healthy results (${confidence}% certainty) with a low Risk Score of ${risk_score}/100. The cells appear normal and benign.`,
+          morphological_breakdown: `The cells are of normal, healthy size (Radius: ${biomarkers.radius_mean} μm, Area: ${biomarkers.area_mean} μm²) with smooth, even borders and regular textures. These are classic signs of normal, non-cancerous breast tissue.`,
+          engine_telemetry_insight: `All screening models confirmed that the cell measurements align closely with typical healthy tissue baselines.`,
+          actionable_recommendations: `No special treatment or extra procedures are needed. Continue with your regular routine health screenings and periodic checkups.`
         };
       }
     }

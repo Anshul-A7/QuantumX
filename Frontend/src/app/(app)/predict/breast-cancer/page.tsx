@@ -39,12 +39,25 @@ import {
   ArrowLeft,
   Play,
   CheckSquare,
-  FileText
+  FileText,
+  Languages,
+  Globe
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
 import { PatientMetadata } from "@/lib/medicalReportParser";
 import { showToast } from "@/components/common/ToastNotification";
+
+const LANGUAGES = [
+  { code: "en", name: "English", flag: "🇺🇸" },
+  { code: "es", name: "Spanish (Español)", flag: "🇪🇸" },
+  { code: "fr", name: "French (Français)", flag: "🇫🇷" },
+  { code: "de", name: "German (Deutsch)", flag: "🇩🇪" },
+  { code: "hi", name: "Hindi (हिन्दी)", flag: "🇮🇳" },
+  { code: "zh", name: "Chinese (中文)", flag: "🇨🇳" },
+  { code: "ja", name: "Japanese (日本語)", flag: "🇯🇵" },
+  { code: "ar", name: "Arabic (العربية)", flag: "🇸🇦" },
+];
 
 interface FieldConfig {
   key: string;
@@ -234,6 +247,9 @@ export default function BreastCancerDetailPage() {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [typedSummaryText, setTypedSummaryText] = useState("");
   const [isTypingSummary, setIsTypingSummary] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("en");
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [baseEnglishSummary, setBaseEnglishSummary] = useState("");
 
   const generateNewPatientIdentity = () => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -251,11 +267,32 @@ export default function BreastCancerDetailPage() {
     generateNewPatientIdentity();
   }, []);
 
+  const triggerTypewriter = (text: string) => {
+    setIsTypingSummary(true);
+    setTypedSummaryText("");
+
+    let currentIdx = 0;
+    const speed = 10;
+    const chunkSize = 2;
+
+    const interval = setInterval(() => {
+      currentIdx += chunkSize;
+      if (currentIdx >= text.length) {
+        setTypedSummaryText(text);
+        setIsTypingSummary(false);
+        clearInterval(interval);
+      } else {
+        setTypedSummaryText(text.slice(0, currentIdx));
+      }
+    }, speed);
+  };
+
   // Real-time typewriter effect for clinical diagnostic summary
   useEffect(() => {
     if (!screeningResult) {
       setTypedSummaryText("");
       setIsTypingSummary(false);
+      setBaseEnglishSummary("");
       return;
     }
 
@@ -264,35 +301,111 @@ export default function BreastCancerDetailPage() {
       const parts = [
         aiSynthesis.executive_summary,
         aiSynthesis.morphological_breakdown,
-        aiSynthesis.actionable_recommendations ? `Recommended Next Step: ${aiSynthesis.actionable_recommendations}` : ""
+        aiSynthesis.actionable_recommendations ? `Recommended Action: ${aiSynthesis.actionable_recommendations}` : ""
       ].filter(Boolean);
       fullText = parts.join("\n\n");
     } else if (!isLoadingAi) {
-      fullText = `Fine-needle aspiration (FNA) cytology for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% diagnostic certainty, yielding a composite Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCellular morphometry shows nuclear area of ${formValues.area_mean || 458.7} μm² with mean cell radius of ${formValues.radius_mean || 12.2} μm and concavity index of ${formValues.concavity_mean || 0.037}. ${screeningResult.clinical_action || "Routine clinical follow-up is advised."}`;
+      fullText = `The biopsy screening for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% certainty, yielding a continuous Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCell measurements show nuclear area of ${formValues.area_mean || 458.7} μm² with mean cell radius of ${formValues.radius_mean || 12.2} μm and concavity index of ${formValues.concavity_mean || 0.037}. ${screeningResult.clinical_action || "Routine checkup and clinical follow-up is advised."}`;
     }
 
     if (!fullText) return;
 
-    setIsTypingSummary(true);
-    setTypedSummaryText("");
-
-    let currentIdx = 0;
-    const speed = 12; // ms
-    const chunkSize = 2; // chars per tick
-
-    const interval = setInterval(() => {
-      currentIdx += chunkSize;
-      if (currentIdx >= fullText.length) {
-        setTypedSummaryText(fullText);
-        setIsTypingSummary(false);
-        clearInterval(interval);
-      } else {
-        setTypedSummaryText(fullText.slice(0, currentIdx));
-      }
-    }, speed);
-
-    return () => clearInterval(interval);
+    setBaseEnglishSummary(fullText);
+    setSelectedLanguage("en");
+    triggerTypewriter(fullText);
   }, [aiSynthesis, isLoadingAi, screeningResult, patientName, formValues]);
+
+  const handleTranslateSummary = async (langCode: string) => {
+    setSelectedLanguage(langCode);
+    if (!baseEnglishSummary) return;
+
+    if (langCode === "en") {
+      triggerTypewriter(baseEnglishSummary);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const selectedLangObj = LANGUAGES.find((l) => l.code === langCode);
+      const res = await fetch("/api/ai/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: baseEnglishSummary,
+          targetLanguage: langCode,
+          languageName: selectedLangObj?.name || langCode,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.translatedText) {
+        triggerTypewriter(data.translatedText);
+      } else {
+        triggerTypewriter(baseEnglishSummary);
+      }
+    } catch (err) {
+      console.warn("Translation failed, keeping original:", err);
+      triggerTypewriter(baseEnglishSummary);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleApproximateMissing = () => {
+    if (hasInferred) return;
+    const r = formValues.radius_mean || 12.2;
+    const updated = { ...formValues };
+    const notes: Record<string, string> = { ...derivedNotes };
+
+    // Perimeter = 2 * PI * r
+    updated.perimeter_mean = parseFloat((2 * Math.PI * r).toFixed(1));
+    notes.perimeter_mean = "Approx. from Radius (2πr)";
+
+    // Area = PI * r^2
+    updated.area_mean = parseFloat((Math.PI * r * r).toFixed(1));
+    notes.area_mean = "Approx. from Radius (πr²)";
+
+    // Concave points approx from concavity
+    if (formValues.concavity_mean) {
+      updated.concave_points_mean = parseFloat((formValues.concavity_mean * 0.45).toFixed(3));
+      notes.concave_points_mean = "Approx. from Concavity";
+    }
+
+    setFormValues(updated);
+    setDerivedNotes(notes);
+
+    showToast({
+      title: "Missing Values Approximated",
+      message: "Perimeter, Area, and Indentations calculated from known cell radius.",
+      type: "quantum",
+    });
+  };
+
+  const handleApproximateSingle = (targetKey: string) => {
+    if (hasInferred) return;
+    const r = formValues.radius_mean || 12.2;
+    const updated = { ...formValues };
+    const notes: Record<string, string> = { ...derivedNotes };
+
+    if (targetKey === "perimeter_mean") {
+      updated.perimeter_mean = parseFloat((2 * Math.PI * r).toFixed(1));
+      notes.perimeter_mean = "Approx. from Radius (2πr)";
+    } else if (targetKey === "area_mean") {
+      updated.area_mean = parseFloat((Math.PI * r * r).toFixed(1));
+      notes.area_mean = "Approx. from Radius (πr²)";
+    } else if (targetKey === "concave_points_mean") {
+      const conc = formValues.concavity_mean || 0.037;
+      updated.concave_points_mean = parseFloat((conc * 0.45).toFixed(3));
+      notes.concave_points_mean = "Approx. from Concavity";
+    }
+
+    setFormValues(updated);
+    setDerivedNotes(notes);
+    showToast({
+      title: "Value Approximated",
+      message: `${notes[targetKey]} applied.`,
+      type: "quantum",
+    });
+  };
 
   const handleNavigateToAnalysis = () => {
     try {
@@ -646,10 +759,10 @@ export default function BreastCancerDetailPage() {
             </div>
             <div>
               <h3 className="font-serif text-sm font-medium text-ink">
-                Patient Demographics &amp; Clinical Intake Metadata
+                Patient Information &amp; Intake Details
               </h3>
               <p className="text-[11px] font-mono text-ink-soft">
-                {patientName ? `${patientName} (${patientId})` : "New Patient Intake (Ready for Input)"} • {patientAge ? `Age: ${patientAge}` : "Age: Not Specified"} • Cohort: {patientGender}
+                {patientName ? `${patientName} (${patientId})` : "Not Specified"} • {patientAge ? `Age: ${patientAge}` : "Age: Not Specified"} • Gender: Female
               </p>
             </div>
           </div>
@@ -710,12 +823,12 @@ export default function BreastCancerDetailPage() {
               />
             </div>
 
-            {/* 4. Gender (Fixed Standard for Breast Cancer) */}
+            {/* 4. Gender */}
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-ink-soft font-medium">Biological Cohort</label>
+              <label className="text-[11px] font-mono text-ink-soft font-medium">Gender</label>
               <div className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/20 text-ink text-xs font-medium flex items-center justify-between">
-                <span>Female (FNA WDBC)</span>
-                <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Validated</span>
+                <span>Female</span>
+                <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Female</span>
               </div>
             </div>
           </div>
@@ -729,24 +842,52 @@ export default function BreastCancerDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-3">
             <div>
               <div className="flex items-center gap-1.5">
-                <h2 className="font-serif text-lg font-medium text-ink">8 Biopsy Cell Measurements</h2>
+                <h2 className="font-serif text-lg font-medium text-ink">Cell Measurements</h2>
                 <HelpTooltip
-                  title="Biopsy Cell Measurements"
-                  text="These 8 microscopic metrics are calculated from a Fine-Needle Aspiration (FNA) biopsy to evaluate cell nucleus shape, size irregularity, and surface roughness."
+                  title="Cell Measurements"
+                  text="These 8 microscopic metrics evaluate cell shape, size, border smoothness, and surface texture under the microscope."
                 />
               </div>
-              <p className="text-xs text-ink-soft">Adjust measured values or import lab report</p>
+              <p className="text-xs text-ink-soft">Adjust measured values or upload lab report</p>
             </div>
             
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              {/* Linked Geometry Toggle */}
+              <button
+                type="button"
+                onClick={() => setLinkGeometry(!linkGeometry)}
+                disabled={hasInferred}
+                className={`px-2.5 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                  linkGeometry
+                    ? "bg-quantum/15 text-ink border-quantum/40 font-semibold shadow-2xs"
+                    : "bg-white hover:bg-cream border-hairline text-ink-soft"
+                }`}
+                title="When enabled, changing cell radius automatically calculates perimeter and area"
+              >
+                {linkGeometry ? <Link2 size={12} className="text-quantum" /> : <Unlink2 size={12} />}
+                <span>{linkGeometry ? "Geometry Linked" : "Link Geometry"}</span>
+              </button>
+
+              {/* Approximate Missing Button */}
+              <button
+                type="button"
+                onClick={handleApproximateMissing}
+                disabled={hasInferred}
+                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                title="Calculate missing Perimeter, Area, and Indentations from known cell radius"
+              >
+                <Calculator size={13} className="text-quantum" />
+                <span>Approx. Missing</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsUploadModalOpen(true)}
                 disabled={hasInferred}
-                className="px-3 py-1.5 rounded-xl bg-white hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
               >
                 <UploadCloud size={13} className="text-quantum" />
-                <span>Upload Report / JSON</span>
+                <span>Upload Report</span>
               </button>
 
               {!hasInferred && (
@@ -781,6 +922,9 @@ export default function BreastCancerDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FIELDS.map((field) => {
               const val = formValues[field.key] ?? field.defaultValue;
+              const hasDerived = derivedNotes[field.key];
+              const isDerivable = field.key === "perimeter_mean" || field.key === "area_mean" || field.key === "concave_points_mean";
+
               return (
                 <div
                   key={field.key}
@@ -792,10 +936,28 @@ export default function BreastCancerDetailPage() {
                     <div className="flex items-center gap-1">
                       <span className="text-xs font-semibold text-ink">{field.label}</span>
                       <HelpTooltip title={field.label} text={field.simpleExplanation} />
+                      {isDerivable && !hasInferred && (
+                        <button
+                          type="button"
+                          onClick={() => handleApproximateSingle(field.key)}
+                          className="text-[9px] font-mono text-quantum hover:underline flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded bg-quantum/10 border border-quantum/20 cursor-pointer"
+                          title="Auto-calculate approx. value from known radius"
+                        >
+                          <Calculator size={9} />
+                          <span>Approx</span>
+                        </button>
+                      )}
                     </div>
-                    <span className="text-xs font-mono font-bold text-quantum">
-                      {val} <span className="text-[10px] text-ink-soft">{field.unit}</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {hasDerived && (
+                        <span className="text-[8px] font-mono text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                          {hasDerived}
+                        </span>
+                      )}
+                      <span className="text-xs font-mono font-bold text-quantum">
+                        {val} <span className="text-[10px] text-ink-soft">{field.unit}</span>
+                      </span>
+                    </div>
                   </div>
                   <input
                     type="range"
@@ -1106,30 +1268,63 @@ export default function BreastCancerDetailPage() {
                   </div>
                 </div>
 
-                {/* PATHOLOGIST DIAGNOSTIC SUMMARY (PARAGRAPH FORMAT WITH TYPEWRITER ANIMATION) */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-white border border-hairline shadow-xs space-y-3 relative overflow-hidden">
+                {/* QUANTUMX AI SUMMARY (PARAGRAPH FORMAT WITH TYPEWRITER ANIMATION & AI TRANSLATION) */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-white border border-hairline shadow-xs space-y-3.5 relative overflow-hidden">
                   {/* Header Row - Clean & Medical */}
-                  <div className="flex items-center justify-between border-b border-hairline pb-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-hairline pb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-lg bg-quantum/10 border border-quantum/20 flex items-center justify-center text-quantum shadow-2xs">
                         <FileText size={15} />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
-                          Pathologist Diagnostic Summary
+                          QuantumX AI Summary
                         </h4>
                         <p className="text-[11px] text-ink-soft">
-                          Clinical evaluation for {patientName || "Patient"} ({patientId})
+                          Evaluation for {patientName || "Patient"} ({patientId})
                         </p>
                       </div>
                     </div>
 
-                    {(isLoadingAi || isTypingSummary) && (
-                      <span className="text-[10px] font-mono text-quantum flex items-center gap-1 font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-ping" />
-                        {isLoadingAi ? "Thinking..." : "Synthesizing..."}
-                      </span>
-                    )}
+                    {/* Translation Controls & Status */}
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {(isLoadingAi || isTypingSummary || isTranslating) && (
+                        <span className="text-[10px] font-mono text-quantum flex items-center gap-1 font-semibold mr-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-ping" />
+                          {isLoadingAi ? "Thinking..." : isTranslating ? "Translating..." : "Writing..."}
+                        </span>
+                      )}
+
+                      {/* Language Dropdown */}
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => {
+                          const lang = e.target.value;
+                          setSelectedLanguage(lang);
+                          handleTranslateSummary(lang);
+                        }}
+                        disabled={isLoadingAi || isTranslating}
+                        className="px-2.5 py-1 rounded-lg border border-hairline bg-cream/30 hover:bg-cream/60 text-ink text-xs font-medium focus:outline-none focus:border-quantum cursor-pointer"
+                      >
+                        {LANGUAGES.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.flag} {lang.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Translate Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleTranslateSummary(selectedLanguage)}
+                        disabled={isLoadingAi || isTranslating}
+                        className="px-2.5 py-1 rounded-lg bg-ink hover:bg-ink/90 text-parchment text-xs font-medium flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shadow-2xs"
+                        title="AI rewrite and translate summary"
+                      >
+                        <Languages size={12} className="text-quantum" />
+                        <span>Translate</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Body: Thinking State or Typed Paragraph */}
@@ -1140,7 +1335,12 @@ export default function BreastCancerDetailPage() {
                         <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce [animation-delay:-0.15s]" />
                         <span className="w-1.5 h-1.5 rounded-full bg-quantum animate-bounce" />
                       </div>
-                      <span className="italic">Thinking... evaluating cytomorphology and compiling diagnostic summary</span>
+                      <span className="italic">Thinking... evaluating cell measurements and compiling clear summary</span>
+                    </div>
+                  ) : isTranslating ? (
+                    <div className="py-3 px-3.5 rounded-xl bg-parchment/40 border border-hairline flex items-center gap-2.5 text-xs text-ink-soft font-mono">
+                      <Loader2 size={13} className="animate-spin text-quantum shrink-0" />
+                      <span>Rewriting summary in {LANGUAGES.find(l => l.code === selectedLanguage)?.name}...</span>
                     </div>
                   ) : (
                     <div className="p-3.5 rounded-xl bg-parchment/50 border border-hairline">
