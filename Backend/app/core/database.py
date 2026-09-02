@@ -42,5 +42,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     """Initialize all database tables automatically on startup."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception as db_err:
+        print(f"[QuantumX Backend] Remote DB connection note ({db_err}). Continuing server startup for ML and Quantum inference.")
