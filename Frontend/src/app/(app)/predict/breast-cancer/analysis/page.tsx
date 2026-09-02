@@ -10,6 +10,7 @@ import {
   Activity,
   Download,
   BarChart3,
+  BarChart2,
   Layers,
   Microscope,
   User,
@@ -19,13 +20,14 @@ import HelpTooltip from "@/components/common/HelpTooltip";
 import KeyRiskFactorsTab, { COMBINED_BIOMARKER_DATA } from "./components/KeyRiskFactorsTab";
 import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
 import ModelComparisonTab from "./components/ModelComparisonTab";
+import RealTimeGraphsTab from "./components/RealTimeGraphsTab";
 
 export default function BreastCancerAnalysisPage() {
   const router = useRouter();
-  // 3 Focused Tabs: 1. Key Risk Factors, 2. QuantumX AI, 3. Model Comparison
-  const [activeTab, setActiveTab] = useState<"key_risk_factors" | "quantumx_ai" | "model_comparison">(
-    "key_risk_factors"
-  );
+  // 4 Focused Tabs: 1. Key Risk Factors, 2. QuantumX AI, 3. Model Comparison, 4. Real-Time Graphs
+  const [activeTab, setActiveTab] = useState<
+    "key_risk_factors" | "quantumx_ai" | "model_comparison" | "realtime_graphs"
+  >("key_risk_factors");
 
   // Model selection switch: "transfinite_1" (Hybrid Quantum) vs "cx_01" (Classical Baseline)
   const [selectedModel, setSelectedModel] = useState<"transfinite_1" | "cx_01">("transfinite_1");
@@ -464,6 +466,19 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
             <Layers size={14} className={activeTab === "model_comparison" ? "text-quantum" : ""} />
             <span>⚖️ 3. Model Comparison</span>
           </button>
+
+          {/* Tab 4: Real-Time Graphs */}
+          <button
+            onClick={() => setActiveTab("realtime_graphs")}
+            className={`py-2 px-4 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === "realtime_graphs"
+                ? "bg-white text-ink font-bold shadow-xs border border-hairline"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <BarChart2 size={14} className={activeTab === "realtime_graphs" ? "text-quantum" : ""} />
+            <span>📈 4. Real-Time Graphs</span>
+          </button>
         </div>
       </div>
 
@@ -497,6 +512,17 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
             cx01CalculatedProb={cx01CalculatedProb}
             tfCalculatedProb={tfCalculatedProb}
             activePrediction={activePrediction}
+            biomarkers={biomarkers}
+          />
+        )}
+
+        {activeTab === "realtime_graphs" && (
+          <RealTimeGraphsTab
+            isHybrid={isHybrid}
+            biomarkers={biomarkers}
+            screeningResult={screeningResult}
+            activeAttributions={activeAttributions}
+            patientName={patientInfo.name}
           />
         )}
       </div>
