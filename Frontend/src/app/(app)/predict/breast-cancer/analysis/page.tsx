@@ -342,7 +342,7 @@ ${screeningResult.clinical_action}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full overflow-x-hidden space-y-6 pb-12"
+      className="space-y-6 pb-12 w-full"
     >
       {/* 1. TOP BREADCRUMB & HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-hairline pb-4">
