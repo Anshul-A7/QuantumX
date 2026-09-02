@@ -524,7 +524,7 @@ export default function BreastCancerDetailPage() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="space-y-6 pb-12 w-full"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full overflow-x-hidden space-y-6 pb-12"
     >
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-hairline pb-4">
@@ -549,7 +549,7 @@ export default function BreastCancerDetailPage() {
                 </span>
               </div>
               <p className="text-xs text-ink-soft">
-                Fine-Needle Aspiration (FNA) Nuclear Morphometry • Wisconsin Diagnostic Breast Cancer (WDBC)
+                Fine-Needle Biopsy Screening • Cellular Nuclear Size, Shape &amp; Structure Analysis
               </p>
             </div>
           </div>
@@ -724,46 +724,20 @@ export default function BreastCancerDetailPage() {
         )}
       </div>
 
-      {/* BENCHMARK PRESET SELECTORS */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-soft font-semibold">
-            Scientific Calibration Cohorts (WDBC Ground Truth)
-          </span>
-          {hasInferred && (
-            <span className="text-[10px] text-amber-600 font-medium">Presets locked during active result view</span>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {PRESETS.map((preset) => (
-            <button
-              key={preset.name}
-              disabled={hasInferred}
-              onClick={() => handleSelectPreset(preset)}
-              className={`p-3.5 rounded-2xl border text-left transition-all shadow-xs ${
-                selectedPresetName === preset.name
-                  ? "border-quantum bg-quantum/5 ring-1 ring-quantum"
-                  : "border-hairline bg-parchment hover:bg-cream"
-              } ${hasInferred ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-bold text-ink">{preset.patientName}</span>
-                <span className="text-[10px] font-mono text-quantum font-semibold">Load Case</span>
-              </div>
-              <p className="text-[11px] text-ink-soft line-clamp-2 leading-relaxed">{preset.description}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* MAIN SCREENING WORKSPACE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* LEFT: Parameter Sliders */}
         <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-5 space-y-5 shadow-xs">
           <div className="flex items-center justify-between border-b border-hairline pb-3">
             <div>
-              <h2 className="font-serif text-lg font-medium text-ink">8 Morphometric Biomarkers</h2>
-              <p className="text-xs text-ink-soft">Fine-tune cell parameters or load clinical cohort values</p>
+              <div className="flex items-center gap-1.5">
+                <h2 className="font-serif text-lg font-medium text-ink">8 Biopsy Cell Measurements</h2>
+                <HelpTooltip
+                  title="Biopsy Cell Measurements"
+                  text="These 8 microscopic metrics are calculated from a Fine-Needle Aspiration (FNA) biopsy to evaluate cell nucleus shape, size irregularity, and surface roughness."
+                />
+              </div>
+              <p className="text-xs text-ink-soft">Adjust measured values from biopsy report or lab results</p>
             </div>
             {!hasInferred && (
               <button
@@ -802,7 +776,10 @@ export default function BreastCancerDetailPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-ink">{field.label}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold text-ink">{field.label}</span>
+                      <HelpTooltip title={field.label} text={field.simpleExplanation} />
+                    </div>
                     <span className="text-xs font-mono font-bold text-quantum">
                       {val} <span className="text-[10px] text-ink-soft">{field.unit}</span>
                     </span>
@@ -1014,9 +991,15 @@ export default function BreastCancerDetailPage() {
 
                 {/* Primary Risk Drivers */}
                 <div className="space-y-2">
-                  <span className="text-xs font-semibold text-ink font-mono uppercase tracking-wider">
-                    Primary Morphometric Risk Drivers (SHAP)
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-ink font-mono uppercase tracking-wider">
+                      Key Factors Influencing This Result
+                    </span>
+                    <HelpTooltip
+                      title="Key Factors (SHAP)"
+                      text="Shows which measured cell features contributed most to this assessment. Red indicates features that increase risk, while green indicates healthy protective features."
+                    />
+                  </div>
                   <div className="space-y-1.5">
                     {(screeningResult.shap_attributions || []).slice(0, 3).map((attr: any, idx: number) => {
                       const isRisk = attr.direction === "risk_elevating";
@@ -1036,7 +1019,11 @@ export default function BreastCancerDetailPage() {
                 <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-amber-900">
                     <Info size={14} />
-                    <span>Clinical Finding Summary</span>
+                    <span>Recommended Next Steps</span>
+                    <HelpTooltip
+                      title="Clinical Recommendations"
+                      text="Guidance based on standard clinical oncology protocols corresponding to the calculated risk tier."
+                    />
                   </div>
                   <p className="text-[11px] text-amber-900/90 leading-relaxed">
                     {screeningResult.clinical_action}
@@ -1052,7 +1039,7 @@ export default function BreastCancerDetailPage() {
                   >
                     <div className="flex items-center gap-2">
                       <Microscope size={16} className="text-quantum" />
-                      <span>🔬 View Complete Diagnostic Analysis & Telemetry</span>
+                      <span>🔬 View Full Patient Analysis Report</span>
                     </div>
                     <ChevronRight size={15} className="text-parchment/70" />
                   </button>
