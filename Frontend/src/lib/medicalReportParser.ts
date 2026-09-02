@@ -146,10 +146,22 @@ export interface ExtractedFieldMatch {
   derivationFormula?: string;
 }
 
+export interface PatientMetadata {
+  patientId: string;
+  patientName: string;
+  patientAge?: number;
+  patientGender?: string;
+  intakeDate?: string;
+  accessionNumber?: string;
+  contactNumber?: string;
+  clinicalNotes?: string;
+}
+
 export interface MedicalReportParseResult {
   fileName: string;
   fileType: string;
   patientId: string;
+  metadata?: PatientMetadata;
   extractedFields: Record<string, number>;
   fieldMatches: ExtractedFieldMatch[];
   rawTextPreview: string;
@@ -188,19 +200,82 @@ function findCanonicalMatch(rawKey: string): { config: BiomarkerFieldConfig; mat
   return null;
 }
 
-function extractPatientIdFromText(text: string): string | null {
-  const patterns = [
+export function extractPatientMetadataFromText(text: string): PatientMetadata {
+  let patientId = "";
+  let patientName = "Jane Doe";
+  let patientAge: number | undefined = undefined;
+  let patientGender = "Female";
+  let intakeDate = new Date().toISOString().split("T")[0];
+  let accessionNumber = "";
+
+  // 1. Patient ID
+  const idPatterns = [
     /(?:patient\s*(?:id|number|code|#)|subject\s*(?:id|#)|mrn|case\s*#?)[:\s\-=]+([A-Za-z0-9\-_]+)/i,
     /(Patient-[A-Za-z0-9\-]+)/i,
     /(BC-[0-9]{3,6})/i,
   ];
-  for (const pat of patterns) {
+  for (const pat of idPatterns) {
     const m = text.match(pat);
     if (m && m[1]) {
-      return m[1].trim();
+      patientId = m[1].trim();
+      break;
     }
   }
-  return null;
+  if (!patientId) {
+    patientId = `QX-BC-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  // 2. Patient Name
+  const nameMatch = text.match(/(?:patient\s*(?:name|full\s*name)|name\s*of\s*patient|patient)[:\s\-=]+([A-Za-z\s\.\,\-]+)/i);
+  if (nameMatch && nameMatch[1]) {
+    const clean = nameMatch[1].replace(/[\n\r\t]+/g, " ").trim();
+    if (clean.length > 2 && !clean.toLowerCase().includes("id") && !clean.toLowerCase().includes("age")) {
+      patientName = clean.split(/[,;\n]/)[0].trim();
+    }
+  }
+
+  // 3. Age
+  const ageMatch = text.match(/(?:age|patient\s*age)[:\s\-=]+(\d{1,3})/i);
+  if (ageMatch && ageMatch[1]) {
+    const a = parseInt(ageMatch[1], 10);
+    if (a >= 10 && a <= 120) patientAge = a;
+  }
+
+  // 4. Gender / Sex
+  const genderMatch = text.match(/(?:gender|sex)[:\s\-=]+(female|male|f|m|other)/i);
+  if (genderMatch && genderMatch[1]) {
+    const g = genderMatch[1].toLowerCase();
+    if (g.startsWith("f")) patientGender = "Female";
+    else if (g.startsWith("m")) patientGender = "Male";
+    else patientGender = "Other";
+  }
+
+  // 5. Collection / Intake Date
+  const dateMatch = text.match(/(?:collection\s*date|date\s*of\s*collection|intake\s*date|report\s*date|date)[:\s\-=]+([0-9]{4}[-\/][0-9]{2}[-\/][0-9]{2}|[0-9]{2}[-\/][0-9]{2}[-\/][0-9]{4})/i);
+  if (dateMatch && dateMatch[1]) {
+    intakeDate = dateMatch[1].trim();
+  }
+
+  // 6. Accession Number
+  const accMatch = text.match(/(?:accession\s*(?:number|no|#)|acc\s*#?)[:\s\-=]+([A-Za-z0-9\-_]+)/i);
+  if (accMatch && accMatch[1]) {
+    accessionNumber = accMatch[1].trim();
+  } else {
+    accessionNumber = `ACC-${Math.floor(100000 + Math.random() * 900000)}`;
+  }
+
+  return {
+    patientId,
+    patientName,
+    patientAge,
+    patientGender,
+    intakeDate,
+    accessionNumber,
+  };
+}
+
+function extractPatientIdFromText(text: string): string | null {
+  return extractPatientMetadataFromText(text).patientId;
 }
 
 /**
@@ -575,12 +650,14 @@ export function parseUnstructuredMedicalText(rawText: string, fileName: string):
     }
   });
 
-  const patientId = extractPatientIdFromText(rawText) || `Patient-BC-${Math.floor(1000 + Math.random() * 9000)}`;
+  const metadata = extractPatientMetadataFromText(rawText);
+  const patientId = metadata.patientId;
 
   return {
     fileName,
     fileType: fileName.endsWith(".pdf") ? "application/pdf" : "text/plain",
     patientId,
+    metadata,
     extractedFields: extracted,
     fieldMatches: matches,
     rawTextPreview: rawText.slice(0, 400),

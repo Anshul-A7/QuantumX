@@ -20,13 +20,14 @@ import {
   parseMedicalReportFile,
   MedicalReportParseResult,
   BREAST_CANCER_CANONICAL_SCHEMA,
+  PatientMetadata,
 } from "@/lib/medicalReportParser";
 import { playSound } from "@/lib/sound";
 
 interface BiomarkerUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyData: (extractedValues: Record<string, number>, patientId: string) => void;
+  onApplyData: (extractedValues: Record<string, number>, metadata: PatientMetadata) => void;
 }
 
 export default function BiomarkerUploadModal({
@@ -97,7 +98,14 @@ export default function BiomarkerUploadModal({
   const handleApply = () => {
     if (!parseResult) return;
     playSound("quantum");
-    onApplyData(editableValues, patientId);
+    const meta: PatientMetadata = parseResult.metadata || {
+      patientId: patientId || `Patient-BC-${Math.floor(1000 + Math.random() * 9000)}`,
+      patientName: "Jane Doe",
+      patientGender: "Female",
+      intakeDate: new Date().toISOString().split("T")[0],
+    };
+    if (patientId) meta.patientId = patientId;
+    onApplyData(editableValues, meta);
     onClose();
   };
 

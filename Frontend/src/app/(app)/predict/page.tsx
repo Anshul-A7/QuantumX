@@ -34,6 +34,7 @@ import { ScreeningService } from "@/services/screening.service";
 import { NotificationService } from "@/services/notification.service";
 import { showToast } from "@/components/common/ToastNotification";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import { PatientMetadata } from "@/lib/medicalReportParser";
 
 type DiseaseType = "breast_cancer" | "heart_disease" | "chronic_kidney";
 
@@ -306,16 +307,16 @@ function PredictPageContent() {
     setSelectedPresetName(preset.name);
   };
 
-  const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
+  const handleApplyExtractedData = (extractedValues: Record<string, number>, metadata: PatientMetadata) => {
     setFormValues(extractedValues);
     setDerivedNotes({});
     setSelectedPresetName(null);
-    if (detectedPatientId) {
-      setPatientIdInput(detectedPatientId);
+    if (metadata.patientId) {
+      setPatientIdInput(metadata.patientId);
     }
     showToast({
       title: "Medical Report Imported",
-      message: "8 cellular biomarkers successfully extracted, validated, and loaded into screening studio.",
+      message: `Loaded ${metadata.patientName || "Patient"} (${metadata.patientId}) with 8 cellular biomarkers.`,
       type: "quantum",
     });
   };

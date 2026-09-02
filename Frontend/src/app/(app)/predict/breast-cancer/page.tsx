@@ -14,17 +14,22 @@ import {
   FlaskConical,
   CheckCircle2,
   Download,
-  Check,
   Info,
   UploadCloud,
   Calculator,
   Link2,
   Unlink2,
   X,
-  ShieldCheck,
+  User,
+  Calendar,
+  Hash,
+  RefreshCw,
+  Phone,
+  FileCheck2,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import { PatientMetadata } from "@/lib/medicalReportParser";
 import { showToast } from "@/components/common/ToastNotification";
 
 interface FieldConfig {
@@ -52,8 +57,11 @@ const FIELDS: FieldConfig[] = [
 
 const PRESETS = [
   {
-    name: "High-Risk Case (Malignant)",
-    description: "Enlarged nuclear radius, jagged borders, and high indentation count.",
+    name: "High-Risk Case (Elena Vance)",
+    patientName: "Elena Vance",
+    patientAge: 54,
+    patientGender: "Female",
+    description: "Infiltrating ductal carcinoma: enlarged nuclear radius and high indentation count.",
     values: {
       radius_mean: 20.57,
       texture_mean: 17.77,
@@ -66,8 +74,11 @@ const PRESETS = [
     },
   },
   {
-    name: "Low-Risk Case (Benign)",
-    description: "Smooth cellular boundaries, normal size, and uniform shape.",
+    name: "Low-Risk Case (Sarah Jenkins)",
+    patientName: "Sarah Jenkins",
+    patientAge: 42,
+    patientGender: "Female",
+    description: "Fibroadenoma: smooth cellular boundaries, normal size, and uniform shape.",
     values: {
       radius_mean: 11.42,
       texture_mean: 13.25,
@@ -97,12 +108,19 @@ export default function BreastCancerDetailPage() {
   const [formValues, setFormValues] = useState<Record<string, number>>({});
   const [derivedNotes, setDerivedNotes] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
-  const [patientIdInput, setPatientIdInput] = useState("");
+
+  // Patient Intake & Demographics State
+  const [patientName, setPatientName] = useState("Elena Vance");
+  const [patientId, setPatientId] = useState("");
+  const [patientAge, setPatientAge] = useState<number>(54);
+  const [patientGender, setPatientGender] = useState("Female");
+  const [intakeDate, setIntakeDate] = useState("");
+  const [accessionNumber, setAccessionNumber] = useState("");
+  const [contactNumber, setContactNumber] = useState("+91 98765 43210");
+  const [isPatientIntakeOpen, setIsPatientIntakeOpen] = useState(true);
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  
-  // Morphology linking: automatically updates Perimeter and Area as Radius changes if enabled
   const [linkGeometry, setLinkGeometry] = useState(false);
-  // Quick inline derivation helper open for specific field
   const [inlineHelperKey, setInlineHelperKey] = useState<string | null>(null);
 
   const [isInferring, setIsInferring] = useState(false);
@@ -116,35 +134,48 @@ export default function BreastCancerDetailPage() {
       initial[f.key] = f.defaultValue;
     });
     setFormValues(initial);
-    setPatientIdInput(`Patient-BC-${Math.floor(1000 + Math.random() * 9000)}`);
+    generateNewPatientIdentity();
   }, []);
+
+  const generateNewPatientIdentity = () => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    setPatientId(`QX-BC-${randomSuffix}`);
+    setAccessionNumber(`ACC-2026-08${Math.floor(10 + Math.random() * 90)}`);
+    setIntakeDate(new Date().toISOString().split("T")[0]);
+  };
 
   const handleSelectPreset = (preset: typeof PRESETS[0]) => {
     setFormValues(preset.values);
     setDerivedNotes({});
     setSelectedPresetName(preset.name);
+    setPatientName(preset.patientName);
+    setPatientAge(preset.patientAge);
+    setPatientGender(preset.patientGender);
   };
 
-  const handleApplyExtractedData = (extractedValues: Record<string, number>, detectedPatientId: string) => {
+  const handleApplyExtractedData = (extractedValues: Record<string, number>, metadata: PatientMetadata) => {
     setFormValues(extractedValues);
     setDerivedNotes({});
     setSelectedPresetName(null);
-    if (detectedPatientId) {
-      setPatientIdInput(detectedPatientId);
-    }
+
+    if (metadata.patientId) setPatientId(metadata.patientId);
+    if (metadata.patientName) setPatientName(metadata.patientName);
+    if (metadata.patientAge) setPatientAge(metadata.patientAge);
+    if (metadata.patientGender) setPatientGender(metadata.patientGender);
+    if (metadata.intakeDate) setIntakeDate(metadata.intakeDate);
+    if (metadata.accessionNumber) setAccessionNumber(metadata.accessionNumber);
+
     showToast({
       title: "Medical Report Imported",
-      message: "8 cellular biomarkers successfully extracted, validated, and loaded into screening studio.",
+      message: `Loaded ${metadata.patientName} (${metadata.patientId}) with 8 cellular biomarkers.`,
       type: "quantum",
     });
   };
 
-  // Updates a field value and handles geometric coupling if enabled
   const handleValueChange = (key: string, numVal: number, fromDerivation?: string) => {
     const updated = { ...formValues, [key]: numVal };
 
     if (linkGeometry && key === "radius_mean") {
-      // Auto-compute geometric Perimeter (2*pi*r) and Area (pi*r^2)
       const p = parseFloat((2 * Math.PI * numVal).toFixed(2));
       const a = parseFloat((Math.PI * Math.pow(numVal, 2)).toFixed(1));
       updated["perimeter_mean"] = p;
@@ -155,15 +186,12 @@ export default function BreastCancerDetailPage() {
 
     if (fromDerivation) {
       setDerivedNotes((prev) => ({ ...prev, [key]: fromDerivation }));
-    } else {
-      // Clear specific derivation note if user manually drags slider
-      if (derivedNotes[key]) {
-        setDerivedNotes((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-      }
+    } else if (derivedNotes[key]) {
+      setDerivedNotes((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
     }
     setSelectedPresetName(null);
   };
@@ -176,17 +204,16 @@ export default function BreastCancerDetailPage() {
     });
   };
 
-  // Instant inline mathematical derivations
   const executeInlineDerivation = (key: string, method: string) => {
     if (key === "radius_mean") {
       if (method === "from_area") {
         const a = formValues.area_mean || 1001.0;
         const r = parseFloat(Math.sqrt(a / Math.PI).toFixed(2));
-        handleValueChange("radius_mean", r, `Derived from Area: r = √(1001/π) = ${r}μm`);
+        handleValueChange("radius_mean", r, `Derived: r = √(1001/π) = ${r}μm`);
       } else if (method === "from_perimeter") {
         const p = formValues.perimeter_mean || 122.8;
         const r = parseFloat((p / (2 * Math.PI)).toFixed(2));
-        handleValueChange("radius_mean", r, `Derived from Perimeter: r = P/2π = ${r}μm`);
+        handleValueChange("radius_mean", r, `Derived: r = P/2π = ${r}μm`);
       } else if (method === "cohort_median") {
         handleValueChange("radius_mean", 17.99, "Population Benchmark: 17.99μm");
       }
@@ -194,7 +221,7 @@ export default function BreastCancerDetailPage() {
       if (method === "from_radius") {
         const r = formValues.radius_mean || 17.99;
         const a = parseFloat((Math.PI * Math.pow(r, 2)).toFixed(1));
-        handleValueChange("area_mean", a, `Derived from Radius: A = πr² = ${a}μm²`);
+        handleValueChange("area_mean", a, `Derived: A = πr² = ${a}μm²`);
       } else if (method === "cohort_median") {
         handleValueChange("area_mean", 1001.0, "Population Benchmark: 1001.0μm²");
       }
@@ -202,7 +229,7 @@ export default function BreastCancerDetailPage() {
       if (method === "from_radius") {
         const r = formValues.radius_mean || 17.99;
         const p = parseFloat((2 * Math.PI * r).toFixed(2));
-        handleValueChange("perimeter_mean", p, `Derived from Radius: P = 2πr = ${p}μm`);
+        handleValueChange("perimeter_mean", p, `Derived: P = 2πr = ${p}μm`);
       } else if (method === "cohort_median") {
         handleValueChange("perimeter_mean", 122.8, "Population Benchmark: 122.8μm");
       }
@@ -216,7 +243,6 @@ export default function BreastCancerDetailPage() {
         handleValueChange("compactness_mean", 0.2776, "Population Benchmark: 0.2776");
       }
     } else {
-      // General cohort fallback
       const fieldDef = FIELDS.find((f) => f.key === key);
       if (fieldDef) {
         handleValueChange(key, fieldDef.defaultValue, `Population Benchmark: ${fieldDef.defaultValue}`);
@@ -280,8 +306,12 @@ export default function BreastCancerDetailPage() {
         const storedHistory = localStorage.getItem("quantumx_prediction_history");
         const historyList = storedHistory ? JSON.parse(storedHistory) : [];
         const newRecord = {
-          id: `QX-BC-${Math.floor(10000 + Math.random() * 90000)}`,
-          patientName: patientIdInput || "Patient",
+          id: patientId || `QX-BC-${Math.floor(10000 + Math.random() * 90000)}`,
+          patientName: patientName || "Patient",
+          patientAge: patientAge,
+          patientGender: patientGender,
+          intakeDate: intakeDate,
+          accessionNumber: accessionNumber,
           disease: "Breast Cancer Screening",
           quantumPrediction: qLabel,
           quantumConfidence: qConf,
@@ -297,10 +327,10 @@ export default function BreastCancerDetailPage() {
         const notifList = storedNotifs ? JSON.parse(storedNotifs) : [];
         const newNotif = {
           id: `notif-${Date.now()}`,
-          title: `Screening Completed: ${newRecord.patientName}`,
+          title: `Screening Completed: ${patientName} (${patientId})`,
           category: "disease",
           time: "Just now",
-          message: `${newRecord.disease} result: ${qLabel} (${qConf}% confidence).`,
+          message: `${patientName} (${patientAge}y/${patientGender}): ${qLabel} (${qConf}% confidence).`,
           read: false,
           actionUrl: "/history",
           actionLabel: "View Record",
@@ -315,29 +345,50 @@ export default function BreastCancerDetailPage() {
   const handleDownloadReport = () => {
     if (!inferenceResult) return;
     const summary = `
-QUANTUMX DETAILED BREAST CANCER SCREENING REPORT
-============================================================
-Patient ID / Name:    ${patientIdInput}
-Condition:            Breast Cancer (Cellular Biopsy)
-Date & Time:          ${new Date().toLocaleString()}
+================================================================================
+QUANTUMX ADVANCED ONCOLOGY SCREENING REPORT
+================================================================================
+PATIENT DEMOGRAPHICS & CLINICAL INTAKE:
+- Patient Name:       ${patientName}
+- Patient ID:         ${patientId}
+- Accession Number:   ${accessionNumber}
+- Age / Gender:       ${patientAge} Yrs / ${patientGender}
+- Examination Date:   ${intakeDate}
+- Contact / Phone:    ${contactNumber}
+- Condition:          Breast Cytopathology (Fine Needle Aspiration)
 
-DIAGNOSTIC OUTCOME:
-- Quantum Model:      ${inferenceResult.quantumLabel} (${inferenceResult.quantumConfidence}%)
-- Standard ML Model:  ${inferenceResult.classicalLabel} (${inferenceResult.classicalConfidence}%)
-- Risk Level:         ${inferenceResult.riskLevel} Risk
+--------------------------------------------------------------------------------
+EXTRACTED CELLULAR BIOMARKERS:
+- Cell Size (Radius): ${formValues.radius_mean ?? 17.99} μm
+- Surface Texture:    ${formValues.texture_mean ?? 10.38} std
+- Cell Perimeter:     ${formValues.perimeter_mean ?? 122.8} μm
+- Nuclear Area:       ${formValues.area_mean ?? 1001.0} μm²
+- Border Smoothness:  ${formValues.smoothness_mean ?? 0.1184} idx
+- Compactness:        ${formValues.compactness_mean ?? 0.2776} idx
+- Indentation Depth:  ${formValues.concavity_mean ?? 0.3001} idx
+- Indentation Count:  ${formValues.concave_points_mean ?? 0.1471} cnt
 
-KEY CELLULAR FACTORS:
-${inferenceResult.quantumGateAttribution.map((g) => `- ${g.name}: +${g.impact}% impact (${g.description})`).join("\n")}
+--------------------------------------------------------------------------------
+DIAGNOSTIC OUTCOME & CONSENSUS:
+- Quantum Model (VQC):      ${inferenceResult.quantumLabel} (${inferenceResult.quantumConfidence}%)
+- Classical Baseline (SVM): ${inferenceResult.classicalLabel} (${inferenceResult.classicalConfidence}%)
+- Risk Stratification:      ${inferenceResult.riskLevel} Risk
+- Quantum Latency:          ${inferenceResult.quantumExecutionTimeMs} ms
 
-CLINICAL RECOMMENDATION:
+KEY CELLULAR RISK DRIVERS (QXplain Quantum Gate Saliency):
+${inferenceResult.quantumGateAttribution.map((g) => `• ${g.name}: +${g.impact}% impact (${g.description})`).join("\n")}
+
+CLINICAL IMPRESSION & RECOMMENDATION:
 ${inferenceResult.clinicalNote}
+================================================================================
+Generated via QuantumX Clinical Engine (SIH26139 Compliance Validated)
     `.trim();
 
     const blob = new Blob([summary], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Breast_Cancer_Screening_${patientIdInput}.txt`;
+    link.download = `Clinical_Report_${patientId}_${patientName.replace(/\s+/g, "_")}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -349,14 +400,14 @@ ${inferenceResult.clinicalNote}
       transition={{ duration: 0.35, ease: "easeOut" }}
       className="space-y-5 pb-12 w-full"
     >
-      {/* Upload Modal (Only for multi-format files) */}
+      {/* Upload Modal */}
       <BiomarkerUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
       />
 
-      {/* Back Button + Title */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-hairline pb-4">
         <div className="space-y-1">
           <Link
@@ -374,7 +425,7 @@ ${inferenceResult.clinicalNote}
             </h1>
           </div>
           <p className="text-xs text-ink-soft font-light">
-            Evaluates microscopic cell boundary smoothness and tumor thickness using quantum algorithms.
+            Quantum multi-qubit entangling classification & gate explainability for fine-needle cytology.
           </p>
         </div>
 
@@ -407,6 +458,115 @@ ${inferenceResult.clinicalNote}
 
       {activeTab === "form" ? (
         <>
+          {/* Patient Demographics & Clinical Intake Bar */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-parchment border border-hairline shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-hairline/70 pb-2">
+              <div className="flex items-center gap-2">
+                <User size={14} className="text-quantum" />
+                <span className="text-xs font-semibold text-ink font-sans">
+                  Patient Demographics & Clinical Intake
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cream border border-hairline text-ink-soft">
+                  {accessionNumber}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={generateNewPatientIdentity}
+                  className="text-[11px] font-mono text-quantum hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Generate new random Patient ID & Accession #"
+                >
+                  <RefreshCw size={11} /> Auto-Generate ID
+                </button>
+              </div>
+            </div>
+
+            {/* Form Fields: Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+              {/* Patient Name */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft flex items-center gap-1">
+                  <User size={10} /> Full Name
+                </label>
+                <input
+                  type="text"
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="Patient Name"
+                  className="w-full h-8 px-2.5 rounded-lg bg-cream/50 border border-hairline text-xs font-medium text-ink focus:outline-none focus:border-quantum"
+                />
+              </div>
+
+              {/* Patient ID */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft flex items-center gap-1">
+                  <Hash size={10} /> Patient ID / MRN
+                </label>
+                <input
+                  type="text"
+                  value={patientId}
+                  onChange={(e) => setPatientId(e.target.value)}
+                  className="w-full h-8 px-2.5 rounded-lg bg-cream/50 border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum"
+                />
+              </div>
+
+              {/* Age */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft">Age (Yrs)</label>
+                <input
+                  type="number"
+                  min={10}
+                  max={120}
+                  value={patientAge}
+                  onChange={(e) => setPatientAge(parseInt(e.target.value) || 50)}
+                  className="w-full h-8 px-2.5 rounded-lg bg-cream/50 border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum"
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft">Gender / Sex</label>
+                <select
+                  value={patientGender}
+                  onChange={(e) => setPatientGender(e.target.value)}
+                  className="w-full h-8 px-2 rounded-lg bg-cream/50 border border-hairline text-xs font-medium text-ink focus:outline-none focus:border-quantum cursor-pointer"
+                >
+                  <option value="Female">Female</option>
+                  <option value="Male">Male</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Examination Date */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft flex items-center gap-1">
+                  <Calendar size={10} /> Date
+                </label>
+                <input
+                  type="date"
+                  value={intakeDate}
+                  onChange={(e) => setIntakeDate(e.target.value)}
+                  className="w-full h-8 px-2 rounded-lg bg-cream/50 border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum"
+                />
+              </div>
+
+              {/* Contact / Phone */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-medium text-ink-soft flex items-center gap-1">
+                  <Phone size={10} /> Contact / Phone
+                </label>
+                <input
+                  type="text"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="+91..."
+                  className="w-full h-8 px-2.5 rounded-lg bg-cream/50 border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Quick Presets, Geometry Auto-Sync, and Upload Action Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-xl bg-cream-deep/40 border border-hairline text-xs">
             <div className="flex items-center gap-2 flex-wrap">
@@ -453,19 +613,8 @@ ${inferenceResult.clinicalNote}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-quantum/10 border border-quantum/30 text-quantum hover:bg-quantum hover:text-white transition-all font-medium text-xs cursor-pointer shadow-xs"
               >
                 <UploadCloud size={13} />
-                <span>Upload Report</span>
+                <span>Upload Report (.pdf, .csv, .txt)</span>
               </button>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] text-ink-soft font-mono">Patient ID:</span>
-                <input
-                  type="text"
-                  value={patientIdInput}
-                  onChange={(e) => setPatientIdInput(e.target.value)}
-                  placeholder="Patient Name"
-                  className="w-32 h-7 px-2 rounded-lg bg-parchment border border-hairline text-xs font-mono text-ink focus:outline-none focus:border-quantum/60"
-                />
-              </div>
             </div>
           </div>
 
@@ -479,7 +628,7 @@ ${inferenceResult.clinicalNote}
                   <p className="text-[11px] text-ink-soft">
                     {linkGeometry
                       ? "🔗 Linked Mode: Adjusting Cell Radius automatically computes Perimeter and Area in real-time."
-                      : "Drag sliders or type exact values. Click 'Derive' to auto-calculate missing values."}
+                      : "Drag sliders or type exact values. Click 'Don't have this?' to auto-calculate missing metrics."}
                   </p>
                 </div>
                 <button
@@ -544,7 +693,7 @@ ${inferenceResult.clinicalNote}
                         </div>
                       </div>
 
-                      {/* Micro Range Slider (The Main Interactive Element) */}
+                      {/* Micro Range Slider */}
                       <input
                         type="range"
                         min={field.min}
@@ -586,7 +735,7 @@ ${inferenceResult.clinicalNote}
                         </div>
                       )}
 
-                      {/* Inline Clean Derivation Expandable Panel (Zero Popups) */}
+                      {/* Inline Clean Derivation Expandable Panel */}
                       <AnimatePresence>
                         {isHelperOpen && (
                           <motion.div
@@ -718,7 +867,7 @@ ${inferenceResult.clinicalNote}
                 {isInferring ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-parchment border-t-transparent rounded-full animate-spin" />
-                    <span>Analyzing Breast Cell Morphology...</span>
+                    <span>Analyzing Cellular Measurements for {patientName}...</span>
                   </>
                 ) : (
                   <>
@@ -744,7 +893,7 @@ ${inferenceResult.clinicalNote}
                       <Cpu size={28} />
                     </div>
                     <h3 className="font-serif text-xl font-light text-ink">
-                      Computing Quantum State Overlap...
+                      Computing Quantum State Overlap for {patientName}...
                     </h3>
                     <p className="text-[11px] font-mono text-ink-soft max-w-sm mx-auto">
                       Encoding 8 cellular measurements into entangled quantum phase space
@@ -761,9 +910,12 @@ ${inferenceResult.clinicalNote}
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-hairline pb-2.5">
                       <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-quantum font-semibold">
-                          Screening Results
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-quantum font-semibold">
+                            {patientName} ({patientId})
+                          </span>
+                          <span className="text-[10px] text-ink-soft">· {patientAge}y/{patientGender}</span>
+                        </div>
                         <h3 className="font-serif text-lg font-medium text-ink">Diagnostic Consensus</h3>
                       </div>
                       <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium">
@@ -840,7 +992,7 @@ ${inferenceResult.clinicalNote}
                       className="w-full py-2 px-3 rounded-xl border border-hairline bg-parchment hover:bg-cream text-ink text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                     >
                       <Download size={13} />
-                      <span>Download Clinical Screening Summary (.txt)</span>
+                      <span>Download Clinical Screening Summary ({patientId}.txt)</span>
                     </button>
                   </motion.div>
                 ) : (
@@ -852,7 +1004,7 @@ ${inferenceResult.clinicalNote}
                     <div className="space-y-1 max-w-xs mx-auto">
                       <h3 className="font-serif text-lg font-light text-ink">Ready to Analyze</h3>
                       <p className="text-xs text-ink-soft leading-relaxed">
-                        Adjust cellular measurements on the left, calculate missing values, upload a medical lab report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
+                        Enter patient demographics above, adjust cellular measurements, upload a lab report, or select a sample case, then click &ldquo;Run Quantum vs Classical Screening&rdquo;.
                       </p>
                     </div>
                   </div>
