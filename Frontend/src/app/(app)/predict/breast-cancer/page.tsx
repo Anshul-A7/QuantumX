@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
@@ -32,10 +33,10 @@ import {
   Layers,
   Lock,
   ExternalLink,
+  Microscope,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
-import { DeepAnalysisModal } from "@/components/predict/DeepAnalysisModal";
 import { PatientMetadata } from "@/lib/medicalReportParser";
 import { showToast } from "@/components/common/ToastNotification";
 
@@ -117,6 +118,7 @@ const PRESETS = [
 ];
 
 export default function BreastCancerDetailPage() {
+  const router = useRouter();
   const [formValues, setFormValues] = useState<Record<string, number>>({});
   const [derivedNotes, setDerivedNotes] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
@@ -137,7 +139,6 @@ export default function BreastCancerDetailPage() {
   const [isPatientIntakeOpen, setIsPatientIntakeOpen] = useState(true);
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isDeepAnalysisOpen, setIsDeepAnalysisOpen] = useState(false);
   const [linkGeometry, setLinkGeometry] = useState(false);
   const [inlineHelperKey, setInlineHelperKey] = useState<string | null>(null);
 
@@ -147,6 +148,26 @@ export default function BreastCancerDetailPage() {
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "circuit">("form");
+
+  const handleNavigateToAnalysis = () => {
+    try {
+      const payload = {
+        patientInfo: {
+          name: patientName,
+          patient_id: patientId,
+          age: patientAge,
+          gender: patientGender,
+        },
+        biomarkers: formValues,
+        screeningResult: screeningResult || {},
+        aiSynthesis: aiSynthesis,
+      };
+      sessionStorage.setItem("quantumx_active_analysis", JSON.stringify(payload));
+    } catch (e) {
+      console.warn("Could not save analysis payload to sessionStorage:", e);
+    }
+    router.push("/predict/breast-cancer/analysis");
+  };
 
   useEffect(() => {
     const initial: Record<string, number> = {};
@@ -376,7 +397,7 @@ export default function BreastCancerDetailPage() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="space-y-6 max-w-7xl mx-auto pb-16 px-4 sm:px-6"
+      className="space-y-6 pb-12 w-full"
     >
       {/* HEADER SECTION */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-hairline pb-4">
@@ -741,11 +762,11 @@ export default function BreastCancerDetailPage() {
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => setIsDeepAnalysisOpen(true)}
-                    className="w-full py-3 px-4 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center justify-between transition-all shadow-md cursor-pointer border border-ink"
+                    onClick={handleNavigateToAnalysis}
+                    className="w-full py-3.5 px-4 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center justify-between transition-all shadow-md cursor-pointer border border-ink"
                   >
                     <div className="flex items-center gap-2">
-                      <Eye size={15} className="text-quantum" />
+                      <Microscope size={16} className="text-quantum" />
                       <span>🔬 View Complete Diagnostic Analysis & Telemetry</span>
                     </div>
                     <ChevronRight size={15} className="text-parchment/70" />
@@ -846,26 +867,11 @@ export default function BreastCancerDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* MODALS */}
+      {/* UPLOAD MODAL */}
       <BiomarkerUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
-      />
-
-      <DeepAnalysisModal
-        isOpen={isDeepAnalysisOpen}
-        onClose={() => setIsDeepAnalysisOpen(false)}
-        patientInfo={{
-          name: patientName,
-          patient_id: patientId,
-          age: patientAge,
-          gender: patientGender,
-        }}
-        screeningResult={screeningResult || {}}
-        biomarkers={formValues}
-        aiSynthesis={aiSynthesis}
-        isLoadingAi={isLoadingAi}
       />
     </motion.div>
   );
