@@ -6,21 +6,26 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Sparkles,
-  ArrowLeft,
-  Cpu,
   Activity,
+  Layers,
   Zap,
   Sliders,
+  CheckCircle2,
+  Check,
   RotateCcw,
   FlaskConical,
-  CheckCircle2,
-  Download,
-  Info,
+  HelpCircle,
+  Loader2,
+  Lock,
+  ArrowRight,
+  AlertTriangle,
+  X,
+  ShieldCheck,
   UploadCloud,
+  Info,
   Calculator,
   Link2,
   Unlink2,
-  X,
   User,
   Calendar,
   Hash,
@@ -29,11 +34,11 @@ import {
   FileCheck2,
   ChevronRight,
   Eye,
-  ShieldCheck,
-  Layers,
-  Lock,
-  ExternalLink,
   Microscope,
+  ExternalLink,
+  ArrowLeft,
+  Play,
+  CheckSquare
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
@@ -53,19 +58,99 @@ interface FieldConfig {
 }
 
 const FIELDS: FieldConfig[] = [
-  { key: "radius_mean", label: "Cell Size (Radius)", min: 6.0, max: 30.0, step: 0.1, defaultValue: 17.99, unit: "μm", description: "Mean distances from center to perimeter points", simpleExplanation: "Average radius of the cell nucleus under microscope." },
-  { key: "texture_mean", label: "Surface Texture", min: 9.0, max: 40.0, step: 0.1, defaultValue: 10.38, unit: "std", description: "Standard deviation of gray-scale values", simpleExplanation: "Variation in gray-scale texture across the cell." },
-  { key: "perimeter_mean", label: "Cell Perimeter", min: 40.0, max: 190.0, step: 0.5, defaultValue: 122.8, unit: "μm", description: "Mean size of the core tumor perimeter", simpleExplanation: "Total boundary length around the cell nucleus." },
-  { key: "area_mean", label: "Nuclear Area", min: 140.0, max: 2500.0, step: 1.0, defaultValue: 1001.0, unit: "μm²", description: "Mean nuclear spatial area", simpleExplanation: "Total two-dimensional area of the nucleus." },
-  { key: "smoothness_mean", label: "Border Smoothness", min: 0.05, max: 0.25, step: 0.005, defaultValue: 0.1184, unit: "idx", description: "Local variation in radius lengths", simpleExplanation: "How smooth or jagged the cell boundary appears." },
-  { key: "compactness_mean", label: "Compactness", min: 0.01, max: 0.35, step: 0.005, defaultValue: 0.2776, unit: "idx", description: "Perimeter² / area - 1.0", simpleExplanation: "Measure of how dense and tightly packed the cell is." },
-  { key: "concavity_mean", label: "Indentation Depth", min: 0.0, max: 0.45, step: 0.005, defaultValue: 0.3001, unit: "idx", description: "Severity of concave portions of contour", simpleExplanation: "How deep the inward curves/indentations are." },
-  { key: "concave_points_mean", label: "Indentation Count", min: 0.0, max: 0.25, step: 0.005, defaultValue: 0.1471, unit: "cnt", description: "Number of concave portions of contour", simpleExplanation: "Total number of inward irregular notches on the cell." },
+  {
+    key: "radius_mean",
+    label: "Cell Size (Radius)",
+    min: 6.0,
+    max: 30.0,
+    step: 0.1,
+    defaultValue: 12.2,
+    unit: "μm",
+    description: "Mean distance from center to points on perimeter of cell nucleus.",
+    simpleExplanation: "Average radius of the cell nucleus under microscope.",
+  },
+  {
+    key: "texture_mean",
+    label: "Surface Texture",
+    min: 9.0,
+    max: 40.0,
+    step: 0.1,
+    defaultValue: 17.4,
+    unit: "std",
+    description: "Standard deviation of gray-scale values in the cell nucleus image.",
+    simpleExplanation: "Variation in gray-scale texture across the cell.",
+  },
+  {
+    key: "perimeter_mean",
+    label: "Cell Perimeter",
+    min: 40.0,
+    max: 200.0,
+    step: 0.5,
+    defaultValue: 78.2,
+    unit: "μm",
+    description: "Total boundary length of the cell nucleus.",
+    simpleExplanation: "Distance around the outside edge of the cell.",
+  },
+  {
+    key: "area_mean",
+    label: "Nuclear Area",
+    min: 140.0,
+    max: 2500.0,
+    step: 1.0,
+    defaultValue: 458.7,
+    unit: "μm²",
+    description: "Total surface area of the cell nucleus.",
+    simpleExplanation: "Two-dimensional size of the nucleus footprint.",
+  },
+  {
+    key: "smoothness_mean",
+    label: "Border Smoothness",
+    min: 0.05,
+    max: 0.20,
+    step: 0.001,
+    defaultValue: 0.091,
+    unit: "idx",
+    description: "Local variation in radius lengths.",
+    simpleExplanation: "How even or jagged the cell boundary appears.",
+  },
+  {
+    key: "compactness_mean",
+    label: "Compactness",
+    min: 0.01,
+    max: 0.35,
+    step: 0.001,
+    defaultValue: 0.065,
+    unit: "idx",
+    description: "Calculated as (perimeter² / area - 1.0).",
+    simpleExplanation: "Density and circular packing efficiency of cell structure.",
+  },
+  {
+    key: "concavity_mean",
+    label: "Indentation Depth",
+    min: 0.0,
+    max: 0.45,
+    step: 0.001,
+    defaultValue: 0.037,
+    unit: "idx",
+    description: "Severity of concave portions of the nuclear contour.",
+    simpleExplanation: "Depth of inward curves/notches on cell surface.",
+  },
+  {
+    key: "concave_points_mean",
+    label: "Indentation Count",
+    min: 0.0,
+    max: 0.25,
+    step: 0.001,
+    defaultValue: 0.023,
+    unit: "cnt",
+    description: "Number of concave portions along the nuclear boundary.",
+    simpleExplanation: "Count of sharp inward notches on cell margin.",
+  },
 ];
 
 const PRESETS = [
   {
-    name: "Case A: Clear Low Risk (Ananya Mehta)",
+    name: "Case A: Low-Risk Normal (Ananya Mehta)",
     patientName: "Ananya Mehta",
     patientAge: 27,
     patientGender: "Female",
@@ -117,6 +202,13 @@ const PRESETS = [
   },
 ];
 
+const INFERENCE_STEPS = [
+  "1/4: Encoding 8 nuclear morphometry features into 8-qubit Pauli-Z state...",
+  "2/4: Contracting 2-layer strongly entangling VQC variational ansatz...",
+  "3/4: Evaluating non-linear empirical WDBC continuous risk distribution...",
+  "4/4: Computing directional SHAP feature attributions and AI synthesis..."
+];
+
 export default function BreastCancerDetailPage() {
   const router = useRouter();
   const [formValues, setFormValues] = useState<Record<string, number>>({});
@@ -128,34 +220,49 @@ export default function BreastCancerDetailPage() {
   const [executionMode, setExecutionMode] = useState<"simulator" | "real_ibm_qpu">("simulator");
   const [isIbmModalOpen, setIsIbmModalOpen] = useState(false);
 
-  // Patient Demographics State
-  const [patientName, setPatientName] = useState("Elena Vance");
+  // Patient Demographics State (Starts Empty & Inputable)
+  const [patientName, setPatientName] = useState("");
   const [patientId, setPatientId] = useState("");
-  const [patientAge, setPatientAge] = useState<number>(54);
+  const [patientAge, setPatientAge] = useState<number | "">("");
   const [patientGender, setPatientGender] = useState("Female");
   const [intakeDate, setIntakeDate] = useState("");
   const [accessionNumber, setAccessionNumber] = useState("");
-  const [contactNumber, setContactNumber] = useState("+91 98765 43210");
   const [isPatientIntakeOpen, setIsPatientIntakeOpen] = useState(true);
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [linkGeometry, setLinkGeometry] = useState(false);
-  const [inlineHelperKey, setInlineHelperKey] = useState<string | null>(null);
 
+  // Execution & Progress State
   const [isInferring, setIsInferring] = useState(false);
+  const [inferenceStepIdx, setInferenceStepIdx] = useState(0);
   const [hasInferred, setHasInferred] = useState(false);
   const [screeningResult, setScreeningResult] = useState<any>(null);
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [activeTab, setActiveTab] = useState<"form" | "circuit">("form");
+
+  const generateNewPatientIdentity = () => {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    setPatientId(`QX-BC-${randomSuffix}`);
+    setAccessionNumber(`ACC-2026-08${Math.floor(10 + Math.random() * 90)}`);
+    setIntakeDate(new Date().toISOString().split("T")[0]);
+  };
+
+  useEffect(() => {
+    const initial: Record<string, number> = {};
+    FIELDS.forEach((f) => {
+      initial[f.key] = f.defaultValue;
+    });
+    setFormValues(initial);
+    generateNewPatientIdentity();
+  }, []);
 
   const handleNavigateToAnalysis = () => {
     try {
       const payload = {
         patientInfo: {
-          name: patientName,
+          name: patientName.trim() || "Patient",
           patient_id: patientId,
-          age: patientAge,
+          age: patientAge || 45,
           gender: patientGender,
         },
         biomarkers: formValues,
@@ -169,29 +276,36 @@ export default function BreastCancerDetailPage() {
     router.push("/predict/breast-cancer/analysis");
   };
 
-  useEffect(() => {
-    const initial: Record<string, number> = {};
-    FIELDS.forEach((f) => {
-      initial[f.key] = f.defaultValue;
-    });
-    setFormValues(initial);
-    generateNewPatientIdentity();
-  }, []);
-
-  const generateNewPatientIdentity = () => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    setPatientId(`QX-BC-${randomSuffix}`);
-    setAccessionNumber(`ACC-2026-08${Math.floor(10 + Math.random() * 90)}`);
-    setIntakeDate(new Date().toISOString().split("T")[0]);
-  };
-
   const handleSelectPreset = (preset: typeof PRESETS[0]) => {
+    if (hasInferred) return; // Prevent changing when locked
     setFormValues(preset.values);
     setDerivedNotes({});
     setSelectedPresetName(preset.name);
     setPatientName(preset.patientName);
     setPatientAge(preset.patientAge);
     setPatientGender(preset.patientGender);
+  };
+
+  const handleStartNewScreening = () => {
+    const initial: Record<string, number> = {};
+    FIELDS.forEach((f) => {
+      initial[f.key] = f.defaultValue;
+    });
+    setFormValues(initial);
+    setDerivedNotes({});
+    setSelectedPresetName(null);
+    setPatientName("");
+    setPatientAge("");
+    generateNewPatientIdentity();
+    setHasInferred(false);
+    setScreeningResult(null);
+    setAiSynthesis(null);
+    setIsPatientIntakeOpen(true);
+    showToast({
+      title: "New Patient Intake Initialized",
+      message: "Parameters and demographics unlocked for new patient screening.",
+      type: "quantum",
+    });
   };
 
   const executeInferenceEngine = async (
@@ -206,6 +320,12 @@ export default function BreastCancerDetailPage() {
     setIsInferring(true);
     setHasInferred(false);
     setIsLoadingAi(true);
+    setInferenceStepIdx(0);
+
+    // Animate through computation stages
+    const stepInterval = setInterval(() => {
+      setInferenceStepIdx((prev) => (prev < INFERENCE_STEPS.length - 1 ? prev + 1 : prev));
+    }, 350);
 
     try {
       // 1. Call the Dedicated Inference Engine API
@@ -226,11 +346,18 @@ export default function BreastCancerDetailPage() {
       });
 
       const data = await response.json();
+      clearInterval(stepInterval);
 
       if (data.success) {
         setScreeningResult(data);
         setHasInferred(true);
         setIsInferring(false);
+
+        showToast({
+          title: "Screening Computation Complete",
+          message: `${pName} · ${data.prediction_label} (${data.composite_risk_score}/100 Risk Index)`,
+          type: "quantum",
+        });
 
         // 2. Trigger Gemini AI Multimodal Cytopathology Synthesis
         fetch("/api/ai/synthesize-analysis", {
@@ -268,6 +395,7 @@ export default function BreastCancerDetailPage() {
         throw new Error(data.error || "Inference failed");
       }
     } catch (err: any) {
+      clearInterval(stepInterval);
       console.error("Inference execution error:", err);
       showToast({
         title: "Inference Error",
@@ -284,22 +412,21 @@ export default function BreastCancerDetailPage() {
     setDerivedNotes({});
     setSelectedPresetName(null);
 
-    const name = metadata.patientName || patientName;
+    const name = metadata.patientName || patientName || "Imported Patient";
     const id = metadata.patientId || patientId;
-    const age = metadata.patientAge || patientAge;
-    const gender = metadata.patientGender || patientGender;
+    const age = metadata.patientAge || (patientAge ? Number(patientAge) : 48);
+    const gender = "Female";
     const date = metadata.intakeDate || intakeDate;
     const acc = metadata.accessionNumber || accessionNumber;
 
     if (metadata.patientId) setPatientId(metadata.patientId);
     if (metadata.patientName) setPatientName(metadata.patientName);
     if (metadata.patientAge) setPatientAge(metadata.patientAge);
-    if (metadata.patientGender) setPatientGender(metadata.patientGender);
     if (metadata.intakeDate) setIntakeDate(metadata.intakeDate);
     if (metadata.accessionNumber) setAccessionNumber(metadata.accessionNumber);
 
     showToast({
-      title: "Report Imported & Analyzed",
+      title: "Report Imported & Parsed",
       message: `Extracted 8 biomarkers for ${name}. Running dual-engine screening...`,
       type: "quantum",
     });
@@ -308,18 +435,45 @@ export default function BreastCancerDetailPage() {
   };
 
   const handleRunInference = () => {
+    if (hasInferred) {
+      handleStartNewScreening();
+      return;
+    }
+
+    if (!patientName.trim()) {
+      showToast({
+        title: "Patient Name Required",
+        message: "Please enter the patient's full name in the Patient Intake section.",
+        type: "warning",
+      });
+      setIsPatientIntakeOpen(true);
+      return;
+    }
+
+    const numAge = Number(patientAge);
+    if (!patientAge || isNaN(numAge) || numAge <= 0 || numAge > 120) {
+      showToast({
+        title: "Valid Age Required",
+        message: "Please specify a valid patient age (e.g. 45) before running inference.",
+        type: "warning",
+      });
+      setIsPatientIntakeOpen(true);
+      return;
+    }
+
     executeInferenceEngine(
       formValues,
-      patientName,
+      patientName.trim(),
       patientId,
-      patientAge,
-      patientGender,
+      numAge,
+      "Female",
       intakeDate,
       accessionNumber
     );
   };
 
   const handleValueChange = (key: string, numVal: number, fromDerivation?: string) => {
+    if (hasInferred) return; // Prevent changing values after inference
     setSelectedPresetName(null);
     setFormValues((prev) => {
       const updated = { ...prev, [key]: numVal };
@@ -348,33 +502,8 @@ export default function BreastCancerDetailPage() {
     }
   };
 
-  const executeInlineDerivation = (targetKey: string, method: string) => {
-    const currentRadius = formValues.radius_mean || 17.99;
-    const currentArea = formValues.area_mean || 1001.0;
-    const currentPerim = formValues.perimeter_mean || 122.8;
-
-    if (method === "from_area" && targetKey === "radius_mean") {
-      const calcR = Math.sqrt(currentArea / Math.PI);
-      handleValueChange("radius_mean", parseFloat(calcR.toFixed(2)), "Derived from Nuclear Area: r = √(A/π)");
-    } else if (method === "from_perimeter" && targetKey === "radius_mean") {
-      const calcR = currentPerim / (2 * Math.PI);
-      handleValueChange("radius_mean", parseFloat(calcR.toFixed(2)), "Derived from Perimeter: r = P / 2π");
-    } else if (method === "from_radius" && targetKey === "area_mean") {
-      const calcA = Math.PI * Math.pow(currentRadius, 2);
-      handleValueChange("area_mean", parseFloat(calcA.toFixed(1)), "Derived from Radius: A = πr²");
-    } else if (method === "from_radius" && targetKey === "perimeter_mean") {
-      const calcP = 2 * Math.PI * currentRadius;
-      handleValueChange("perimeter_mean", parseFloat(calcP.toFixed(1)), "Derived from Radius: P = 2πr");
-    } else if (method === "cohort_median") {
-      const fieldObj = FIELDS.find((f) => f.key === targetKey);
-      if (fieldObj) {
-        handleValueChange(targetKey, fieldObj.defaultValue, `Applied Cohort Baseline: ${fieldObj.defaultValue} ${fieldObj.unit}`);
-      }
-    }
-    setInlineHelperKey(null);
-  };
-
   const handleReset = () => {
+    if (hasInferred) return;
     const initial: Record<string, number> = {};
     FIELDS.forEach((f) => {
       initial[f.key] = f.defaultValue;
@@ -382,14 +511,12 @@ export default function BreastCancerDetailPage() {
     setFormValues(initial);
     setDerivedNotes({});
     setSelectedPresetName(null);
-    setHasInferred(false);
-    setScreeningResult(null);
   };
 
   const getRiskColor = (tier: string) => {
-    if (tier?.includes("HIGH")) return "text-red-500 bg-red-500/10 border-red-500/20";
-    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE")) return "text-amber-500 bg-amber-500/10 border-amber-500/20";
-    return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+    if (tier?.includes("HIGH")) return "text-red-700 bg-red-50 border-red-200";
+    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE")) return "text-amber-700 bg-amber-50 border-amber-200";
+    return "text-emerald-700 bg-emerald-50 border-emerald-200";
   };
 
   return (
@@ -410,7 +537,7 @@ export default function BreastCancerDetailPage() {
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-quantum/10 border border-quantum/30 text-quantum flex items-center justify-center shadow-xs">
-              <Sparkles size={20} />
+              <Microscope size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -428,11 +555,21 @@ export default function BreastCancerDetailPage() {
           </div>
         </div>
 
-        {/* Global Import Action */}
+        {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {hasInferred && (
+            <button
+              onClick={handleStartNewScreening}
+              className="px-3.5 py-2 rounded-xl bg-parchment hover:bg-cream border border-hairline text-ink text-xs font-semibold flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+            >
+              <RotateCcw size={13} className="text-quantum" />
+              <span>Start New Patient</span>
+            </button>
+          )}
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="px-3.5 py-2 rounded-xl bg-parchment hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-2 transition-all shadow-xs cursor-pointer"
+            disabled={hasInferred}
+            className="px-3.5 py-2 rounded-xl bg-parchment hover:bg-cream border border-hairline text-ink text-xs font-medium flex items-center gap-2 transition-all shadow-xs cursor-pointer disabled:opacity-50"
           >
             <UploadCloud size={14} className="text-quantum" />
             <span>Import Lab Report / JSON</span>
@@ -448,25 +585,27 @@ export default function BreastCancerDetailPage() {
           </span>
           <div className="inline-flex p-1 rounded-xl bg-cream border border-hairline">
             <button
+              disabled={hasInferred}
               onClick={() => setSelectedModelFamily("quantumx_hybrid_v1")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 selectedModelFamily === "quantumx_hybrid_v1"
                   ? "bg-ink text-parchment shadow-xs"
                   : "text-ink-soft hover:text-ink"
-              }`}
+              } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
               <Zap size={13} className="text-quantum" />
               <span>Quantum Hybrid</span>
             </button>
             <button
+              disabled={hasInferred}
               onClick={() => setSelectedModelFamily("aegis_classical_v1")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                 selectedModelFamily === "aegis_classical_v1"
                   ? "bg-ink text-parchment shadow-xs"
                   : "text-ink-soft hover:text-ink"
-              }`}
+              } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
             >
-              <Activity size={13} className="text-blue-400" />
+              <Activity size={13} className="text-blue-500" />
               <span>CX-01 (Classical)</span>
             </button>
           </div>
@@ -480,23 +619,25 @@ export default function BreastCancerDetailPage() {
             </span>
             <div className="inline-flex p-1 rounded-xl bg-cream border border-hairline">
               <button
+                disabled={hasInferred}
                 onClick={() => setExecutionMode("simulator")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   executionMode === "simulator"
                     ? "bg-quantum text-black shadow-xs font-bold"
                     : "text-ink-soft hover:text-ink"
-                }`}
+                } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
               >
-                <Cpu size={13} />
+                <Sparkles size={13} />
                 <span>Transfinite-1 (Simulator)</span>
               </button>
               <button
+                disabled={hasInferred}
                 onClick={() => setIsIbmModalOpen(true)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
                   executionMode === "real_ibm_qpu"
                     ? "bg-purple-600 text-white shadow-xs font-bold"
                     : "text-ink-soft hover:text-ink"
-                }`}
+                } ${hasInferred ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
               >
                 <Lock size={12} className="text-amber-500" />
                 <span>Aleph-1 (IBM QPU)</span>
@@ -510,7 +651,7 @@ export default function BreastCancerDetailPage() {
         )}
       </div>
 
-      {/* PATIENT INTAKE ACCORDION */}
+      {/* PATIENT INTAKE ACCORDION (INPUTABLE, NOT PRE-FILLED) */}
       <div className="bg-parchment rounded-2xl border border-hairline shadow-xs overflow-hidden">
         <button
           type="button"
@@ -523,58 +664,79 @@ export default function BreastCancerDetailPage() {
             </div>
             <div>
               <h3 className="font-serif text-sm font-medium text-ink">
-                Patient Demographics & Medical Case Metadata
+                Patient Demographics & Clinical Intake Metadata
               </h3>
               <p className="text-[11px] font-mono text-ink-soft">
-                {patientName} ({patientId || "Unassigned"}) • Age: {patientAge} • Gender: {patientGender}
+                {patientName ? `${patientName} (${patientId})` : "New Patient Intake (Ready for Input)"} • {patientAge ? `Age: ${patientAge}` : "Age: Not Specified"} • Cohort: {patientGender}
               </p>
             </div>
           </div>
-          <span className="text-xs font-mono text-quantum">
+          <span className="text-xs font-mono text-quantum font-semibold">
             {isPatientIntakeOpen ? "Collapse −" : "Expand +"}
           </span>
         </button>
 
         {isPatientIntakeOpen && (
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-parchment">
+            {/* 1. Patient Name (Inputable) */}
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-ink-soft">Patient Full Name</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-mono text-ink-soft font-medium">Patient Full Name</label>
+                <span className="text-[10px] text-amber-600 font-bold">*Required</span>
+              </div>
               <input
                 type="text"
+                disabled={hasInferred}
+                placeholder="e.g. Elena Vance"
                 value={patientName}
                 onChange={(e) => setPatientName(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-medium focus:outline-none focus:border-quantum"
+                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-medium focus:outline-none focus:border-quantum ${
+                  hasInferred ? "opacity-75 cursor-not-allowed bg-cream/30" : ""
+                }`}
               />
             </div>
+
+            {/* 2. Patient ID (Auto-Generated, Read-Only) */}
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-ink-soft">Patient ID</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-mono text-ink-soft font-medium">Patient ID</label>
+                <span className="text-[9px] font-mono text-ink-soft bg-cream px-1.5 py-0.5 rounded border border-hairline">Auto-Assigned</span>
+              </div>
               <input
                 type="text"
                 value={patientId}
-                onChange={(e) => setPatientId(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-mono focus:outline-none focus:border-quantum"
+                readOnly
+                className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/40 text-ink text-xs font-mono font-bold cursor-not-allowed select-all"
               />
             </div>
+
+            {/* 3. Age (Inputable) */}
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-ink-soft">Age (Years)</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-mono text-ink-soft font-medium">Age (Years)</label>
+                <span className="text-[10px] text-amber-600 font-bold">*Required</span>
+              </div>
               <input
                 type="number"
+                disabled={hasInferred}
+                placeholder="e.g. 54"
+                min="18"
+                max="110"
                 value={patientAge}
-                onChange={(e) => setPatientAge(parseInt(e.target.value) || 0)}
-                className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-mono focus:outline-none focus:border-quantum"
+                onChange={(e) => setPatientAge(e.target.value ? parseInt(e.target.value) : "")}
+                className={`w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-mono focus:outline-none focus:border-quantum ${
+                  hasInferred ? "opacity-75 cursor-not-allowed bg-cream/30" : ""
+                }`}
               />
             </div>
+
+            {/* 4. Gender (Fixed Standard for Breast Cancer) */}
             <div className="space-y-1">
-              <label className="text-[11px] font-mono text-ink-soft">Gender</label>
-              <select
-                value={patientGender}
-                onChange={(e) => setPatientGender(e.target.value)}
-                className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-parchment text-ink text-xs font-medium focus:outline-none focus:border-quantum"
-              >
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
-              </select>
+              <label className="text-[11px] font-mono text-ink-soft font-medium">Biological Cohort</label>
+              <div className="w-full px-3 py-1.5 rounded-xl border border-hairline bg-cream/30 text-ink text-xs font-medium flex items-center justify-between">
+                <span>Female (FNA WDBC)</span>
+                <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Validated</span>
+              </div>
             </div>
           </div>
         )}
@@ -582,19 +744,25 @@ export default function BreastCancerDetailPage() {
 
       {/* BENCHMARK PRESET SELECTORS */}
       <div className="space-y-2">
-        <span className="text-[11px] font-mono uppercase tracking-wider text-ink-soft font-semibold">
-          Scientific Calibration Cohorts (WDBC Ground Truth)
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-mono uppercase tracking-wider text-ink-soft font-semibold">
+            Scientific Calibration Cohorts (WDBC Ground Truth)
+          </span>
+          {hasInferred && (
+            <span className="text-[10px] text-amber-600 font-medium">Presets locked during active result view</span>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {PRESETS.map((preset) => (
             <button
               key={preset.name}
+              disabled={hasInferred}
               onClick={() => handleSelectPreset(preset)}
-              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer shadow-xs ${
+              className={`p-3.5 rounded-2xl border text-left transition-all shadow-xs ${
                 selectedPresetName === preset.name
                   ? "border-quantum bg-quantum/5 ring-1 ring-quantum"
                   : "border-hairline bg-parchment hover:bg-cream"
-              }`}
+              } ${hasInferred ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-ink">{preset.patientName}</span>
@@ -613,21 +781,44 @@ export default function BreastCancerDetailPage() {
           <div className="flex items-center justify-between border-b border-hairline pb-3">
             <div>
               <h2 className="font-serif text-lg font-medium text-ink">8 Morphometric Biomarkers</h2>
-              <p className="text-xs text-ink-soft">Adjust parameters or use automatic circular geometry coupling</p>
+              <p className="text-xs text-ink-soft">Fine-tune cell parameters or load clinical cohort values</p>
             </div>
-            <button
-              onClick={handleReset}
-              className="text-xs font-mono text-ink-soft hover:text-ink flex items-center gap-1 transition-colors"
-            >
-              <RotateCcw size={12} /> Reset
-            </button>
+            {!hasInferred && (
+              <button
+                onClick={handleReset}
+                className="text-xs font-mono text-ink-soft hover:text-ink flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <RotateCcw size={12} /> Reset
+              </button>
+            )}
           </div>
+
+          {/* Locked Notice Banner if Inferred */}
+          {hasInferred && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between text-xs text-amber-900 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Lock size={14} className="text-amber-600 shrink-0" />
+                <span className="font-semibold">Parameters locked to current diagnostic result.</span>
+              </div>
+              <button
+                onClick={handleStartNewScreening}
+                className="px-2.5 py-1 rounded-lg bg-ink text-parchment text-[11px] font-semibold hover:bg-ink/90 transition-all cursor-pointer"
+              >
+                Start New
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FIELDS.map((field) => {
               const val = formValues[field.key] ?? field.defaultValue;
               return (
-                <div key={field.key} className="p-3 rounded-xl bg-cream/30 border border-hairline space-y-2">
+                <div
+                  key={field.key}
+                  className={`p-3 rounded-xl border border-hairline space-y-2 transition-all ${
+                    hasInferred ? "bg-cream/20 opacity-70" : "bg-cream/30"
+                  }`}
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-ink">{field.label}</span>
                     <span className="text-xs font-mono font-bold text-quantum">
@@ -639,9 +830,10 @@ export default function BreastCancerDetailPage() {
                     min={field.min}
                     max={field.max}
                     step={field.step}
+                    disabled={hasInferred}
                     value={val}
                     onChange={(e) => handleValueChange(field.key, parseFloat(e.target.value))}
-                    className="w-full accent-quantum cursor-pointer"
+                    className={`w-full accent-quantum ${hasInferred ? "cursor-not-allowed" : "cursor-pointer"}`}
                   />
                   <p className="text-[10px] text-ink-soft leading-tight">{field.simpleExplanation}</p>
                 </div>
@@ -649,42 +841,88 @@ export default function BreastCancerDetailPage() {
             })}
           </div>
 
-          <button
-            onClick={handleRunInference}
-            disabled={isInferring}
-            className="w-full py-3 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
-          >
-            {isInferring ? (
-              <>
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-parchment border-t-transparent animate-spin" />
-                <span>Processing {selectedModelFamily === "quantumx_hybrid_v1" ? (executionMode === "real_ibm_qpu" ? "Aleph-1" : "Transfinite-1") : "CX-01"} Telemetry...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={14} className="text-quantum" />
-                <span>Run {selectedModelFamily === "quantumx_hybrid_v1" ? (executionMode === "real_ibm_qpu" ? "Aleph-1 (IBM QPU)" : "Transfinite-1 (Quantum)") : "CX-01 (Classical)"} Screening</span>
-              </>
-            )}
-          </button>
+          {/* Primary Action Button */}
+          {hasInferred ? (
+            <button
+              onClick={handleStartNewScreening}
+              className="w-full py-3 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+            >
+              <RotateCcw size={14} className="text-quantum" />
+              <span>Start New Patient Screening (Reset Parameters)</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleRunInference}
+              disabled={isInferring}
+              className="w-full py-3 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+            >
+              {isInferring ? (
+                <>
+                  <div className="h-3.5 w-3.5 rounded-full border-2 border-parchment border-t-transparent animate-spin" />
+                  <span>Executing Dual-Engine Pipeline...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={14} className="text-quantum fill-quantum" />
+                  <span>Run {selectedModelFamily === "quantumx_hybrid_v1" ? (executionMode === "real_ibm_qpu" ? "Aleph-1 (IBM QPU)" : "Transfinite-1 (Quantum)") : "CX-01 (Classical)"} Screening</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
-        {/* RIGHT: Results Panel */}
-        <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-5 space-y-5 shadow-xs min-h-[480px] flex flex-col justify-between">
+        {/* RIGHT: Results Panel with Animation State */}
+        <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-5 space-y-5 shadow-xs min-h-[500px] flex flex-col justify-between">
           <AnimatePresence mode="wait">
+            {/* 1. COMPUTING ANIMATION STATE */}
             {isInferring ? (
-              <div className="my-auto text-center space-y-3 py-16">
-                <div className="w-12 h-12 rounded-2xl bg-quantum/10 border border-quantum/30 text-quantum mx-auto flex items-center justify-center animate-pulse">
-                  <Cpu size={24} />
-                </div>
-                <h3 className="font-serif text-lg text-ink font-medium">
-                  Evaluating Telemetry for {patientName}...
-                </h3>
-                <p className="text-xs text-ink-soft font-mono">
-                  Executing {selectedModelFamily} across high-dimensional feature space
-                </p>
-              </div>
-            ) : hasInferred && screeningResult ? (
               <motion.div
+                key="computing"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                className="my-auto text-center space-y-5 py-12 px-4"
+              >
+                {/* Glowing Multi-Ring Pulse Animation */}
+                <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-3xl bg-quantum/20 animate-ping opacity-40" />
+                  <div className="absolute inset-1 rounded-3xl bg-quantum/10 border border-quantum/40 animate-pulse" />
+                  <div className="relative w-12 h-12 rounded-2xl bg-white border border-hairline flex items-center justify-center shadow-md text-quantum">
+                    <Microscope size={24} className="animate-bounce" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="font-serif text-xl text-ink font-semibold">
+                    Evaluating Cytometry for {patientName || "Patient"}...
+                  </h3>
+                  <p className="text-xs text-ink-soft max-w-sm mx-auto leading-relaxed">
+                    Executing {selectedModelFamily === "quantumx_hybrid_v1" ? "8-Qubit Variational Quantum Classifier (Transfinite-1)" : "30-Feature Ensemble (CX-01)"}
+                  </p>
+                </div>
+
+                {/* Step-by-Step Progress List */}
+                <div className="max-w-md mx-auto p-4 rounded-2xl bg-white border border-hairline space-y-2 text-left shadow-xs">
+                  {INFERENCE_STEPS.map((step, idx) => (
+                    <div key={idx} className="flex items-center gap-2.5 text-xs">
+                      {idx < inferenceStepIdx ? (
+                        <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                      ) : idx === inferenceStepIdx ? (
+                        <div className="h-3.5 w-3.5 rounded-full border-2 border-quantum border-t-transparent animate-spin shrink-0" />
+                      ) : (
+                        <div className="h-3.5 w-3.5 rounded-full border border-hairline bg-cream shrink-0" />
+                      )}
+                      <span className={idx <= inferenceStepIdx ? "text-ink font-medium font-mono text-[11px]" : "text-ink-soft font-mono text-[11px]"}>
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ) : hasInferred && screeningResult ? (
+              /* 2. RESULTS SCORECARD */
+              <motion.div
+                key="results"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
@@ -704,8 +942,8 @@ export default function BreastCancerDetailPage() {
                   </span>
                 </div>
 
-                {/* Risk Score Meter */}
-                <div className="p-4 rounded-2xl bg-cream/40 border border-hairline flex items-center justify-between">
+                {/* Continuous Risk Score Meter */}
+                <div className="p-4 rounded-2xl bg-white border border-hairline flex items-center justify-between shadow-xs">
                   <div className="space-y-1">
                     <span className="text-xs font-semibold text-ink-soft uppercase tracking-wider font-mono">
                       Continuous Clinical Risk Score
@@ -736,9 +974,9 @@ export default function BreastCancerDetailPage() {
                     {(screeningResult.shap_attributions || []).slice(0, 3).map((attr: any, idx: number) => {
                       const isRisk = attr.direction === "risk_elevating";
                       return (
-                        <div key={idx} className="p-2.5 rounded-xl bg-cream/30 border border-hairline text-xs flex items-center justify-between">
+                        <div key={idx} className="p-2.5 rounded-xl bg-white border border-hairline text-xs flex items-center justify-between shadow-2xs">
                           <span className="font-medium text-ink">{attr.featureName}</span>
-                          <span className={`font-mono font-bold ${isRisk ? "text-red-500" : "text-emerald-600"}`}>
+                          <span className={`font-mono font-bold ${isRisk ? "text-red-600" : "text-emerald-700"}`}>
                             {isRisk ? "+" : "-"}{attr.impactPercentage?.toFixed(1)}% impact
                           </span>
                         </div>
@@ -748,18 +986,18 @@ export default function BreastCancerDetailPage() {
                 </div>
 
                 {/* Clinical Finding Note */}
-                <div className="p-3.5 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-300">
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-900">
                     <Info size={14} />
                     <span>Clinical Finding Summary</span>
                   </div>
-                  <p className="text-[11px] text-amber-900/80 dark:text-amber-300/80 leading-relaxed">
+                  <p className="text-[11px] text-amber-900/90 leading-relaxed">
                     {screeningResult.clinical_action}
                   </p>
                 </div>
 
-                {/* Prominent "View Complete Analysis" Hero Button */}
-                <div className="pt-2">
+                {/* Navigation and Action Buttons */}
+                <div className="pt-2 space-y-2">
                   <button
                     type="button"
                     onClick={handleNavigateToAnalysis}
@@ -771,9 +1009,19 @@ export default function BreastCancerDetailPage() {
                     </div>
                     <ChevronRight size={15} className="text-parchment/70" />
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleStartNewScreening}
+                    className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-cream border border-hairline text-ink font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+                  >
+                    <RotateCcw size={13} className="text-quantum" />
+                    <span>Start New Patient Screening</span>
+                  </button>
                 </div>
               </motion.div>
             ) : (
+              /* 3. INITIAL EMPTY / READY STATE */
               <div className="my-auto text-center space-y-3 py-16">
                 <div className="w-12 h-12 rounded-2xl bg-cream-deep text-ink-soft mx-auto flex items-center justify-center">
                   <Sliders size={22} />
@@ -781,7 +1029,7 @@ export default function BreastCancerDetailPage() {
                 <div className="space-y-1 max-w-xs mx-auto">
                   <h3 className="font-serif text-lg text-ink font-medium">Ready to Screen</h3>
                   <p className="text-xs text-ink-soft leading-relaxed">
-                    Select a preset case or adjust sliders on the left, then click &ldquo;Run Screening&rdquo; to execute the model.
+                    Enter the patient&apos;s Name and Age, select a calibration cohort or adjust sliders on the left, then click &ldquo;Run Screening&rdquo;.
                   </p>
                 </div>
               </div>
@@ -803,7 +1051,7 @@ export default function BreastCancerDetailPage() {
               <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                    <Cpu size={20} />
+                    <Layers size={20} />
                   </div>
                   <div>
                     <h3 className="font-bold text-base">Real IBM Quantum QPU Engine</h3>
@@ -843,7 +1091,7 @@ export default function BreastCancerDetailPage() {
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   onClick={() => setIsIbmModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold"
+                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold cursor-pointer"
                 >
                   Use High-Speed Simulator
                 </button>
@@ -857,7 +1105,7 @@ export default function BreastCancerDetailPage() {
                       type: "quantum",
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30"
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30 cursor-pointer"
                 >
                   Enable QPU Verification
                 </button>
