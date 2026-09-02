@@ -202,13 +202,6 @@ const PRESETS = [
   },
 ];
 
-const INFERENCE_STEPS = [
-  "1/4: Encoding 8 nuclear morphometry features into 8-qubit Pauli-Z state...",
-  "2/4: Contracting 2-layer strongly entangling VQC variational ansatz...",
-  "3/4: Evaluating non-linear empirical WDBC continuous risk distribution...",
-  "4/4: Computing directional SHAP feature attributions and AI synthesis..."
-];
-
 export default function BreastCancerDetailPage() {
   const router = useRouter();
   const [formValues, setFormValues] = useState<Record<string, number>>({});
@@ -234,7 +227,6 @@ export default function BreastCancerDetailPage() {
 
   // Execution & Progress State
   const [isInferring, setIsInferring] = useState(false);
-  const [inferenceStepIdx, setInferenceStepIdx] = useState(0);
   const [hasInferred, setHasInferred] = useState(false);
   const [screeningResult, setScreeningResult] = useState<any>(null);
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
@@ -320,12 +312,6 @@ export default function BreastCancerDetailPage() {
     setIsInferring(true);
     setHasInferred(false);
     setIsLoadingAi(true);
-    setInferenceStepIdx(0);
-
-    // Animate through computation stages
-    const stepInterval = setInterval(() => {
-      setInferenceStepIdx((prev) => (prev < INFERENCE_STEPS.length - 1 ? prev + 1 : prev));
-    }, 350);
 
     try {
       // 1. Call the Dedicated Inference Engine API
@@ -346,7 +332,6 @@ export default function BreastCancerDetailPage() {
       });
 
       const data = await response.json();
-      clearInterval(stepInterval);
 
       if (data.success) {
         setScreeningResult(data);
@@ -395,7 +380,6 @@ export default function BreastCancerDetailPage() {
         throw new Error(data.error || "Inference failed");
       }
     } catch (err: any) {
-      clearInterval(stepInterval);
       console.error("Inference execution error:", err);
       showToast({
         title: "Inference Error",
@@ -807,52 +791,39 @@ export default function BreastCancerDetailPage() {
           )}
         </div>
 
-        {/* RIGHT: Results Panel with Animation State */}
+        {/* RIGHT: Results Panel with Clean Simple Loading State */}
         <div className="lg:col-span-6 bg-parchment rounded-2xl border border-hairline p-5 space-y-5 shadow-xs min-h-[500px] flex flex-col justify-between">
           <AnimatePresence mode="wait">
-            {/* 1. COMPUTING ANIMATION STATE */}
+            {/* 1. CLEAN SIMPLE LOADING STATE */}
             {isInferring ? (
               <motion.div
                 key="computing"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className="my-auto text-center space-y-5 py-12 px-4"
+                className="my-auto text-center space-y-6 py-20 px-4"
               >
-                {/* Glowing Multi-Ring Pulse Animation */}
-                <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-3xl bg-quantum/20 animate-ping opacity-40" />
-                  <div className="absolute inset-1 rounded-3xl bg-quantum/10 border border-quantum/40 animate-pulse" />
-                  <div className="relative w-12 h-12 rounded-2xl bg-white border border-hairline flex items-center justify-center shadow-md text-quantum">
-                    <Microscope size={24} className="animate-bounce" />
+                {/* Elegant Smooth Spinner */}
+                <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-2 border-quantum/20 border-t-quantum animate-spin" />
+                  <div className="w-10 h-10 rounded-full bg-quantum/10 flex items-center justify-center text-quantum shadow-2xs">
+                    <Microscope size={20} />
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 max-w-sm mx-auto">
                   <h3 className="font-serif text-xl text-ink font-semibold">
-                    Evaluating Cytometry for {patientName || "Patient"}...
+                    Analyzing Biopsy Sample...
                   </h3>
-                  <p className="text-xs text-ink-soft max-w-sm mx-auto leading-relaxed">
-                    Executing {selectedModelFamily === "quantumx_hybrid_v1" ? "8-Qubit Variational Quantum Classifier (Transfinite-1)" : "30-Feature Ensemble (CX-01)"}
+                  <p className="text-xs text-ink-soft leading-relaxed">
+                    Evaluating cell measurements across classical and quantum models for{" "}
+                    <strong className="text-ink">{patientName || "Patient"}</strong>
                   </p>
                 </div>
 
-                {/* Step-by-Step Progress List */}
-                <div className="max-w-md mx-auto p-4 rounded-2xl bg-white border border-hairline space-y-2 text-left shadow-xs">
-                  {INFERENCE_STEPS.map((step, idx) => (
-                    <div key={idx} className="flex items-center gap-2.5 text-xs">
-                      {idx < inferenceStepIdx ? (
-                        <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                      ) : idx === inferenceStepIdx ? (
-                        <div className="h-3.5 w-3.5 rounded-full border-2 border-quantum border-t-transparent animate-spin shrink-0" />
-                      ) : (
-                        <div className="h-3.5 w-3.5 rounded-full border border-hairline bg-cream shrink-0" />
-                      )}
-                      <span className={idx <= inferenceStepIdx ? "text-ink font-medium font-mono text-[11px]" : "text-ink-soft font-mono text-[11px]"}>
-                        {step}
-                      </span>
-                    </div>
-                  ))}
+                {/* Subtle pulsing progress indicator */}
+                <div className="w-44 mx-auto bg-cream h-1.5 rounded-full overflow-hidden">
+                  <div className="h-full bg-quantum rounded-full animate-pulse w-full" />
                 </div>
               </motion.div>
             ) : hasInferred && screeningResult ? (
