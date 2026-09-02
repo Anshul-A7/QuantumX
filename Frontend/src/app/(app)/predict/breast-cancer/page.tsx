@@ -662,10 +662,9 @@ export default function BreastCancerDetailPage() {
           <div className="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-parchment">
             {/* 1. Patient Name (Inputable) */}
             <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="text-[11px] font-mono text-ink-soft font-medium">Patient Full Name</label>
-                <span className="text-[10px] text-amber-600 font-bold">*Required</span>
-              </div>
+              <label className="text-[11px] font-mono text-ink-soft font-medium block">
+                Patient Full Name <span className="text-red-500 font-bold">*</span>
+              </label>
               <input
                 type="text"
                 disabled={hasInferred}
@@ -694,10 +693,9 @@ export default function BreastCancerDetailPage() {
 
             {/* 3. Age (Inputable) */}
             <div className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="text-[11px] font-mono text-ink-soft font-medium">Age (Years)</label>
-                <span className="text-[10px] text-amber-600 font-bold">*Required</span>
-              </div>
+              <label className="text-[11px] font-mono text-ink-soft font-medium block">
+                Age (Years) <span className="text-red-500 font-bold">*</span>
+              </label>
               <input
                 type="number"
                 disabled={hasInferred}
