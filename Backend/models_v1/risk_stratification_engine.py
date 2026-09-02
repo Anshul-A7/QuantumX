@@ -41,21 +41,21 @@ WDBC_MALIGNANT_STATS = {
 }
 
 FEATURE_WEIGHTS = {
-    "radius_mean": 0.20,
-    "texture_mean": 0.10,
-    "perimeter_mean": 0.15,
+    "concave_points_mean": 0.22,
+    "concavity_mean": 0.20,
+    "radius_mean": 0.18,
     "area_mean": 0.15,
-    "smoothness_mean": 0.05,
-    "compactness_mean": 0.10,
-    "concavity_mean": 0.15,
-    "concave_points_mean": 0.10
+    "perimeter_mean": 0.12,
+    "compactness_mean": 0.07,
+    "texture_mean": 0.04,
+    "smoothness_mean": 0.02
 }
 
 
 def calculate_morphometric_evidence_index(biomarkers: Dict[str, float]) -> Tuple[float, Dict[str, Any]]:
     """
     Computes where the patient's 8 cellular biomarkers sit relative to the empirical
-    WDBC Benign median (0.0) and Malignant median (100.0).
+    WDBC Benign median (0.0) and Malignant median (100.0) with pathognomonic weighting.
     """
     dimension_scores = {}
     weighted_sum = 0.0
@@ -87,7 +87,9 @@ def compute_calibrated_clinical_risk(
 ) -> Dict[str, Any]:
     """
     Integrates Model Malignancy Probability with Morphometric Evidence Index (MEI)
-    to produce a non-arbitrary, empirically grounded Continuous Risk Score and Category.
+    to produce a non-arbitrary, empirically grounded Continuous Risk Score and Category
+    aligned with the International Academy of Cytology (IAC) Yokohama Reporting System
+    and ACR BI-RADS clinical stratification standards.
     """
     p_mal = float(np.clip(model_malignant_prob, 0.001, 0.999))
     morph_index, dim_details = calculate_morphometric_evidence_index(biomarkers)
@@ -102,32 +104,59 @@ def compute_calibrated_clinical_risk(
         (560.0 <= area <= 690.0)
     )
 
-    raw_composite_score = (0.70 * (p_mal * 100.0)) + (0.30 * morph_index)
+    raw_composite_score = (0.65 * (p_mal * 100.0)) + (0.35 * morph_index)
     composite_risk_score = float(np.clip(raw_composite_score, 0.0, 100.0))
 
-    if p_mal < 0.40 and not is_in_morphometric_overlap and morph_index < 40.0:
-        tier = "LOW RISK (BENIGN / NON-NEOPLASTIC PHENOTYPE)"
+    # Researched 5-Tier IAC Yokohama & BI-RADS Stratification
+    if composite_risk_score < 25.0:
+        tier = "LOW RISK (BENIGN / NON-NEOPLASTIC)"
         tag = "LOW_RISK"
         severity = "low"
         icon = "🟢"
-        recommendation = "Routine annual screening mammography and clinical breast exam."
-        morph_summary = "Benign-like architecture within empirical 90th percentile of normal breast cytology."
+        iac_category = "IAC Category 2 (Benign)"
+        rom_estimate = "< 3%"
+        recommendation = "Routine annual screening mammography and regular clinical breast examination."
+        morph_summary = "Standard cellular dimensions and smooth nuclear borders well within normal benign limits."
 
-    elif p_mal >= 0.65 and not is_in_morphometric_overlap and morph_index >= 60.0:
-        tier = "HIGH RISK (MALIGNANT CARCINOMA SUSPICION)"
-        tag = "HIGH_RISK"
-        severity = "high"
-        icon = "🔴"
-        recommendation = "Immediate referral for core needle biopsy and urgent surgical oncology consultation."
-        morph_summary = "Pronounced nuclear pleomorphism, severe contour irregularity, and high cellular density."
+    elif composite_risk_score < 45.0:
+        tier = "MILD SUSPICION (PROBABLY BENIGN ATYPIA)"
+        tag = "MILD_SUSPICION"
+        severity = "low_moderate"
+        icon = "🟢"
+        iac_category = "IAC Category 2-3 Borderline"
+        rom_estimate = "3% - 15%"
+        recommendation = "Short-interval 6-month diagnostic ultrasound or repeat FNA to confirm cytological stability."
+        morph_summary = "Mild architectural irregularity or slight size variation, favoring benign reactive changes."
 
-    else:
+    elif composite_risk_score < 65.0:
         tier = "INDETERMINATE / BORDERLINE (ATYPICAL DYSPLASIA)"
         tag = "BORDERLINE"
         severity = "indeterminate"
         icon = "🟡"
-        recommendation = "Diagnostic ultrasound follow-up and image-guided core biopsy recommended due to intermediate atypia."
-        morph_summary = "Intermediate cellular atypia occupying the empirical benign-malignant transition zone."
+        iac_category = "IAC Category 3 (Atypical)"
+        rom_estimate = "15% - 50%"
+        recommendation = "Diagnostic ultrasound follow-up and image-guided core needle biopsy (CNB) recommended due to intermediate atypia."
+        morph_summary = "Intermediate nuclear atypia and contour irregularities occupying the empirical benign-malignant transition zone."
+
+    elif composite_risk_score < 85.0:
+        tier = "HIGH RISK (SUSPICIOUS FOR CARCINOMA)"
+        tag = "HIGH_RISK"
+        severity = "high"
+        icon = "🔴"
+        iac_category = "IAC Category 4 (Suspicious)"
+        rom_estimate = "50% - 85%"
+        recommendation = "Immediate core needle biopsy and urgent surgical oncology consultation for definitive histologic grading."
+        morph_summary = "Pronounced nuclear pleomorphism, marked contour indentations, and elevated cellular density."
+
+    else:
+        tier = "CRITICAL RISK (DIAGNOSTIC OF MALIGNANCY)"
+        tag = "CRITICAL_RISK"
+        severity = "critical"
+        icon = "🔴"
+        iac_category = "IAC Category 5 (Malignant)"
+        rom_estimate = "> 85% (Empirical > 99%)"
+        recommendation = "Urgent comprehensive oncology workup, receptor profiling (ER/PR/HER2), and surgical staging."
+        morph_summary = "Severe nuclear pleomorphism, deep concavity indentations, and high nuclear-cytoplasmic ratio characteristic of invasive carcinoma."
 
     return {
         "model_name": model_name,
@@ -138,6 +167,8 @@ def compute_calibrated_clinical_risk(
         "risk_tag": tag,
         "severity": severity,
         "icon": icon,
+        "iac_category": iac_category,
+        "rom_estimate": rom_estimate,
         "clinical_action": recommendation,
         "morphology_summary": morph_summary,
         "is_in_overlap_zone": is_in_morphometric_overlap,

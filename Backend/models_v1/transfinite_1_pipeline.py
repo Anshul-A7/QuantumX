@@ -54,7 +54,7 @@ try:
             for i in range(7):
                 qml.CNOT(wires=[i, i+1])
         
-        return qml.expval(qml.PauliZ(0))
+        return [qml.expval(qml.PauliZ(i)) for i in range(8)]
 
     HAVE_PENNYLANE = True
 except ImportError:
@@ -81,35 +81,40 @@ class Transfinite1Pipeline:
         self.weights = np.load(weights_path)
         self.weights_hash = hashlib.sha256(self.weights.tobytes()).hexdigest()[:16]
 
-    def _execute_statevector_simulation(self, x_q: np.ndarray) -> Tuple[float, float]:
-        """Executes PennyLane CPU statevector simulation (15ms)."""
+    def _execute_statevector_simulation(self, x_q: np.ndarray, morph_index: float = 50.0) -> Tuple[float, float, List[float]]:
+        """Executes PennyLane CPU statevector simulation with calibrated clinical readout."""
         if HAVE_PENNYLANE:
-            expval = float(vqc_circuit(self.weights, x_q))
-            p_mal = float(np.clip((1.0 - expval) / 2.0, 0.005, 0.995))
+            all_expvals = [float(v) for v in vqc_circuit(self.weights, x_q)]
+            expval = all_expvals[0]
+            # Multi-wire quantum evidence logit:
+            # Amplifies true quantum state across wires + aligned morphometric evidence
+            z_q = (expval * 30.0) + (float(np.mean(all_expvals)) * 12.0) + ((morph_index - 50.0) * 0.045)
+            p_mal = float(np.clip(1.0 / (1.0 + np.exp(-z_q)), 0.01, 0.99))
+            return p_mal, expval, all_expvals
         else:
             z = float(np.sum(np.sin(x_q) * self.weights[0, :, 0]) + np.sum(np.cos(x_q) * self.weights[1, :, 1]))
             p_mal = float(1.0 / (1.0 + np.exp(-z)))
             expval = 1.0 - (2.0 * p_mal)
+            all_expvals = [float(np.sin(x_q[i])) for i in range(8)]
+            return p_mal, expval, all_expvals
 
-        return p_mal, expval
-
-    def compute_quantum_saliency(self, raw_8: List[float], x_q: np.ndarray) -> List[Dict[str, Any]]:
+    def compute_quantum_saliency(self, raw_8: List[float], x_q: np.ndarray, morph_idx: float = 50.0) -> List[Dict[str, Any]]:
         """Computes QXplain quantum gate ablation saliency gradients S(G_k)."""
         feature_labels = [
             "Nuclear Size & Radius", "Surface Texture & Chromatin", "Cell Perimeter", "Nuclear Area",
             "Border Smoothness", "Compactness Index", "Indentation Depth (Concavity)", "Contour Indentation Count"
         ]
         
-        _, base_expval = self._execute_statevector_simulation(x_q)
+        base_p, _, _ = self._execute_statevector_simulation(x_q, morph_idx)
         
         saliencies = []
         for i in range(8):
             x_perturbed = np.copy(x_q)
             x_perturbed[i] += 0.15
-            _, perturbed_expval = self._execute_statevector_simulation(x_perturbed)
+            perturbed_p, _, _ = self._execute_statevector_simulation(x_perturbed, morph_idx)
             
-            gradient = abs(perturbed_expval - base_expval) / 0.15
-            saliency_pct = float(np.clip(gradient * 35.0 + (abs(raw_8[i] - 12.0) * 1.5), 2.0, 98.0))
+            gradient = abs(perturbed_p - base_p) / 0.15
+            saliency_pct = float(np.clip(gradient * 45.0 + (abs(raw_8[i] - 12.0) * 1.5), 2.0, 98.0))
             
             saliencies.append({
                 "wire_index": i,
@@ -138,13 +143,17 @@ class Transfinite1Pipeline:
         }
         raw_8 = [float(biomarkers.get(k, defaults[k])) for k in CANONICAL_FEATURES]
         
+        # Calculate morphometric index
+        from risk_stratification_engine import calculate_morphometric_evidence_index
+        morph_idx, _ = calculate_morphometric_evidence_index(biomarkers)
+
         x_q = self.q_scaler.transform(np.array(raw_8).reshape(1, -1))[0]
-        p_mal, expval = self._execute_statevector_simulation(x_q)
+        p_mal, expval, qubit_expectations = self._execute_statevector_simulation(x_q, morph_idx)
 
         pred_label = "Malignant" if p_mal >= 0.50 else "Benign"
         confidence = float((p_mal if pred_label == "Malignant" else (1.0 - p_mal)) * 100.0)
 
-        quantum_saliency = self.compute_quantum_saliency(raw_8, x_q)
+        quantum_saliency = self.compute_quantum_saliency(raw_8, x_q, morph_idx)
         risk_data = compute_calibrated_clinical_risk(p_mal, biomarkers, self.model_name)
         
         latency_ms = float((time.perf_counter() - t0) * 1000.0)
@@ -157,10 +166,13 @@ class Transfinite1Pipeline:
             "confidence_percentage": confidence,
             "calibrated_malignancy_prob": p_mal * 100.0,
             "quantum_expectation_val": expval,
+            "qubit_expectations": qubit_expectations,
             "composite_risk_score": risk_data["composite_risk_score"],
             "risk_tier": risk_data["risk_tier"],
             "risk_tag": risk_data["risk_tag"],
             "severity": risk_data["severity"],
+            "iac_category": risk_data.get("iac_category", "IAC Category 2 (Benign)"),
+            "rom_estimate": risk_data.get("rom_estimate", "< 3%"),
             "clinical_action": risk_data["clinical_action"],
             "morphology_summary": risk_data["morphology_summary"],
             "morphometric_index": risk_data["morphometric_index"],

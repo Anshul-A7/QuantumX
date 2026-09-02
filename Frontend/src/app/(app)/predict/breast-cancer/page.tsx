@@ -499,6 +499,7 @@ export default function BreastCancerDetailPage() {
             prediction: data.prediction_label,
             confidence: data.confidence,
             risk_score: data.composite_risk_score,
+            risk_tag: data.risk_tag,
             risk_tier: data.risk_tier,
             model_engine: data.engine,
             execution_mode: executionMode,
@@ -1037,63 +1038,102 @@ export default function BreastCancerDetailPage() {
                       </div>
 
                       {/* Main Circular Gauge & Prediction */}
-                      <div className="py-3 flex items-center justify-around gap-3">
+                      <div className="py-2.5 flex items-center justify-between gap-3">
                         {/* Circular Score Gauge */}
                         {(() => {
                           const score = Number(screeningResult.dual_comparison?.transfinite_1?.risk_score ?? screeningResult.composite_risk_score ?? 0);
-                          const strokeColor = score >= 60 ? "#ef4444" : score >= 40 ? "#f59e0b" : "#10b981";
+                          const strokeColor = score >= 85 ? "#dc2626" : score >= 65 ? "#ef4444" : score >= 45 ? "#f59e0b" : "#10b981";
                           const radius = 26;
                           const circumference = 2 * Math.PI * radius;
                           const dashoffset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference;
 
                           return (
-                            <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
-                              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
-                                <circle
-                                  cx="32"
-                                  cy="32"
-                                  r={radius}
-                                  stroke="#f1ede6"
-                                  strokeWidth="4.5"
-                                  fill="transparent"
-                                />
-                                <circle
-                                  cx="32"
-                                  cy="32"
-                                  r={radius}
-                                  stroke={strokeColor}
-                                  strokeWidth="4.5"
-                                  strokeDasharray={circumference}
-                                  strokeDashoffset={dashoffset}
-                                  strokeLinecap="round"
-                                  fill="transparent"
-                                  className="transition-all duration-700"
-                                />
-                              </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-base font-black font-mono text-ink leading-none">
-                                  {score.toFixed(1)}
-                                </span>
-                                <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                            <div className="flex flex-col items-center">
+                              <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
+                                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r={radius}
+                                    stroke="#f1ede6"
+                                    strokeWidth="4.5"
+                                    fill="transparent"
+                                  />
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r={radius}
+                                    stroke={strokeColor}
+                                    strokeWidth="4.5"
+                                    strokeDasharray={circumference}
+                                    strokeDashoffset={dashoffset}
+                                    strokeLinecap="round"
+                                    fill="transparent"
+                                    className="transition-all duration-700"
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                  <span className="text-base font-black font-mono text-ink leading-none">
+                                    {score.toFixed(1)}
+                                  </span>
+                                  <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                                </div>
                               </div>
+                              <span className="text-[9px] font-mono text-ink-soft font-semibold mt-1">Risk Score</span>
                             </div>
                           );
                         })()}
 
-                        {/* Status & Confidence Breakdown */}
-                        <div className="space-y-1.5 text-right">
-                          <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Assessment</span>
-                          <span className={`inline-block text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
-                            screeningResult.dual_comparison?.transfinite_1?.prediction_label === "Malignant"
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          }`}>
-                            {screeningResult.dual_comparison?.transfinite_1?.prediction_label || screeningResult.prediction_label}
-                          </span>
-                          <div className="text-[11px] font-mono text-ink-soft">
-                            Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.transfinite_1?.confidence || screeningResult.confidence}%</strong>
-                          </div>
-                        </div>
+                        {/* Status, Risk Tag & Confidence Breakdown */}
+                        {(() => {
+                          const tf = screeningResult.dual_comparison?.transfinite_1;
+                          const score = Number(tf?.risk_score ?? screeningResult.composite_risk_score ?? 0);
+                          const rawTag = tf?.risk_tag || screeningResult.risk_tag || (score >= 85 ? "CRITICAL_RISK" : score >= 65 ? "HIGH_RISK" : score >= 45 ? "BORDERLINE" : score >= 25 ? "MILD_SUSPICION" : "LOW_RISK");
+
+                          const isCritical = rawTag === "CRITICAL_RISK" || score >= 85;
+                          const isHigh = rawTag === "HIGH_RISK" || (score >= 65 && score < 85);
+                          const isBorderline = rawTag === "BORDERLINE" || (score >= 45 && score < 65);
+                          const isMild = rawTag === "MILD_SUSPICION" || (score >= 25 && score < 45);
+
+                          const tagLabel = isCritical ? "CRITICAL RISK" : isHigh ? "HIGH RISK" : isBorderline ? "BORDERLINE" : isMild ? "MILD SUSPICION" : "LOW RISK";
+                          const tagBadgeStyle = isCritical
+                            ? "bg-red-100 text-red-800 border-red-300"
+                            : isHigh
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : isBorderline
+                            ? "bg-amber-50 text-amber-800 border-amber-300"
+                            : isMild
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+                          const dotColor = isCritical ? "bg-red-600" : isHigh ? "bg-red-500" : isBorderline ? "bg-amber-500" : "bg-emerald-500";
+                          const pred = tf?.prediction_label || screeningResult.prediction_label;
+
+                          return (
+                            <div className="space-y-1 text-right flex flex-col items-end">
+                              {/* Prominent Standardized Risk Tag */}
+                              <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border shadow-2xs ${tagBadgeStyle}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                {tagLabel}
+                              </span>
+
+                              {/* Assessment Label */}
+                              <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                                <span className={`inline-block text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                  pred === "Malignant"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                }`}>
+                                  {pred}
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] font-mono text-ink-soft">
+                                Confidence: <strong className="text-ink">{tf?.confidence || screeningResult.confidence}%</strong>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Model-Specific Key Factors (Quantum SHAP) */}
@@ -1138,63 +1178,102 @@ export default function BreastCancerDetailPage() {
                       </div>
 
                       {/* Main Circular Gauge & Prediction */}
-                      <div className="py-3 flex items-center justify-around gap-3">
+                      <div className="py-2.5 flex items-center justify-between gap-3">
                         {/* Circular Score Gauge */}
                         {(() => {
                           const score = Number(screeningResult.dual_comparison?.cx_01?.risk_score ?? screeningResult.composite_risk_score ?? 0);
-                          const strokeColor = score >= 60 ? "#ef4444" : score >= 40 ? "#f59e0b" : "#10b981";
+                          const strokeColor = score >= 85 ? "#dc2626" : score >= 65 ? "#ef4444" : score >= 45 ? "#f59e0b" : "#10b981";
                           const radius = 26;
                           const circumference = 2 * Math.PI * radius;
                           const dashoffset = circumference - (Math.min(100, Math.max(0, score)) / 100) * circumference;
 
                           return (
-                            <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
-                              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
-                                <circle
-                                  cx="32"
-                                  cy="32"
-                                  r={radius}
-                                  stroke="#f1ede6"
-                                  strokeWidth="4.5"
-                                  fill="transparent"
-                                />
-                                <circle
-                                  cx="32"
-                                  cy="32"
-                                  r={radius}
-                                  stroke={strokeColor}
-                                  strokeWidth="4.5"
-                                  strokeDasharray={circumference}
-                                  strokeDashoffset={dashoffset}
-                                  strokeLinecap="round"
-                                  fill="transparent"
-                                  className="transition-all duration-700"
-                                />
-                              </svg>
-                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                <span className="text-base font-black font-mono text-ink leading-none">
-                                  {score.toFixed(1)}
-                                </span>
-                                <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                            <div className="flex flex-col items-center">
+                              <div className="relative w-18 h-18 flex items-center justify-center shrink-0">
+                                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 64 64">
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r={radius}
+                                    stroke="#f1ede6"
+                                    strokeWidth="4.5"
+                                    fill="transparent"
+                                  />
+                                  <circle
+                                    cx="32"
+                                    cy="32"
+                                    r={radius}
+                                    stroke={strokeColor}
+                                    strokeWidth="4.5"
+                                    strokeDasharray={circumference}
+                                    strokeDashoffset={dashoffset}
+                                    strokeLinecap="round"
+                                    fill="transparent"
+                                    className="transition-all duration-700"
+                                  />
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                  <span className="text-base font-black font-mono text-ink leading-none">
+                                    {score.toFixed(1)}
+                                  </span>
+                                  <span className="text-[8px] font-mono text-ink-soft mt-0.5">/ 100</span>
+                                </div>
                               </div>
+                              <span className="text-[9px] font-mono text-ink-soft font-semibold mt-1">Risk Score</span>
                             </div>
                           );
                         })()}
 
-                        {/* Status & Confidence Breakdown */}
-                        <div className="space-y-1.5 text-right">
-                          <span className="text-[10px] font-mono text-ink-soft uppercase font-semibold block">Assessment</span>
-                          <span className={`inline-block text-xs font-mono font-bold px-2.5 py-1 rounded-lg border ${
-                            screeningResult.dual_comparison?.cx_01?.prediction_label === "Malignant"
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          }`}>
-                            {screeningResult.dual_comparison?.cx_01?.prediction_label || screeningResult.prediction_label}
-                          </span>
-                          <div className="text-[11px] font-mono text-ink-soft">
-                            Confidence: <strong className="text-ink">{screeningResult.dual_comparison?.cx_01?.confidence || screeningResult.confidence}%</strong>
-                          </div>
-                        </div>
+                        {/* Status, Risk Tag & Confidence Breakdown */}
+                        {(() => {
+                          const cx = screeningResult.dual_comparison?.cx_01;
+                          const score = Number(cx?.risk_score ?? screeningResult.composite_risk_score ?? 0);
+                          const rawTag = cx?.risk_tag || (score >= 85 ? "CRITICAL_RISK" : score >= 65 ? "HIGH_RISK" : score >= 45 ? "BORDERLINE" : score >= 25 ? "MILD_SUSPICION" : "LOW_RISK");
+
+                          const isCritical = rawTag === "CRITICAL_RISK" || score >= 85;
+                          const isHigh = rawTag === "HIGH_RISK" || (score >= 65 && score < 85);
+                          const isBorderline = rawTag === "BORDERLINE" || (score >= 45 && score < 65);
+                          const isMild = rawTag === "MILD_SUSPICION" || (score >= 25 && score < 45);
+
+                          const tagLabel = isCritical ? "CRITICAL RISK" : isHigh ? "HIGH RISK" : isBorderline ? "BORDERLINE" : isMild ? "MILD SUSPICION" : "LOW RISK";
+                          const tagBadgeStyle = isCritical
+                            ? "bg-red-100 text-red-800 border-red-300"
+                            : isHigh
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : isBorderline
+                            ? "bg-amber-50 text-amber-800 border-amber-300"
+                            : isMild
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+                          const dotColor = isCritical ? "bg-red-600" : isHigh ? "bg-red-500" : isBorderline ? "bg-amber-500" : "bg-emerald-500";
+                          const pred = cx?.prediction_label || screeningResult.prediction_label;
+
+                          return (
+                            <div className="space-y-1 text-right flex flex-col items-end">
+                              {/* Prominent Standardized Risk Tag */}
+                              <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border shadow-2xs ${tagBadgeStyle}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                                {tagLabel}
+                              </span>
+
+                              {/* Assessment Label */}
+                              <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                                <span className={`inline-block text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                  pred === "Malignant"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                }`}>
+                                  {pred}
+                                </span>
+                              </div>
+
+                              <div className="text-[11px] font-mono text-ink-soft">
+                                Confidence: <strong className="text-ink">{cx?.confidence || screeningResult.confidence}%</strong>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Model-Specific Key Factors (Classical SHAP) */}

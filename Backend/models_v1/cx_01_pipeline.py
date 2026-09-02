@@ -133,6 +133,8 @@ class CX01ClassicalPipeline:
             "risk_tier": risk_data["risk_tier"],
             "risk_tag": risk_data["risk_tag"],
             "severity": risk_data["severity"],
+            "iac_category": risk_data.get("iac_category", "IAC Category 2 (Benign)"),
+            "rom_estimate": risk_data.get("rom_estimate", "< 3%"),
             "clinical_action": risk_data["clinical_action"],
             "morphology_summary": risk_data["morphology_summary"],
             "morphometric_index": risk_data["morphometric_index"],

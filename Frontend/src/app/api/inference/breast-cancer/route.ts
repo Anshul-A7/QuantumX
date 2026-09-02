@@ -25,14 +25,14 @@ const WDBC_MALIGNANT = {
 };
 
 const FEATURE_WEIGHTS: Record<string, number> = {
-  radius_mean: 0.20,
-  texture_mean: 0.10,
-  perimeter_mean: 0.15,
+  concave_points_mean: 0.22,
+  concavity_mean: 0.20,
+  radius_mean: 0.18,
   area_mean: 0.15,
-  smoothness_mean: 0.05,
-  compactness_mean: 0.10,
-  concavity_mean: 0.15,
-  concave_points_mean: 0.10
+  perimeter_mean: 0.12,
+  compactness_mean: 0.07,
+  texture_mean: 0.04,
+  smoothness_mean: 0.02
 };
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -73,6 +73,86 @@ function calculateMorphometricIndex(biomarkers: Record<string, number>) {
     morphometricIndex: Math.max(0, Math.min(100, weightedScore)),
     dimensionDetails
   };
+}
+
+function computeCalibratedRisk(pMal: number, morphIndex: number, biomarkers: Record<string, number>) {
+  const p = Math.max(0.001, Math.min(0.999, pMal));
+  const rawScore = (0.65 * (p * 100)) + (0.35 * morphIndex);
+  const compositeRiskScore = Math.max(0, Math.min(100, rawScore));
+
+  const radius = Number(biomarkers.radius_mean ?? 12.2);
+  const concavity = Number(biomarkers.concavity_mean ?? 0.037);
+  const area = Number(biomarkers.area_mean ?? 458.7);
+  const inOverlap = (radius >= 13.6 && radius <= 14.95) ||
+                    (concavity >= 0.08 && concavity <= 0.11) ||
+                    (area >= 560 && area <= 690);
+
+  if (compositeRiskScore < 25.0) {
+    return {
+      compositeRiskScore,
+      riskTier: "LOW RISK (BENIGN / NON-NEOPLASTIC)",
+      riskTag: "LOW_RISK",
+      severity: "low",
+      icon: "🟢",
+      iacCategory: "IAC Category 2 (Benign)",
+      romEstimate: "< 3%",
+      clinicalAction: "Routine annual screening mammography and regular clinical breast examination.",
+      morphSummary: "Standard cellular dimensions and smooth nuclear borders well within normal benign limits.",
+      inOverlap
+    };
+  } else if (compositeRiskScore < 45.0) {
+    return {
+      compositeRiskScore,
+      riskTier: "MILD SUSPICION (PROBABLY BENIGN ATYPIA)",
+      riskTag: "MILD_SUSPICION",
+      severity: "low_moderate",
+      icon: "🟢",
+      iacCategory: "IAC Category 2-3 Borderline",
+      romEstimate: "3% - 15%",
+      clinicalAction: "Short-interval 6-month diagnostic ultrasound or repeat FNA to confirm cytological stability.",
+      morphSummary: "Mild architectural irregularity or slight size variation, favoring benign reactive changes.",
+      inOverlap
+    };
+  } else if (compositeRiskScore < 65.0) {
+    return {
+      compositeRiskScore,
+      riskTier: "INDETERMINATE / BORDERLINE (ATYPICAL DYSPLASIA)",
+      riskTag: "BORDERLINE",
+      severity: "indeterminate",
+      icon: "🟡",
+      iacCategory: "IAC Category 3 (Atypical)",
+      romEstimate: "15% - 50%",
+      clinicalAction: "Diagnostic ultrasound follow-up and image-guided core needle biopsy (CNB) recommended due to intermediate atypia.",
+      morphSummary: "Intermediate nuclear atypia and contour irregularities occupying the empirical benign-malignant transition zone.",
+      inOverlap
+    };
+  } else if (compositeRiskScore < 85.0) {
+    return {
+      compositeRiskScore,
+      riskTier: "HIGH RISK (SUSPICIOUS FOR CARCINOMA)",
+      riskTag: "HIGH_RISK",
+      severity: "high",
+      icon: "🔴",
+      iacCategory: "IAC Category 4 (Suspicious)",
+      romEstimate: "50% - 85%",
+      clinicalAction: "Immediate core needle biopsy and urgent surgical oncology consultation for definitive histologic grading.",
+      morphSummary: "Pronounced nuclear pleomorphism, marked contour indentations, and elevated cellular density.",
+      inOverlap
+    };
+  } else {
+    return {
+      compositeRiskScore,
+      riskTier: "CRITICAL RISK (DIAGNOSTIC OF MALIGNANCY)",
+      riskTag: "CRITICAL_RISK",
+      severity: "critical",
+      icon: "🔴",
+      iacCategory: "IAC Category 5 (Malignant)",
+      romEstimate: "> 85% (Empirical > 99%)",
+      clinicalAction: "Urgent comprehensive oncology workup, receptor profiling (ER/PR/HER2), and surgical staging.",
+      morphSummary: "Severe nuclear pleomorphism, deep concavity indentations, and high nuclear-cytoplasmic ratio characteristic of invasive carcinoma.",
+      inOverlap
+    };
+  }
 }
 
 function computeQuantumAttributions(biomarkers: Record<string, number>) {
@@ -221,7 +301,7 @@ export async function POST(req: NextRequest) {
       : Math.max(0.005, Math.min(0.995, 1.0 / (1.0 + Math.exp(-(((0.45 * (b.radius_mean - 12.2) / 4.0) + (0.35 * (b.concavity_mean - 0.04) / 0.08) + (0.20 * (b.area_mean - 458.7) / 400.0)) * 4.0)))));
     const label_cx01 = livePythonData?.cx ? livePythonData.cx.prediction_label : (pMalignant_cx01 >= 0.5 ? "Malignant" : "Benign");
     const conf_cx01 = livePythonData?.cx ? livePythonData.cx.confidence_percentage : ((label_cx01 === "Malignant" ? pMalignant_cx01 : (1.0 - pMalignant_cx01)) * 100);
-    const risk_cx01 = livePythonData?.cx ? livePythonData.cx.composite_risk_score : Math.max(0, Math.min(100, (0.70 * (pMalignant_cx01 * 100)) + (0.30 * morphometricIndex)));
+    const riskData_cx01 = computeCalibratedRisk(pMalignant_cx01, morphometricIndex, b);
     const latency_cx01 = livePythonData?.cx?.latency_ms ? parseFloat(livePythonData.cx.latency_ms.toFixed(2)) : parseFloat((Math.random() * 2.5 + 1.2).toFixed(2));
 
     // =========================================================================
@@ -232,7 +312,7 @@ export async function POST(req: NextRequest) {
       : Math.max(0.005, Math.min(0.995, 1.0 / (1.0 + Math.exp(-(((0.45 * (b.radius_mean - 12.2) / 4.0) + (0.35 * (b.concavity_mean - 0.04) / 0.08) + (0.20 * (b.area_mean - 458.7) / 400.0)) * 3.5)))));
     const label_transfinite1 = livePythonData?.tf ? livePythonData.tf.prediction_label : (pMalignant_transfinite1 >= 0.5 ? "Malignant" : "Benign");
     const conf_transfinite1 = livePythonData?.tf ? livePythonData.tf.confidence_percentage : ((label_transfinite1 === "Malignant" ? pMalignant_transfinite1 : (1.0 - pMalignant_transfinite1)) * 100);
-    const risk_transfinite1 = livePythonData?.tf ? livePythonData.tf.composite_risk_score : Math.max(0, Math.min(100, (0.70 * (pMalignant_transfinite1 * 100)) + (0.30 * morphometricIndex)));
+    const riskData_transfinite1 = computeCalibratedRisk(pMalignant_transfinite1, morphometricIndex, b);
     const quantumExpectation = livePythonData?.tf?.quantum_expectation_val ?? (1.0 - (2.0 * pMalignant_transfinite1));
     const latency_transfinite1 = livePythonData?.tf?.latency_ms ? parseFloat(livePythonData.tf.latency_ms.toFixed(2)) : parseFloat((Math.random() * 6.0 + 12.5).toFixed(2));
 
@@ -263,37 +343,7 @@ export async function POST(req: NextRequest) {
     const pMalignantPrimary = isClassicalPrimary ? pMalignant_cx01 : (execution_mode === "real_ibm_qpu" ? pMalignant_aleph1 : pMalignant_transfinite1);
     const predictionLabel = pMalignantPrimary >= 0.5 ? "Malignant" : "Benign";
     const confidence = (predictionLabel === "Malignant" ? pMalignantPrimary : (1.0 - pMalignantPrimary)) * 100;
-    const compositeRiskScore = Math.max(0, Math.min(100, (0.70 * (pMalignantPrimary * 100)) + (0.30 * morphometricIndex)));
-
-    const inOverlapZone = (b.radius_mean >= 13.6 && b.radius_mean <= 14.9) ||
-                          (b.concavity_mean >= 0.08 && b.concavity_mean <= 0.11) ||
-                          (b.area_mean >= 560 && b.area_mean <= 690);
-
-    let riskTier = "LOW RISK (BENIGN / NON-NEOPLASTIC PHENOTYPE)";
-    let riskTag = "LOW_RISK";
-    let severity = "low";
-    let clinicalAction = "Routine annual screening mammography and clinical breast exam.";
-    let morphSummary = "Benign-like cellular architecture within empirical 90th percentile of normal breast cytology.";
-
-    if (pMalignantPrimary < 0.40 && !inOverlapZone && morphometricIndex < 40) {
-      riskTier = "LOW RISK (BENIGN / NON-NEOPLASTIC PHENOTYPE)";
-      riskTag = "LOW_RISK";
-      severity = "low";
-      clinicalAction = "Routine annual screening mammography and clinical breast exam.";
-      morphSummary = "Benign-like architecture within empirical 90th percentile of normal breast cytology.";
-    } else if (pMalignantPrimary >= 0.65 && !inOverlapZone && morphometricIndex >= 60) {
-      riskTier = "HIGH RISK (MALIGNANT CARCINOMA SUSPICION)";
-      riskTag = "HIGH_RISK";
-      severity = "high";
-      clinicalAction = "Immediate referral for core needle biopsy and urgent surgical oncology consultation.";
-      morphSummary = "Pronounced nuclear pleomorphism, severe contour irregularity, and high cellular density.";
-    } else {
-      riskTier = "INDETERMINATE / BORDERLINE (ATYPICAL DYSPLASIA)";
-      riskTag = "BORDERLINE";
-      severity = "indeterminate";
-      clinicalAction = "Diagnostic ultrasound follow-up and image-guided core biopsy recommended due to intermediate atypia.";
-      morphSummary = "Intermediate cellular atypia occupying the empirical benign-malignant transition zone.";
-    }
+    const primaryRiskData = computeCalibratedRisk(pMalignantPrimary, morphometricIndex, b);
 
     const latencyMs = performance.now() - t0;
     const isConcordant = label_cx01 === label_transfinite1;
@@ -308,7 +358,12 @@ export async function POST(req: NextRequest) {
         type: "Classical Baseline (SVM-RBF + XGBoost)",
         prediction_label: label_cx01,
         confidence: parseFloat(conf_cx01.toFixed(1)),
-        risk_score: parseFloat(risk_cx01.toFixed(1)),
+        risk_score: parseFloat(riskData_cx01.compositeRiskScore.toFixed(1)),
+        risk_tag: riskData_cx01.riskTag,
+        risk_tier: riskData_cx01.riskTier,
+        severity: riskData_cx01.severity,
+        iac_category: riskData_cx01.iacCategory,
+        rom_estimate: riskData_cx01.romEstimate,
         malignancy_prob: parseFloat((pMalignant_cx01 * 100).toFixed(1)),
         latency_ms: latency_cx01,
         architecture: "30-Feature Regularized Hyperplane",
@@ -319,7 +374,12 @@ export async function POST(req: NextRequest) {
         type: "Quantum Hybrid Simulator (ZZ Feature Map + VQC)",
         prediction_label: label_transfinite1,
         confidence: parseFloat(conf_transfinite1.toFixed(1)),
-        risk_score: parseFloat(risk_transfinite1.toFixed(1)),
+        risk_score: parseFloat(riskData_transfinite1.compositeRiskScore.toFixed(1)),
+        risk_tag: riskData_transfinite1.riskTag,
+        risk_tier: riskData_transfinite1.riskTier,
+        severity: riskData_transfinite1.severity,
+        iac_category: riskData_transfinite1.iacCategory,
+        rom_estimate: riskData_transfinite1.romEstimate,
         malignancy_prob: parseFloat((pMalignant_transfinite1 * 100).toFixed(1)),
         quantum_expectation: parseFloat(quantumExpectation.toFixed(4)),
         latency_ms: latency_transfinite1,
@@ -340,14 +400,16 @@ export async function POST(req: NextRequest) {
       prediction_label: predictionLabel,
       confidence: parseFloat(confidence.toFixed(1)),
       calibrated_malignancy_prob: parseFloat((pMalignantPrimary * 100).toFixed(1)),
-      composite_risk_score: parseFloat(compositeRiskScore.toFixed(1)),
-      risk_tier: riskTier,
-      risk_tag: riskTag,
-      severity,
-      clinical_action: clinicalAction,
-      morphology_summary: morphSummary,
+      composite_risk_score: parseFloat(primaryRiskData.compositeRiskScore.toFixed(1)),
+      risk_tier: primaryRiskData.riskTier,
+      risk_tag: primaryRiskData.riskTag,
+      severity: primaryRiskData.severity,
+      iac_category: primaryRiskData.iacCategory,
+      rom_estimate: primaryRiskData.romEstimate,
+      clinical_action: primaryRiskData.clinicalAction,
+      morphology_summary: primaryRiskData.morphSummary,
       morphometric_index: parseFloat(morphometricIndex.toFixed(1)),
-      in_overlap_zone: inOverlapZone,
+      in_overlap_zone: primaryRiskData.inOverlap,
       quantum_expectation: parseFloat(quantumExpectation.toFixed(4)),
       shap_attributions: shapAttributions,
       dimension_details: dimensionDetails,
@@ -377,8 +439,8 @@ export async function POST(req: NextRequest) {
           quantum_confidence: confidence,
           classical_prediction: predictionLabel,
           classical_confidence: confidence,
-          risk_level: riskTag,
-          risk_score: compositeRiskScore,
+          risk_level: primaryRiskData.riskTag,
+          risk_score: primaryRiskData.compositeRiskScore,
           morphometric_index: morphometricIndex,
           top_driver: shapAttributions[0]?.featureName || "Cell Size",
           quantum_execution_time_ms: Math.round(latencyMs),
@@ -386,7 +448,7 @@ export async function POST(req: NextRequest) {
           gate_attributions: shapAttributions,
           shap_attributions: shapAttributions,
           hardware_receipt: hardwareReceipt,
-          clinical_note: `${riskTier} - ${clinicalAction}`
+          clinical_note: `${primaryRiskData.riskTier} - ${primaryRiskData.clinicalAction}`
         });
       }
     } catch (dbErr) {

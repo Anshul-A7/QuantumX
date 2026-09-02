@@ -226,4 +226,16 @@ export class ScreeningService {
 
     return newRecord;
   }
+
+  /**
+   * Clears all screening history records (both local cache and backend database).
+   */
+  static async clearAllScreenings(): Promise<void> {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("quantumx_prediction_history");
+    }
+    try {
+      await apiClient.delete("/screenings");
+    } catch {}
+  }
 }

@@ -147,22 +147,41 @@ export default function BreastCancerAnalysisPage() {
   const isBorderline = !isMalignant && activeRiskScore >= 30 && activeRiskScore < 60;
 
   const getRiskBadge = () => {
-    if (isMalignant) {
+    if (activeRiskScore >= 85.0) {
       return {
-        label: "HIGH RISK (MALIGNANT CARCINOMA SUSPICION)",
+        label: "CRITICAL RISK (DIAGNOSTIC OF MALIGNANCY)",
+        tag: "CRITICAL_RISK",
+        color: "text-red-800 bg-red-100 border-red-300",
+        stroke: "text-red-600",
+      };
+    }
+    if (activeRiskScore >= 65.0) {
+      return {
+        label: "HIGH RISK (SUSPICIOUS FOR CARCINOMA)",
+        tag: "HIGH_RISK",
         color: "text-red-700 bg-red-50 border-red-200",
         stroke: "text-red-500",
       };
     }
-    if (isBorderline) {
+    if (activeRiskScore >= 45.0) {
       return {
         label: "INDETERMINATE / BORDERLINE (ATYPICAL DYSPLASIA)",
-        color: "text-amber-700 bg-amber-50 border-amber-200",
+        tag: "BORDERLINE",
+        color: "text-amber-800 bg-amber-50 border-amber-300",
         stroke: "text-amber-500",
       };
     }
+    if (activeRiskScore >= 25.0) {
+      return {
+        label: "MILD SUSPICION (PROBABLY BENIGN ATYPIA)",
+        tag: "MILD_SUSPICION",
+        color: "text-emerald-800 bg-emerald-50 border-emerald-300",
+        stroke: "text-emerald-600",
+      };
+    }
     return {
-      label: "LOW RISK (BENIGN / HEALTHY PHENOTYPE)",
+      label: "LOW RISK (BENIGN / NON-NEOPLASTIC)",
+      tag: "LOW_RISK",
       color: "text-emerald-700 bg-emerald-50 border-emerald-200",
       stroke: "text-emerald-500",
     };
