@@ -1,19 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BREAST_CANCER_CANONICAL_SCHEMA, parseUnstructuredMedicalText } from "@/lib/medicalReportParser";
+import zlib from "zlib";
 
-/**
- * AI Medical Report Semantic Resolver API Route
- * Analyzes unstructured pathology notes, biopsies, and lab reports, maps clinical synonyms
- * to canonical biomarker keys, and preserves raw numerical values with 100% precision.
- */
+function extractTextFromPdfBuffer(buffer: Buffer): string {
+  let extractedText = "";
+  const str = buffer.toString("latin1");
+  const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let match;
+  while ((match = streamRegex.exec(str)) !== null) {
+    const streamData = Buffer.from(match[1], "latin1");
+    try {
+      const decompressed = zlib.inflateSync(streamData).toString("latin1");
+      const textMatches = decompressed.match(/\(([^)]+)\)/g);
+      if (textMatches) {
+        extractedText += "\n" + textMatches.map((s) => s.slice(1, -1)).join("");
+      }
+    } catch (e) {
+      // not compressed or raw
+      const rawMatches = match[1].match(/\(([^)]+)\)/g);
+      if (rawMatches) {
+        extractedText += "\n" + rawMatches.map((s) => s.slice(1, -1)).join("");
+      }
+    }
+  }
+  return extractedText || buffer.toString("utf8");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { rawText, fileName = "medical_report.pdf" } = body;
+    let { rawText, base64Data, fileName = "medical_report.pdf" } = body;
+
+    if (base64Data && (!rawText || rawText.length < 50)) {
+      const buf = Buffer.from(base64Data, "base64");
+      rawText = extractTextFromPdfBuffer(buf);
+    }
 
     if (!rawText || typeof rawText !== "string") {
       return NextResponse.json(
-        { error: "Invalid payload: rawText string is required." },
+        { error: "Invalid payload: rawText or base64Data is required." },
         { status: 400 }
       );
     }

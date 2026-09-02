@@ -181,18 +181,38 @@ function cleanToken(str: string): string {
 function findCanonicalMatch(rawKey: string): { config: BiomarkerFieldConfig; matchType: "exact" | "alias"; confidence: number } | null {
   const cleaned = cleanToken(rawKey);
   
+  // Blacklist demographic and header keys from matching biomarker schema
+  const demographicBlacklist = [
+    "age", "patient age", "gender", "sex", "name", "patient name", "full name",
+    "date", "collection date", "intake date", "report date", "patient id", "id", "mrn", 
+    "accession", "accession number", "specimen", "specimen type", "status",
+    "findings", "impression", "notes", "signed by", "dr", "doctor"
+  ];
+  if (demographicBlacklist.includes(cleaned)) {
+    return null;
+  }
+
+  // 1. Exact Key or Label Match
   for (const config of BREAST_CANCER_CANONICAL_SCHEMA) {
     if (cleanToken(config.key) === cleaned || cleanToken(config.label) === cleaned) {
       return { config, matchType: "exact", confidence: 1.0 };
     }
+  }
+
+  // 2. Exact Alias Match
+  for (const config of BREAST_CANCER_CANONICAL_SCHEMA) {
     for (const alias of config.aliases) {
       if (cleanToken(alias) === cleaned) {
         return { config, matchType: "alias", confidence: 0.95 };
       }
     }
+  }
+
+  // 3. Substring Containment (Only if cleaned includes the alias, e.g. "Cell Size (Radius Mean)" includes "cell size")
+  for (const config of BREAST_CANCER_CANONICAL_SCHEMA) {
     for (const alias of config.aliases) {
       const cAlias = cleanToken(alias);
-      if (cleaned.includes(cAlias) || cAlias.includes(cleaned)) {
+      if (cAlias.length >= 4 && cleaned.includes(cAlias)) {
         return { config, matchType: "alias", confidence: 0.85 };
       }
     }
@@ -583,7 +603,8 @@ export function parseUnstructuredMedicalText(rawText: string, fileName: string):
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    const kvMatch = trimmed.match(/^([^:\=\t]+)[\:\=\t]+([0-9\.\-\+]+)\s*([a-zA-Zμµ\^\²\%]*)/);
+    // Matches "Cell Size (Radius Mean):  20.57 um" or "Cell Size (Radius Mean) 20.57" or "radius_mean: 20.57"
+    const kvMatch = trimmed.match(/^([^:\=\t\|]+)[\:\=\t\|]+\s*([0-9\.\-\+]+)\s*([a-zA-Zμµ\^\²\%]*)/);
     if (kvMatch) {
       const rawK = kvMatch[1].trim();
       const num = parseFloat(kvMatch[2]);
@@ -609,7 +630,7 @@ export function parseUnstructuredMedicalText(rawText: string, fileName: string):
     for (const config of BREAST_CANCER_CANONICAL_SCHEMA) {
       if (config.key in extracted) continue;
       for (const alias of config.aliases) {
-        const regex = new RegExp(`(?:${alias})[\\s\\:\\=\\-\\(]+([0-9]+\\.?[0-9]*)`, "i");
+        const regex = new RegExp(`(?:${alias})[\\s\\:\\=\\-\\(]+\\s*([0-9]+\\.?[0-9]*)`, "i");
         const found = trimmed.match(regex);
         if (found && found[1]) {
           const num = parseFloat(found[1]);
@@ -679,18 +700,30 @@ export async function parseMedicalReportFile(file: File): Promise<MedicalReportP
     const text = await file.text();
     return parseCsvReport(text, fileName);
   } else if (ext === "pdf") {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
-    let rawText = "";
-    for (let i = 0; i < uint8.length; i++) {
-      const code = uint8[i];
-      if (code >= 32 && code <= 126) {
-        rawText += String.fromCharCode(code);
-      } else if (code === 10 || code === 13) {
-        rawText += "\n";
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(arrayBuffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
       }
+      const base64Data = btoa(binary);
+
+      const res = await fetch("/api/ai/parse-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64Data, fileName }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) return json.data;
+      }
+    } catch (err) {
+      console.warn("PDF API parser fallback:", err);
     }
-    return parseUnstructuredMedicalText(rawText, fileName);
+    const text = await file.text();
+    return parseUnstructuredMedicalText(text, fileName);
   } else {
     const text = await file.text();
     return parseUnstructuredMedicalText(text, fileName);

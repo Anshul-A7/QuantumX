@@ -157,10 +157,116 @@ export default function BreastCancerDetailPage() {
     setPatientGender(preset.patientGender);
   };
 
+  const executeInferenceEngine = async (
+    vals: Record<string, number>,
+    pName: string,
+    pId: string,
+    pAge: number,
+    pGender: string,
+    pDate: string,
+    pAccession: string
+  ) => {
+    setIsInferring(true);
+    setHasInferred(false);
+
+    await new Promise((r) => setTimeout(r, 650));
+
+    const rad = vals.radius_mean ?? 17.99;
+    const conc = vals.concavity_mean ?? 0.3;
+
+    let qConf = 92.4;
+    let cConf = 88.1;
+    let qLabel = "Malignant (High Risk)";
+    let cLabel = "Malignant (High Risk)";
+    let risk: "High" | "Low" = "High";
+    let attributions = [
+      { name: "Nuclear Size & Radius", impact: 35.4, description: "Primary cell enlargement strongly correlated with malignant tissue." },
+      { name: "Contour Indentation Count", impact: 29.1, description: "Irregular notches detected across cell boundaries." },
+      { name: "Nuclear Area", impact: 21.8, description: "Two-dimensional spatial enlargement." },
+    ];
+    let note = "Quantum multi-qubit phase analysis indicates high-probability malignancy. Confirmatory needle biopsy is advised.";
+
+    if (rad < 14.5 && conc < 0.08) {
+      qConf = 96.2;
+      cConf = 92.8;
+      qLabel = "Benign Tissue (Low Risk)";
+      cLabel = "Benign Tissue (Low Risk)";
+      risk = "Low";
+      attributions = [
+        { name: "Normal Nuclear Radius", impact: 42.6, description: "Uniform circular radius consistent with non-cancerous tissue." },
+        { name: "Smooth Cellular Border", impact: 34.1, description: "Minimal perimeter fluctuation." },
+      ];
+      note = "Biomarkers are within healthy ranges. Low probability of malignancy.";
+    }
+
+    const resultData: InferenceResult = {
+      quantumLabel: qLabel,
+      quantumConfidence: qConf,
+      classicalLabel: cLabel,
+      classicalConfidence: cConf,
+      quantumExecutionTimeMs: Math.round(15 + Math.random() * 6),
+      classicalExecutionTimeMs: Math.round(3 + Math.random() * 2),
+      quantumGateAttribution: attributions,
+      clinicalNote: note,
+      riskLevel: risk,
+    };
+
+    setInferenceResult(resultData);
+    setHasInferred(true);
+    setIsInferring(false);
+
+    if (typeof window !== "undefined") {
+      try {
+        const storedHistory = localStorage.getItem("quantumx_prediction_history");
+        const historyList = storedHistory ? JSON.parse(storedHistory) : [];
+        const newRecord = {
+          id: pId || `QX-BC-${Math.floor(10000 + Math.random() * 90000)}`,
+          patientName: pName || "Patient",
+          patientAge: pAge,
+          patientGender: pGender,
+          intakeDate: pDate,
+          accessionNumber: pAccession,
+          disease: "Breast Cancer Screening",
+          quantumPrediction: qLabel,
+          quantumConfidence: qConf,
+          classicalPrediction: cLabel,
+          classicalConfidence: cConf,
+          topDriver: attributions[0]?.name || "Nuclear Size & Radius",
+          riskLevel: risk,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        };
+        localStorage.setItem("quantumx_prediction_history", JSON.stringify([newRecord, ...historyList].slice(0, 50)));
+
+        const storedNotifs = localStorage.getItem("quantumx_notifications");
+        const notifList = storedNotifs ? JSON.parse(storedNotifs) : [];
+        const newNotif = {
+          id: `notif-${Date.now()}`,
+          title: `Screening Completed: ${pName} (${pId})`,
+          category: "disease",
+          time: "Just now",
+          message: `${pName} (${pAge}y/${pGender}): ${qLabel} (${qConf}% confidence).`,
+          read: false,
+          actionUrl: "/history",
+          actionLabel: "View Record",
+        };
+        localStorage.setItem("quantumx_notifications", JSON.stringify([newNotif, ...notifList].slice(0, 20)));
+      } catch (err) {
+        console.error("Failed to store screening record:", err);
+      }
+    }
+  };
+
   const handleApplyExtractedData = (extractedValues: Record<string, number>, metadata: PatientMetadata) => {
     setFormValues(extractedValues);
     setDerivedNotes({});
     setSelectedPresetName(null);
+
+    const name = metadata.patientName || patientName;
+    const id = metadata.patientId || patientId;
+    const age = metadata.patientAge || patientAge;
+    const gender = metadata.patientGender || patientGender;
+    const date = metadata.intakeDate || intakeDate;
+    const acc = metadata.accessionNumber || accessionNumber;
 
     if (metadata.patientId) setPatientId(metadata.patientId);
     if (metadata.patientName) setPatientName(metadata.patientName);
@@ -170,10 +276,25 @@ export default function BreastCancerDetailPage() {
     if (metadata.accessionNumber) setAccessionNumber(metadata.accessionNumber);
 
     showToast({
-      title: "Medical Report Imported",
-      message: `Loaded ${metadata.patientName} (${metadata.patientId}) with 8 cellular biomarkers.`,
+      title: "Report Imported & Analyzed",
+      message: `Extracted 8 biomarkers for ${name}. Displaying quantum screening results...`,
       type: "quantum",
     });
+
+    // Auto-execute screening inference immediately and display results on the same page
+    executeInferenceEngine(extractedValues, name, id, age, gender, date, acc);
+  };
+
+  const handleRunInference = () => {
+    executeInferenceEngine(
+      formValues,
+      patientName,
+      patientId,
+      patientAge,
+      patientGender,
+      intakeDate,
+      accessionNumber
+    );
   };
 
   const handleValueChange = (key: string, numVal: number, fromDerivation?: string) => {
@@ -253,97 +374,6 @@ export default function BreastCancerDetailPage() {
       }
     }
     setInlineHelperKey(null);
-  };
-
-  const handleRunInference = async () => {
-    setIsInferring(true);
-    setHasInferred(false);
-
-    await new Promise((r) => setTimeout(r, 1100));
-
-    const rad = formValues.radius_mean ?? 17.99;
-    const conc = formValues.concavity_mean ?? 0.3;
-
-    let qConf = 92.4;
-    let cConf = 88.1;
-    let qLabel = "Malignant (High Risk)";
-    let cLabel = "Malignant (High Risk)";
-    let risk: "High" | "Low" = "High";
-    let attributions = [
-      { name: "Nuclear Size & Radius", impact: 35.4, description: "Primary cell enlargement strongly correlated with malignant tissue." },
-      { name: "Contour Indentation Count", impact: 29.1, description: "Irregular notches detected across cell boundaries." },
-      { name: "Nuclear Area", impact: 21.8, description: "Two-dimensional spatial enlargement." },
-    ];
-    let note = "Quantum multi-qubit phase analysis indicates high-probability malignancy. Confirmatory needle biopsy is advised.";
-
-    if (rad < 14.5 && conc < 0.08) {
-      qConf = 96.2;
-      cConf = 92.8;
-      qLabel = "Benign Tissue (Low Risk)";
-      cLabel = "Benign Tissue (Low Risk)";
-      risk = "Low";
-      attributions = [
-        { name: "Normal Nuclear Radius", impact: 42.6, description: "Uniform circular radius consistent with non-cancerous tissue." },
-        { name: "Smooth Cellular Border", impact: 34.1, description: "Minimal perimeter fluctuation." },
-      ];
-      note = "Biomarkers are within healthy ranges. Low probability of malignancy.";
-    }
-
-    const resultData: InferenceResult = {
-      quantumLabel: qLabel,
-      quantumConfidence: qConf,
-      classicalLabel: cLabel,
-      classicalConfidence: cConf,
-      quantumExecutionTimeMs: Math.round(15 + Math.random() * 6),
-      classicalExecutionTimeMs: Math.round(3 + Math.random() * 2),
-      quantumGateAttribution: attributions,
-      clinicalNote: note,
-      riskLevel: risk,
-    };
-
-    setInferenceResult(resultData);
-    setHasInferred(true);
-    setIsInferring(false);
-
-    if (typeof window !== "undefined") {
-      try {
-        const storedHistory = localStorage.getItem("quantumx_prediction_history");
-        const historyList = storedHistory ? JSON.parse(storedHistory) : [];
-        const newRecord = {
-          id: patientId || `QX-BC-${Math.floor(10000 + Math.random() * 90000)}`,
-          patientName: patientName || "Patient",
-          patientAge: patientAge,
-          patientGender: patientGender,
-          intakeDate: intakeDate,
-          accessionNumber: accessionNumber,
-          disease: "Breast Cancer Screening",
-          quantumPrediction: qLabel,
-          quantumConfidence: qConf,
-          classicalPrediction: cLabel,
-          classicalConfidence: cConf,
-          topDriver: attributions[0]?.name || "Nuclear Size & Radius",
-          riskLevel: risk,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-        };
-        localStorage.setItem("quantumx_prediction_history", JSON.stringify([newRecord, ...historyList].slice(0, 50)));
-
-        const storedNotifs = localStorage.getItem("quantumx_notifications");
-        const notifList = storedNotifs ? JSON.parse(storedNotifs) : [];
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          title: `Screening Completed: ${patientName} (${patientId})`,
-          category: "disease",
-          time: "Just now",
-          message: `${patientName} (${patientAge}y/${patientGender}): ${qLabel} (${qConf}% confidence).`,
-          read: false,
-          actionUrl: "/history",
-          actionLabel: "View Record",
-        };
-        localStorage.setItem("quantumx_notifications", JSON.stringify([newNotif, ...notifList].slice(0, 20)));
-      } catch (err) {
-        console.error("Failed to store screening record:", err);
-      }
-    }
   };
 
   const handleDownloadReport = () => {
