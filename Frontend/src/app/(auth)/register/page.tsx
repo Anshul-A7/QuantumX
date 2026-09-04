@@ -229,7 +229,7 @@ export default function RegisterPage() {
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-cream flex items-center justify-center p-4 sm:p-6 md:p-8 font-sans selection:bg-ink selection:text-parchment overflow-hidden relative">
+    <div className="min-h-screen w-full bg-cream flex items-center justify-center p-4 sm:p-6 md:p-8 py-8 sm:py-12 font-sans selection:bg-ink selection:text-parchment overflow-y-auto relative">
       {/* Top-Right Cross Button to Landing (Outside Card) */}
       <Link
         href="/"
