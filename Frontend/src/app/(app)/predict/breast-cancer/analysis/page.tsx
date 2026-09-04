@@ -22,6 +22,8 @@ import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
 import ModelComparisonTab from "./components/ModelComparisonTab";
 import RealTimeGraphsTab from "./components/RealTimeGraphsTab";
 
+import { ScreeningService } from "@/services/screening.service";
+
 export default function BreastCancerAnalysisPage() {
   const router = useRouter();
   // 4 Focused Tabs: 1. Key Risk Factors, 2. QuantumX AI, 3. Model Comparison, 4. Real-Time Graphs
@@ -34,9 +36,9 @@ export default function BreastCancerAnalysisPage() {
 
   // Loaded State
   const [patientInfo, setPatientInfo] = useState({
-    name: "Yuki",
-    patient_id: "QX-BC-5279",
-    age: 55,
+    name: "Patient",
+    patient_id: "QX-BC-1001",
+    age: 48,
     gender: "Female",
   });
 
@@ -73,7 +75,7 @@ export default function BreastCancerAnalysisPage() {
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
 
   useEffect(() => {
-    // Load persisted analysis state from sessionStorage if available
+    // 1. Load active session analysis payload if navigated from Screening Form
     try {
       const stored = sessionStorage.getItem("quantumx_active_analysis");
       if (stored) {
@@ -82,10 +84,35 @@ export default function BreastCancerAnalysisPage() {
         if (parsed.biomarkers) setBiomarkers(parsed.biomarkers);
         if (parsed.screeningResult) setScreeningResult(parsed.screeningResult);
         if (parsed.aiSynthesis) setAiSynthesis(parsed.aiSynthesis);
+        return;
       }
     } catch (e) {
       console.warn("Could not load sessionStorage analysis payload:", e);
     }
+
+    // 2. Fallback: Load latest real screening record from database
+    ScreeningService.getScreenings()
+      .then((records) => {
+        if (records && records.length > 0) {
+          const latest = records[0];
+          setPatientInfo({
+            name: latest.patientName || "Patient",
+            patient_id: latest.patientId || latest.id,
+            age: latest.patientAge || 50,
+            gender: latest.patientGender || "Female",
+          });
+          if (latest.inputFeatures) {
+            setBiomarkers(latest.inputFeatures);
+          }
+          setScreeningResult((prev: any) => ({
+            ...prev,
+            prediction_label: latest.quantumPrediction || latest.classicalPrediction || "Benign",
+            composite_risk_score: latest.quantumRiskScore || 35.4,
+            confidence: latest.quantumConfidence || 50.6,
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Dual comparison telemetry from backend

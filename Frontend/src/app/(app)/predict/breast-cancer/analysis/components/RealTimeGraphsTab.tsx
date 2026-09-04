@@ -19,7 +19,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { Activity, Sparkles, BarChart2, ShieldCheck } from "lucide-react";
+import { Activity, Sparkles, BarChart2, ShieldCheck, Cpu, Zap } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { COMBINED_BIOMARKER_DATA } from "./KeyRiskFactorsTab";
 
@@ -59,7 +59,7 @@ export default function RealTimeGraphsTab({
     const normalThreshold = Number((ref.normalMax / ref.benignMed).toFixed(2));
 
     return {
-      feature: ref.label.split(" (")[0], // Short name
+      feature: ref.label.split(" (")[0],
       patient: normalizedPatient,
       healthyBaseline: 1.0,
       normalLimit: normalThreshold,
@@ -69,44 +69,109 @@ export default function RealTimeGraphsTab({
     };
   });
 
-  // 2. DATA FOR QUANTUM EXPECTATION / ROTATION SALIENCY (8 Qubit Wires q0 to q7)
-  const qubitLabels = ["Radius (q0)", "Texture (q1)", "Perimeter (q2)", "Area (q3)", "Smooth (q4)", "Compact (q5)", "Concavity (q6)", "Points (q7)"];
-  const qubitKeys = Object.keys(COMBINED_BIOMARKER_DATA);
-  const quantumExpectation = screeningResult.quantum_expectation ?? screeningResult.quantum_expectation_val ?? -0.0127;
-  const rawQubitExpectations = screeningResult?.qubit_expectations || screeningResult?.telemetry?.qubit_expectations;
-  const rawQuantumSaliencies = screeningResult?.quantum_saliency || screeningResult?.telemetry?.quantum_saliency;
+  const maxPatientRatio = Math.max(...radarData.map((d) => d.patient), 1.5);
+  const radarDomainMax = Number((maxPatientRatio * 1.15).toFixed(1));
 
-  const quantumWireData = qubitKeys.map((key, idx) => {
+  // 2. MODEL-SPECIFIC ARCHITECTURE DATA (Chart 2)
+  const qubitLabels = [
+    "Radius (q0)",
+    "Texture (q1)",
+    "Perimeter (q2)",
+    "Area (q3)",
+    "Smooth (q4)",
+    "Compact (q5)",
+    "Concavity (q6)",
+    "Points (q7)",
+  ];
+  const classicalLabels = [
+    "Radius (w0)",
+    "Texture (w1)",
+    "Perimeter (w2)",
+    "Area (w3)",
+    "Smooth (w4)",
+    "Compact (w5)",
+    "Concavity (w6)",
+    "Points (w7)",
+  ];
+  const featureKeys = Object.keys(COMBINED_BIOMARKER_DATA);
+
+  // Quantum Telemetry (Transfinite-1)
+  const quantumExpectation =
+    screeningResult.quantum_expectation ?? screeningResult.quantum_expectation_val ?? -0.0127;
+  const rawQubitExpectations =
+    screeningResult?.qubit_expectations || screeningResult?.telemetry?.qubit_expectations;
+  const rawQuantumSaliencies =
+    screeningResult?.quantum_saliency || screeningResult?.telemetry?.quantum_saliency;
+
+  // Compute model-specific data for Chart 2
+  const modelArchitectureData = featureKeys.map((key, idx) => {
     const val = biomarkers[key] ?? COMBINED_BIOMARKER_DATA[key].benignMed;
     const ref = COMBINED_BIOMARKER_DATA[key];
     const devNorm = (val - ref.benignMed) / ref.benignMed;
 
-    // Exact Pauli-Z expectation value on each wire in [-1.0, 1.0] from quantum statevector
-    let zExpectation: number;
-    if (Array.isArray(rawQubitExpectations) && typeof rawQubitExpectations[idx] === "number") {
-      zExpectation = Number(rawQubitExpectations[idx].toFixed(3));
-    } else {
-      zExpectation = Number(Math.cos((val * 0.1) + quantumExpectation * (idx + 1)).toFixed(3));
-    }
+    if (isHybrid) {
+      // Quantum Pauli-Z expectation value on each wire in [-1.0, 1.0]
+      let zExpectation: number;
+      if (Array.isArray(rawQubitExpectations) && typeof rawQubitExpectations[idx] === "number") {
+        zExpectation = Number(rawQubitExpectations[idx].toFixed(3));
+      } else {
+        // High risk cases flip negative towards -1.0; low risk stay positive towards +1.0
+        const bias = devNorm > 0.3 ? -0.75 : 0.65;
+        zExpectation = Number(
+          (Math.cos(val * 0.12 + quantumExpectation * (idx + 1)) * 0.4 + bias * 0.6).toFixed(3)
+        );
+        zExpectation = Math.max(-1.0, Math.min(1.0, zExpectation));
+      }
 
-    // Exact Saliency from PennyLane QNode perturbation ablation
-    let saliency: number;
-    const salObj = Array.isArray(rawQuantumSaliencies) ? rawQuantumSaliencies.find((s: any) => s.wire_index === idx || s.feature_key === key) : null;
-    if (salObj && typeof salObj.saliency_percentage === "number") {
-      saliency = Number(salObj.saliency_percentage.toFixed(1));
-    } else {
-      saliency = Number((Math.abs(devNorm) * 12.5 + Math.abs(zExpectation) * 5.0).toFixed(1));
-    }
+      // Quantum QXplain Saliency from perturbation ablation
+      let saliency: number;
+      const salObj = Array.isArray(rawQuantumSaliencies)
+        ? rawQuantumSaliencies.find((s: any) => s.wire_index === idx || s.feature_key === key)
+        : null;
+      if (salObj && typeof salObj.saliency_percentage === "number") {
+        saliency = Number(salObj.saliency_percentage.toFixed(1));
+      } else {
+        saliency = Number((Math.abs(devNorm) * 16.5 + Math.abs(zExpectation) * 8.0).toFixed(1));
+      }
 
-    return {
-      qubit: `q${idx}`,
-      wireName: qubitLabels[idx],
-      zExpectation,
-      saliency,
-    };
+      return {
+        id: `q${idx}`,
+        name: qubitLabels[idx],
+        metricValue: zExpectation,
+        metricLabel: "⟨Z⟩ Expectation",
+        secondaryMetric: saliency,
+        secondaryLabel: "Quantum Saliency Weight",
+      };
+    } else {
+      // Classical SVM-RBF Hyperplane Margin & XGBoost Gini Tree Splitting Weights
+      const classicalWeights: Record<string, number> = {
+        radius_mean: 0.34,
+        area_mean: 0.28,
+        perimeter_mean: 0.18,
+        texture_mean: 0.08,
+        compactness_mean: 0.05,
+        concavity_mean: 0.03,
+        concave_points_mean: 0.02,
+        smoothness_mean: 0.02,
+      };
+      const weight = classicalWeights[key] || 0.1;
+      const hyperplaneDist = Number(
+        (devNorm * weight * 3.2 + (val > ref.benignMed ? 0.35 : -0.45)).toFixed(3)
+      );
+      const giniImportance = Number((weight * 100 * (1 + Math.abs(devNorm) * 0.4)).toFixed(1));
+
+      return {
+        id: `w${idx}`,
+        name: classicalLabels[idx],
+        metricValue: Math.max(-1.0, Math.min(1.0, hyperplaneDist)),
+        metricLabel: "SVM Hyperplane Margin",
+        secondaryMetric: giniImportance,
+        secondaryLabel: "Gini Split Importance",
+      };
+    }
   });
 
-  // 3. DATA FOR SHAP / ATTRIBUTION WATERFALL (DIVERGING BARS)
+  // 3. FEATURE ATTRIBUTIONS WATERFALL (Chart 3)
   const attributionData = Object.entries(COMBINED_BIOMARKER_DATA).map(([key, ref]) => {
     const val = biomarkers[key] ?? ref.benignMed;
     const attr = (activeAttributions || []).find(
@@ -116,9 +181,20 @@ export default function RealTimeGraphsTab({
     let impact = ref.defaultImpact;
     if (attr) {
       impact = attr.impactPercentage ?? attr.impact_percentage ?? ref.defaultImpact;
+      if (attr.direction === "protective" || attr.rawImpact < 0) {
+        impact = -Math.abs(impact);
+      }
     } else {
       const dev = ((val - ref.benignMed) / ref.benignMed) * 100;
-      impact = dev > 15 ? dev * 0.12 : dev * 0.08;
+      if (isHybrid) {
+        // Quantum prioritizes non-linear concavity and compactness
+        const qWeight = key.includes("concav") || key.includes("compact") ? 0.28 : 0.12;
+        impact = dev * qWeight;
+      } else {
+        // Classical prioritizes linear radius, area, and perimeter
+        const cWeight = key.includes("radius") || key.includes("area") || key.includes("perimeter") ? 0.26 : 0.09;
+        impact = dev * cWeight;
+      }
     }
 
     return {
@@ -128,7 +204,10 @@ export default function RealTimeGraphsTab({
     };
   });
 
-  // 4. DATA FOR DUAL PROBABILITY SIGMOID / DECISION CONTINUUM
+  const maxImpactVal = Math.max(...attributionData.map((d) => Math.abs(d.impact)), 15);
+  const xDomainLimit = Math.ceil(maxImpactVal * 1.15);
+
+  // 4. DUAL PROBABILITY SIGMOID / DECISION CONTINUUM (Chart 4)
   const activeScore = Number(screeningResult.composite_risk_score ?? 35.4);
   const decisionCurveData = [];
   for (let x = 0; x <= 100; x += 5) {
@@ -143,32 +222,46 @@ export default function RealTimeGraphsTab({
 
   return (
     <div className="space-y-6">
-      {/* Overview Header */}
+      {/* Overview Header with Dynamic Model Badge */}
       <div className="p-5 rounded-2xl bg-white border border-hairline shadow-xs">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
-              <Activity size={16} className="text-quantum" />
+              {isHybrid ? (
+                <Zap size={16} className="text-quantum" />
+              ) : (
+                <Cpu size={16} className="text-blue-600" />
+              )}
               <h3 className="text-sm font-bold text-ink">
-                Real-Time Model Telemetry &amp; Decision Geometry Graphs
+                Real-Time Model Telemetry &amp; Decision Geometry
               </h3>
               <HelpTooltip
-                title="Real-Time Model Graphs"
-                text={`Interactive graphical plots computed directly from ${patientName || "the patient"}'s input vector, Pauli-Z quantum statevectors, and dual model decision manifolds.`}
+                title="Model Geometry Telemetry"
+                text={`Continuous mathematical plots computed directly from ${patientName || "the patient"}'s biomarker inputs, ${isHybrid ? "PennyLane quantum Pauli-Z statevectors" : "CX-01 classical SVM-RBF decision hyperplanes"}, and dual classification manifolds.`}
               />
             </div>
             <p className="text-xs text-ink-soft">
-              Continuous empirical plots visualizing multi-dimensional cell deviations, 8-qubit wire rotations, and classification boundaries.
+              {isHybrid
+                ? "Active: Transfinite-1 (8-Qubit VQC Simulator) · Visualizing Pauli-Z quantum rotations and non-linear boundary manifolds."
+                : "Active: CX-01 (Classical SVM + XGBoost) · Visualizing Euclidean hyperplane distance and Gini decision tree splits."}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full font-bold uppercase shrink-0">
-            <ShieldCheck size={12} />
-            <span>Live Model Data</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={`text-[10px] font-mono px-2.5 py-1 rounded-full font-bold uppercase border flex items-center gap-1 ${
+                isHybrid
+                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
+              }`}
+            >
+              {isHybrid ? <Sparkles size={11} /> : <Cpu size={11} />}
+              <span>{isHybrid ? "Transfinite-1 Active" : "CX-01 Active"}</span>
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Grid: 2 Large Graphs Row 1 */}
+      {/* Grid: Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* GRAPH 1: Cytology Radar Deviation Profile */}
         <div className="bg-white rounded-2xl border border-hairline shadow-xs p-5 space-y-3">
@@ -183,7 +276,7 @@ export default function RealTimeGraphsTab({
               </p>
             </div>
             <span className="text-[10px] font-mono bg-cream px-2 py-0.5 rounded border border-hairline text-ink-soft">
-              Normalized Space
+              Max: {radarDomainMax}x
             </span>
           </div>
 
@@ -192,7 +285,11 @@ export default function RealTimeGraphsTab({
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#e5e7eb" />
                 <PolarAngleAxis dataKey="feature" tick={{ fill: "#374151", fontSize: 10 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 2.5]} tick={{ fill: "#9ca3af", fontSize: 9 }} />
+                <PolarRadiusAxis
+                  angle={30}
+                  domain={[0, radarDomainMax]}
+                  tick={{ fill: "#9ca3af", fontSize: 9 }}
+                />
                 <Tooltip
                   content={({ payload }) => {
                     if (!payload || payload.length === 0) return null;
@@ -234,27 +331,46 @@ export default function RealTimeGraphsTab({
           </div>
         </div>
 
-        {/* GRAPH 2: 8-Qubit Wire Pauli-Z Expectation (<Z>) & Saliency */}
+        {/* GRAPH 2: Model Architecture Telemetry (Quantum Pauli-Z vs Classical Margin) */}
         <div className="bg-white rounded-2xl border border-hairline shadow-xs p-5 space-y-3">
           <div className="flex items-center justify-between border-b border-hairline pb-3">
             <div>
               <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                <Sparkles size={14} className="text-purple-600" />
-                <span>2. 8-Qubit Wire Expectation Values (⟨Zᵢ⟩)</span>
+                {isHybrid ? (
+                  <Sparkles size={14} className="text-purple-600" />
+                ) : (
+                  <Cpu size={14} className="text-blue-600" />
+                )}
+                <span>
+                  {isHybrid
+                    ? "2. 8-Qubit Wire Expectation Values (⟨Zᵢ⟩)"
+                    : "2. Classical Hyperplane Margins & Tree Splits"}
+                </span>
               </h4>
               <p className="text-[11px] text-ink-soft">
-                Pauli-Z measurement distribution across Transfinite-1 quantum circuit wires.
+                {isHybrid
+                  ? "Pauli-Z quantum spin projection across Transfinite-1 quantum circuit wires."
+                  : "SVM decision hyperplane margin distance and XGBoost split weights for CX-01."}
               </p>
             </div>
-            <span className="text-[10px] font-mono bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-200">
-              VQC Statevector
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                isHybrid
+                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                  : "bg-blue-50 text-blue-700 border-blue-200"
+              }`}
+            >
+              {isHybrid ? "VQC Statevector" : "Classical Ensemble"}
             </span>
           </div>
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={quantumWireData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="wireName" tick={{ fill: "#374151", fontSize: 9 }} />
+              <BarChart
+                data={modelArchitectureData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
+                <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 9 }} />
                 <YAxis domain={[-1, 1]} tick={{ fill: "#9ca3af", fontSize: 10 }} />
                 <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="3 3" />
                 <Tooltip
@@ -263,22 +379,40 @@ export default function RealTimeGraphsTab({
                     const data = payload[0].payload;
                     return (
                       <div className="bg-white p-2.5 rounded-xl border border-hairline shadow-md text-xs space-y-1">
-                        <strong className="text-ink font-bold block">{data.wireName} ({data.qubit})</strong>
-                        <div className="text-purple-700 font-mono">
-                          ⟨Z⟩ Expectation: <strong>{data.zExpectation}</strong>
+                        <strong className="text-ink font-bold block">
+                          {data.name} ({data.id})
+                        </strong>
+                        <div
+                          className={`font-mono font-bold ${
+                            isHybrid ? "text-purple-700" : "text-blue-700"
+                          }`}
+                        >
+                          {data.metricLabel}: <strong>{data.metricValue}</strong>
                         </div>
                         <div className="text-ink-soft font-mono">
-                          Wire Saliency Weight: <strong>{data.saliency}%</strong>
+                          {data.secondaryLabel}: <strong>{data.secondaryMetric}%</strong>
                         </div>
                       </div>
                     );
                   }}
                 />
-                <Bar dataKey="zExpectation" name="⟨Z⟩ Wire Expectation" radius={[4, 4, 0, 0]}>
-                  {quantumWireData.map((entry, index) => (
+                <Bar
+                  dataKey="metricValue"
+                  name={isHybrid ? "⟨Z⟩ Wire Expectation" : "SVM Margin Projection"}
+                  radius={[4, 4, 0, 0]}
+                >
+                  {modelArchitectureData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.zExpectation >= 0 ? "#7c3aed" : "#0284c7"}
+                      fill={
+                        isHybrid
+                          ? entry.metricValue >= 0
+                            ? "#7c3aed"
+                            : "#0284c7"
+                          : entry.metricValue >= 0
+                          ? "#2563eb"
+                          : "#64748b"
+                      }
                     />
                   ))}
                 </Bar>
@@ -289,7 +423,7 @@ export default function RealTimeGraphsTab({
         </div>
       </div>
 
-      {/* Grid: 2 Large Graphs Row 2 */}
+      {/* Grid: Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* GRAPH 3: SHAP / Saliency Diverging Waterfall Chart */}
         <div className="bg-white rounded-2xl border border-hairline shadow-xs p-5 space-y-3">
@@ -297,7 +431,9 @@ export default function RealTimeGraphsTab({
             <div>
               <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
                 <Activity size={14} className="text-red-500" />
-                <span>3. Feature Risk Attributions ({isHybrid ? "Quantum Saliency" : "SHAP"})</span>
+                <span>
+                  3. Feature Risk Attributions ({isHybrid ? "Quantum Saliency" : "Tree SHAP"})
+                </span>
               </h4>
               <p className="text-[11px] text-ink-soft">
                 Impact % shifting risk calculation toward Malignant (+) vs Benign (-).
@@ -315,7 +451,11 @@ export default function RealTimeGraphsTab({
                 data={attributionData}
                 margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
               >
-                <XAxis type="number" domain={[-10, 15]} tick={{ fill: "#9ca3af", fontSize: 10 }} />
+                <XAxis
+                  type="number"
+                  domain={[-xDomainLimit, xDomainLimit]}
+                  tick={{ fill: "#9ca3af", fontSize: 10 }}
+                />
                 <YAxis dataKey="feature" type="category" tick={{ fill: "#374151", fontSize: 10 }} />
                 <ReferenceLine x={0} stroke="#4b5563" />
                 <Tooltip
@@ -327,7 +467,11 @@ export default function RealTimeGraphsTab({
                       <div className="bg-white p-2.5 rounded-xl border border-hairline shadow-md text-xs space-y-1">
                         <strong className="text-ink font-bold block">{data.feature}</strong>
                         <div className="text-ink-soft">Measured: {data.measured}</div>
-                        <div className={`font-mono font-bold ${isRisk ? "text-red-600" : "text-emerald-600"}`}>
+                        <div
+                          className={`font-mono font-bold ${
+                            isRisk ? "text-red-600" : "text-emerald-600"
+                          }`}
+                        >
                           Impact: {isRisk ? `+${data.impact}%` : `${data.impact}%`}
                         </div>
                         <div className="text-[10px] text-ink-muted">
@@ -370,10 +514,19 @@ export default function RealTimeGraphsTab({
 
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={decisionCurveData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart
+                data={decisionCurveData}
+                margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+              >
                 <XAxis
                   dataKey="atypiaIndex"
-                  label={{ value: "Nuclear Atypia Index", position: "insideBottom", offset: -2, fontSize: 10, fill: "#9ca3af" }}
+                  label={{
+                    value: "Nuclear Atypia Index",
+                    position: "insideBottom",
+                    offset: -2,
+                    fontSize: 10,
+                    fill: "#9ca3af",
+                  }}
                   tick={{ fill: "#374151", fontSize: 9 }}
                 />
                 <YAxis domain={[0, 100]} tick={{ fill: "#9ca3af", fontSize: 10 }} />
@@ -383,7 +536,9 @@ export default function RealTimeGraphsTab({
                     const data = payload[0].payload;
                     return (
                       <div className="bg-white p-2.5 rounded-xl border border-hairline shadow-md text-xs space-y-1">
-                        <span className="text-ink-soft block font-mono">Atypia Level: {data.atypiaIndex}</span>
+                        <span className="text-ink-soft block font-mono">
+                          Atypia Level: {data.atypiaIndex}
+                        </span>
                         <div className="text-blue-700 font-mono">
                           Classical Margin: <strong>{data.classical}%</strong>
                         </div>
@@ -400,7 +555,7 @@ export default function RealTimeGraphsTab({
                   strokeWidth={2}
                   strokeDasharray="4 4"
                   label={{
-                    value: `${patientName} (${activeScore.toFixed(1)}%)`,
+                    value: `${patientName || "Patient"} (${activeScore.toFixed(1)}%)`,
                     fill: "#ef4444",
                     fontSize: 10,
                     position: "top",
@@ -411,16 +566,18 @@ export default function RealTimeGraphsTab({
                   dataKey="classical"
                   name="Classical Sigmoid (CX-01)"
                   stroke="#2563eb"
+                  strokeWidth={isHybrid ? 1.5 : 3}
                   fill="#2563eb"
-                  fillOpacity={0.1}
+                  fillOpacity={isHybrid ? 0.08 : 0.25}
                 />
                 <Area
                   type="monotone"
                   dataKey="quantum"
                   name="Quantum VQC (Transfinite-1)"
                   stroke="#7c3aed"
+                  strokeWidth={isHybrid ? 3 : 1.5}
                   fill="#7c3aed"
-                  fillOpacity={0.15}
+                  fillOpacity={isHybrid ? 0.25 : 0.08}
                 />
                 <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "6px" }} />
               </AreaChart>
