@@ -112,15 +112,15 @@ function Nav() {
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
+    <header className="fixed inset-x-0 top-0 z-50 px-2.5 sm:px-4 pt-2.5 sm:pt-4">
       <div
-        className={`mx-auto flex max-w-6xl items-center justify-between rounded-full border px-5 transition-all duration-500 ${scrolled
-          ? "border-hairline/90 bg-parchment/70 py-2.5 shadow-[0_16px_40px_-34px_rgba(60,50,35,0.8)] backdrop-blur-xl"
-          : "border-transparent bg-transparent py-4"
+        className={`mx-auto flex max-w-6xl items-center justify-between rounded-full border px-3 sm:px-5 transition-all duration-500 ${scrolled
+          ? "border-hairline/90 bg-parchment/80 py-2 sm:py-2.5 shadow-[0_16px_40px_-34px_rgba(60,50,35,0.8)] backdrop-blur-xl"
+          : "border-hairline/30 bg-parchment/40 sm:border-transparent sm:bg-transparent py-2 sm:py-4 backdrop-blur-xs sm:backdrop-blur-none"
           }`}
       >
-        <a href="#top" className="flex items-baseline gap-2">
-          <span className="font-serif text-[19px] tracking-tight text-ink">QuantumX</span>
+        <a href="#top" className="flex items-baseline gap-2 shrink-0">
+          <span className="font-serif text-[17px] sm:text-[19px] tracking-tight text-ink font-normal">QuantumX</span>
           <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:inline">
             Research Platform
           </span>
@@ -138,16 +138,16 @@ function Nav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Link
             href="/login"
-            className="rounded-full border border-hairline px-4 py-1.5 text-[13px] text-ink transition-colors hover:bg-cream-deep"
+            className="rounded-full border border-hairline px-3 sm:px-4 py-1.5 text-xs sm:text-[13px] text-ink transition-colors hover:bg-cream-deep whitespace-nowrap"
           >
             Login
           </Link>
           <Link
             href="/register"
-            className="rounded-full bg-ink px-4 py-1.5 text-[13px] text-parchment transition-opacity hover:opacity-88"
+            className="rounded-full bg-ink px-3 sm:px-4 py-1.5 text-xs sm:text-[13px] text-parchment transition-opacity hover:opacity-88 whitespace-nowrap"
           >
             Register
           </Link>
@@ -169,7 +169,7 @@ function Hero() {
   const opacity = useTransform(scrollYProgress, [0, 0.85], [1, reduce ? 1 : 0.15]);
 
   return (
-    <section id="top" ref={ref} className="relative overflow-hidden px-6 pb-28 pt-44 md:pt-52">
+    <section id="top" ref={ref} className="relative overflow-hidden px-4 sm:px-6 pb-20 sm:pb-28 pt-28 sm:pt-36 md:pt-52">
       {/* atmosphere */}
       <div
         aria-hidden
