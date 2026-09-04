@@ -39,21 +39,33 @@ async def create_screening(
     db: AsyncSession = Depends(get_db),
 ):
     record_id = payload.id or f"QX-{uuid.uuid4().hex[:8].upper()}"
+    patient_id = payload.patientId or record_id
+
     new_screening = Screening(
         id=record_id,
         user_id=current_user.id,
-        patient_id=payload.patientId,
-        disease_type=payload.diseaseType,
+        patient_id=patient_id,
+        patient_name=payload.patientName or patient_id,
+        patient_age=payload.patientAge,
+        patient_gender=payload.patientGender,
+        disease_type=payload.diseaseType or "Breast Cytology (Fine Needle Aspirate)",
+        model_family=payload.modelFamily or "aegis_classical_v1",
+        execution_mode=payload.executionMode or "simulator",
         quantum_prediction=payload.quantumPrediction,
         quantum_confidence=payload.quantumConfidence,
         classical_prediction=payload.classicalPrediction,
         classical_confidence=payload.classicalConfidence,
         risk_level=payload.riskLevel,
+        risk_score=payload.riskScore,
+        morphometric_index=payload.morphometricIndex,
         top_driver=payload.topDriver,
         quantum_execution_time_ms=payload.quantumExecutionTimeMs,
         classical_execution_time_ms=payload.classicalExecutionTimeMs,
         input_features=payload.inputFeatures,
         gate_attributions=payload.gateAttributions,
+        shap_attributions=payload.shapAttributions,
+        hardware_receipt=payload.hardwareReceipt,
+        ai_synthesis=payload.aiSynthesis,
         clinical_note=payload.clinicalNote,
     )
     db.add(new_screening)
