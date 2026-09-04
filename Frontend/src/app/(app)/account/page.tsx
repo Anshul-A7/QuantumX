@@ -361,8 +361,8 @@ export default function AccountPage() {
         </form>
       </div>
 
-      {/* Useful Clinical Telemetry & Metrics (Replaced generic cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Useful Clinical Telemetry & Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Card 1: Clinical Audit Records */}
         <div className="p-4 rounded-xl bg-parchment border border-hairline space-y-2 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -421,22 +421,6 @@ export default function AccountPage() {
           </div>
           <p className="text-[11px] text-ink-soft font-light leading-snug">
             0.00% decoherence noise • Continuous statevector simulation.
-          </p>
-        </div>
-
-        {/* Card 4: Security & Compliance */}
-        <div className="p-4 rounded-xl bg-parchment border border-hairline space-y-2 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-mono tracking-wider text-ink-soft flex items-center gap-1">
-              <ShieldCheck size={12} className="text-quantum" /> Security & Privacy
-            </span>
-            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
-              256-Bit TLS
-            </span>
-          </div>
-          <div className="font-serif text-2xl text-ink font-light">Encrypted</div>
-          <p className="text-[11px] text-ink-soft font-light leading-snug">
-            JWT-authenticated session • User-isolated Supabase storage.
           </p>
         </div>
       </div>

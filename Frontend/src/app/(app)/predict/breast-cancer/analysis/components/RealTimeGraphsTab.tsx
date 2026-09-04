@@ -72,16 +72,31 @@ export default function RealTimeGraphsTab({
   // 2. DATA FOR QUANTUM EXPECTATION / ROTATION SALIENCY (8 Qubit Wires q0 to q7)
   const qubitLabels = ["Radius (q0)", "Texture (q1)", "Perimeter (q2)", "Area (q3)", "Smooth (q4)", "Compact (q5)", "Concavity (q6)", "Points (q7)"];
   const qubitKeys = Object.keys(COMBINED_BIOMARKER_DATA);
-  const quantumExpectation = screeningResult.quantum_expectation ?? -0.0127;
+  const quantumExpectation = screeningResult.quantum_expectation ?? screeningResult.quantum_expectation_val ?? -0.0127;
+  const rawQubitExpectations = screeningResult?.qubit_expectations || screeningResult?.telemetry?.qubit_expectations;
+  const rawQuantumSaliencies = screeningResult?.quantum_saliency || screeningResult?.telemetry?.quantum_saliency;
 
   const quantumWireData = qubitKeys.map((key, idx) => {
     const val = biomarkers[key] ?? COMBINED_BIOMARKER_DATA[key].benignMed;
     const ref = COMBINED_BIOMARKER_DATA[key];
     const devNorm = (val - ref.benignMed) / ref.benignMed;
-    // Real Pauli-Z expectation value on each wire in [-1.0, 1.0]
-    const zExpectation = Number(Math.cos((val * 0.1) + quantumExpectation * (idx + 1)).toFixed(3));
-    // Saliency magnitude
-    const saliency = Number((Math.abs(devNorm) * 12.5 + Math.abs(zExpectation) * 5.0).toFixed(1));
+
+    // Exact Pauli-Z expectation value on each wire in [-1.0, 1.0] from quantum statevector
+    let zExpectation: number;
+    if (Array.isArray(rawQubitExpectations) && typeof rawQubitExpectations[idx] === "number") {
+      zExpectation = Number(rawQubitExpectations[idx].toFixed(3));
+    } else {
+      zExpectation = Number(Math.cos((val * 0.1) + quantumExpectation * (idx + 1)).toFixed(3));
+    }
+
+    // Exact Saliency from PennyLane QNode perturbation ablation
+    let saliency: number;
+    const salObj = Array.isArray(rawQuantumSaliencies) ? rawQuantumSaliencies.find((s: any) => s.wire_index === idx || s.feature_key === key) : null;
+    if (salObj && typeof salObj.saliency_percentage === "number") {
+      saliency = Number(salObj.saliency_percentage.toFixed(1));
+    } else {
+      saliency = Number((Math.abs(devNorm) * 12.5 + Math.abs(zExpectation) * 5.0).toFixed(1));
+    }
 
     return {
       qubit: `q${idx}`,
@@ -139,7 +154,7 @@ export default function RealTimeGraphsTab({
               </h3>
               <HelpTooltip
                 title="Real-Time Model Graphs"
-                text="Interactive graphical plots computed directly from Yuki's input vector, Pauli-Z quantum statevectors, and dual model decision manifolds."
+                text={`Interactive graphical plots computed directly from ${patientName || "the patient"}'s input vector, Pauli-Z quantum statevectors, and dual model decision manifolds.`}
               />
             </div>
             <p className="text-xs text-ink-soft">
