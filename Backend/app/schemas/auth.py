@@ -74,7 +74,8 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(
         min_length=8,
-        max_length=128,
+        max_length=72,
+        description="Password must be between 8 and 72 characters",
     )
 
     model_config = ConfigDict(
@@ -90,7 +91,7 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(
         min_length=1,
-        max_length=128,
+        max_length=72,
     )
 
 
@@ -141,7 +142,12 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=1)
-    newPassword: str | None = Field(default=None, alias="new_password")
+    newPassword: str = Field(
+        min_length=8,
+        max_length=72,
+        alias="new_password",
+        description="Password must be between 8 and 72 characters",
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,

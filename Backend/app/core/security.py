@@ -20,20 +20,41 @@ pwd_context = CryptContext(
 )
 
 
+def _prepare_password(password: str) -> str:
+    """
+    Bcrypt has a hard cryptographic limitation of 72 bytes.
+    Safely slice UTF-8 bytes to at most 72 bytes and decode back,
+    preventing bcrypt from raising ValueError while preserving full security.
+    """
+    if not isinstance(password, str):
+        password = str(password)
+    raw_bytes = password.encode("utf-8")
+    if len(raw_bytes) > 72:
+        return raw_bytes[:72].decode("utf-8", errors="ignore")
+    return password
+
+
 def hash_password(password: str) -> str:
-    """Safely hashes passwords using bcrypt."""
-    return pwd_context.hash(password)
+    """Safely hashes passwords using bcrypt with 72-byte truncation protection."""
+    safe_password = _prepare_password(password)
+    return pwd_context.hash(safe_password)
 
 
 def verify_password(
     plain_password: str,
     password_hash: str,
 ) -> bool:
-    """Verifies a plain password against its bcrypt hash."""
-    return pwd_context.verify(
-        plain_password,
-        password_hash,
-    )
+    """Verifies a plain password against its bcrypt hash safely."""
+    if not plain_password or not password_hash:
+        return False
+    safe_password = _prepare_password(plain_password)
+    try:
+        return pwd_context.verify(
+            safe_password,
+            password_hash,
+        )
+    except Exception:
+        return False
 
 
 # =========================================================

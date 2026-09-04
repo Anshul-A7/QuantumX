@@ -102,6 +102,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (password.length > 72) {
+      setErrorMessage("Password cannot be longer than 72 characters.");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
@@ -353,6 +358,7 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    maxLength={72}
                     placeholder="Enter your password"
                     className="w-full h-11 pl-4 pr-11 rounded-xl bg-cream/70 border border-hairline text-sm text-ink placeholder:text-muted-foreground/50 focus:outline-none focus:border-quantum/60 focus:bg-parchment transition-all shadow-2xs font-sans"
                     required
@@ -402,6 +408,7 @@ export default function RegisterPage() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    maxLength={72}
                     placeholder="Confirm your password"
                     className="w-full h-11 pl-4 pr-11 rounded-xl bg-cream/70 border border-hairline text-sm text-ink placeholder:text-muted-foreground/50 focus:outline-none focus:border-quantum/60 focus:bg-parchment transition-all shadow-2xs font-sans"
                     required
