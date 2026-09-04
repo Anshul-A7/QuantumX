@@ -82,7 +82,13 @@ export default function HomePage() {
       setUserName(cachedUser.fullName || cachedUser.username || "Investigator");
     }
 
-    // 2. Fetch real patient screenings from Supabase DB
+    // 2. Instant 0ms cached screenings load
+    const cached = ScreeningService.getCachedScreenings();
+    if (cached && cached.length > 0) {
+      setRecentPredictions(cached.slice(0, 5));
+    }
+
+    // 3. Parallel background sync with Supabase DB
     ScreeningService.getScreenings()
       .then((records) => {
         setRecentPredictions((records || []).slice(0, 5));

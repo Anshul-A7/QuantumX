@@ -30,17 +30,16 @@ export default function HistoryPage() {
   const [riskFilter, setRiskFilter] = useState<"ALL" | "High" | "Low">("ALL");
   const [selectedCase, setSelectedCase] = useState<StoredPrediction | null>(null);
 
-  const loadHistory = async () => {
-    try {
-      const records = await ScreeningService.getScreenings();
-      setPredictions(records || []);
-    } catch {
-      setPredictions([]);
-    }
-  };
-
   useEffect(() => {
-    loadHistory();
+    // 1. Instant 0ms cached load
+    const cached = ScreeningService.getCachedScreenings();
+    if (cached && cached.length > 0) {
+      setPredictions(cached);
+    }
+    // 2. Parallel background sync
+    ScreeningService.getScreenings().then((records) => {
+      setPredictions(records || []);
+    });
   }, []);
 
   const handleExportReport = (pred: StoredPrediction, e?: React.MouseEvent) => {

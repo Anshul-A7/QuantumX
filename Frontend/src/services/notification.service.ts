@@ -20,17 +20,33 @@ function getUserNotificationKey(): string {
 
 export class NotificationService {
   /**
+   * Synchronously returns cached user notifications for instant 0ms render.
+   */
+  static getCachedNotifications(): NotificationItem[] {
+    if (typeof window === "undefined") return [];
+    const storageKey = getUserNotificationKey();
+    try {
+      const local = localStorage.getItem(storageKey);
+      return local ? JSON.parse(local) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Fetch real notifications strictly for the current authenticated user.
-   * Returns empty list for fresh accounts.
+   * Leverages fast Stale-While-Revalidate pattern for instantaneous loading.
    */
   static async getNotifications(): Promise<NotificationItem[]> {
-    let records: NotificationItem[] = [];
     const storageKey = getUserNotificationKey();
+    const cached = NotificationService.getCachedNotifications();
 
     try {
-      const response = await apiClient.get<NotificationItem[]>("/notifications");
+      const response = await apiClient.get<NotificationItem[]>("/notifications", {
+        timeout: 4500,
+      });
       if (response.data && Array.isArray(response.data)) {
-        records = response.data.map((n) => ({
+        const records = response.data.map((n) => ({
           ...n,
           time: n.createdAt
             ? new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -44,20 +60,10 @@ export class NotificationService {
         return records;
       }
     } catch {
-      // Offline fallback: returns user-scoped local records only
-      if (typeof window !== "undefined") {
-        const local = localStorage.getItem(storageKey);
-        if (local) {
-          try {
-            records = JSON.parse(local);
-          } catch {
-            records = [];
-          }
-        }
-      }
+      return cached;
     }
 
-    return records;
+    return cached;
   }
 
   /**

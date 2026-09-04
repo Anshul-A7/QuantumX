@@ -23,17 +23,16 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [filter, setFilter] = useState<"all" | "unread" | "system" | "disease">("all");
 
-  const loadNotifications = async () => {
-    try {
-      const records = await NotificationService.getNotifications();
-      setNotifications(records || []);
-    } catch {
-      setNotifications([]);
-    }
-  };
-
   useEffect(() => {
-    loadNotifications();
+    // 1. Instant 0ms cached load
+    const cached = NotificationService.getCachedNotifications();
+    if (cached && cached.length > 0) {
+      setNotifications(cached);
+    }
+    // 2. Parallel background sync
+    NotificationService.getNotifications().then((records) => {
+      setNotifications(records || []);
+    });
   }, []);
 
   const markAsRead = async (id: string) => {
