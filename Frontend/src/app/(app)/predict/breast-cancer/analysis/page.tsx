@@ -569,6 +569,11 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
             screeningResult={screeningResult}
             activeAttributions={activeAttributions}
             patientName={patientInfo.name}
+            activeRiskScore={activeRiskScore}
+            activePrediction={activePrediction}
+            activeEngineName={activeEngineName}
+            tfRiskScore={tfData?.risk_score ?? screeningResult.composite_risk_score ?? tfCalculatedProb}
+            cxRiskScore={cxData?.risk_score ?? cx01CalculatedProb}
           />
         )}
       </div>
