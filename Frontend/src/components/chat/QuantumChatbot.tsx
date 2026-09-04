@@ -322,12 +322,12 @@ export default function QuantumChatbot() {
   };
 
   return (
-    <div className="fixed bottom-6 right-5 md:bottom-11 md:right-9 z-50 font-sans">
-      {/* Floating Trigger Button with Rotating Rainbow Border */}
+    <div className="fixed bottom-6 right-6 z-50 font-sans">
+      {/* Floating Trigger Button with Rotating Rainbow Glow Border */}
       <div className="relative group flex items-center justify-center">
-        <div className="absolute -inset-[2.5px] rounded-full overflow-hidden opacity-90 group-hover:opacity-100 transition-opacity">
+        <div className="absolute -inset-[2px] rounded-full overflow-hidden pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity">
           <div
-            className="w-full h-full animate-rainbow-spin"
+            className="absolute -inset-[50%] animate-rainbow-spin"
             style={{
               background:
                 "conic-gradient(from 0deg, #ff4545, #00ffcc, #0070f3, #7928ca, #ff007a, #ffbb00, #00ffcc, #ff4545)",
@@ -340,7 +340,7 @@ export default function QuantumChatbot() {
           whileTap={{ scale: 0.95 }}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="Open Quantum AI Assistant"
+          aria-label={isOpen ? "Close Quantum AI Assistant" : "Open Quantum AI Assistant"}
           title="QuantumX Clinical AI Assistant"
           className="relative w-12 h-12 rounded-full bg-black text-white shadow-xl flex items-center justify-center cursor-pointer transition-all z-10"
         >
@@ -373,14 +373,14 @@ export default function QuantumChatbot() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.94 }}
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 25, scale: 0.94 }}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className={`fixed inset-x-3.5 bottom-20 top-auto h-[540px] max-h-[75vh] md:static md:h-auto md:max-h-none md:absolute md:inset-auto md:bottom-16 md:right-0 ${
+            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className={`fixed inset-x-3 bottom-20 sm:inset-auto sm:absolute sm:bottom-16 sm:right-0 ${
               isExpanded
-                ? "md:w-[680px] md:h-[82vh] md:max-h-[820px]"
-                : "md:w-[420px] md:h-[580px] md:max-h-[75vh]"
+                ? "sm:w-[660px] h-[82vh] max-h-[820px]"
+                : "sm:w-[420px] h-[580px] max-h-[calc(100vh-120px)]"
             } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_25px_70px_-15px_rgba(40,30,20,0.35)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
           >
             {/* Window Header */}
