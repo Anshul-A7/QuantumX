@@ -239,6 +239,19 @@ export class AuthService {
   }
 
   /**
+   * Update the user profile on the backend and sync local storage.
+   */
+  static async updateProfile(payload: { fullName?: string; profileImageUrl?: string | null }): Promise<UserProfile> {
+    try {
+      const response = await apiClient.patch<UserProfile>('/users/me', payload);
+      setUserData(response.data as unknown as Record<string, unknown>);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  }
+
+  /**
    * Logout: immediately revokes session in DB and wipes all client state and cookies.
    */
   static async logout(): Promise<void> {
