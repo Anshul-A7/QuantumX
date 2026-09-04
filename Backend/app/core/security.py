@@ -5,39 +5,34 @@ import string
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
 # =========================================================
-# PASSWORD HASHING (BCRYPT)
+# PASSWORD HASHING (NATIVE BCRYPT)
 # =========================================================
 
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-)
-
-
-def _prepare_password(password: str) -> str:
+def _prepare_password_bytes(password: str | bytes) -> bytes:
     """
     Bcrypt has a hard cryptographic limitation of 72 bytes.
-    Safely slice UTF-8 bytes to at most 72 bytes and decode back,
-    preventing bcrypt from raising ValueError while preserving full security.
+    Ensures input is always safely sliced to at most 72 bytes.
     """
-    if not isinstance(password, str):
-        password = str(password)
-    raw_bytes = password.encode("utf-8")
-    if len(raw_bytes) > 72:
-        return raw_bytes[:72].decode("utf-8", errors="ignore")
-    return password
+    if isinstance(password, str):
+        pwd_bytes = password.encode("utf-8")
+    elif isinstance(password, bytes):
+        pwd_bytes = password
+    else:
+        pwd_bytes = str(password).encode("utf-8")
+    return pwd_bytes[:72]
 
 
 def hash_password(password: str) -> str:
-    """Safely hashes passwords using bcrypt with 72-byte truncation protection."""
-    safe_password = _prepare_password(password)
-    return pwd_context.hash(safe_password)
+    """Safely hashes passwords using native bcrypt with 72-byte truncation protection."""
+    pwd_bytes = _prepare_password_bytes(password)
+    salt = bcrypt.gensalt(rounds=12)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(
@@ -47,12 +42,10 @@ def verify_password(
     """Verifies a plain password against its bcrypt hash safely."""
     if not plain_password or not password_hash:
         return False
-    safe_password = _prepare_password(plain_password)
     try:
-        return pwd_context.verify(
-            safe_password,
-            password_hash,
-        )
+        pwd_bytes = _prepare_password_bytes(plain_password)
+        hash_bytes = password_hash.encode("utf-8")
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
     except Exception:
         return False
 
