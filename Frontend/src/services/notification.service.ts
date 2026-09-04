@@ -12,29 +12,25 @@ export interface NotificationItem {
   createdAt?: string;
 }
 
+function getUserNotificationKey(): string {
+  if (typeof window === "undefined") return "quantumx_user_notifications";
+  const email = localStorage.getItem("quantumx_user_email") || "default";
+  return `quantumx_notifications_${email}`;
+}
+
 export class NotificationService {
   /**
-   * Fetch real notifications from Supabase via backend API with robust persistence.
+   * Fetch real notifications strictly for the current authenticated user.
+   * Returns empty list for fresh accounts.
    */
   static async getNotifications(): Promise<NotificationItem[]> {
     let records: NotificationItem[] = [];
-
-    // Check local storage persistent log first
-    if (typeof window !== "undefined") {
-      const local = localStorage.getItem("quantumx_notifications");
-      if (local) {
-        try {
-          records = JSON.parse(local);
-        } catch {
-          records = [];
-        }
-      }
-    }
+    const storageKey = getUserNotificationKey();
 
     try {
       const response = await apiClient.get<NotificationItem[]>("/notifications");
-      if (response.data && response.data.length > 0) {
-        const mapped = response.data.map((n) => ({
+      if (response.data && Array.isArray(response.data)) {
+        records = response.data.map((n) => ({
           ...n,
           time: n.createdAt
             ? new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -42,27 +38,30 @@ export class NotificationService {
           actionLabel: n.actionUrl ? "View Details" : undefined,
         }));
 
-        // Merge backend records with local storage without duplicates
-        const existingIds = new Set(records.map((r) => r.id));
-        mapped.forEach((m) => {
-          if (!existingIds.has(m.id)) {
-            records.push(m);
-          }
-        });
-
         if (typeof window !== "undefined") {
-          localStorage.setItem("quantumx_notifications", JSON.stringify(records));
+          localStorage.setItem(storageKey, JSON.stringify(records));
         }
+        return records;
       }
     } catch {
-      // Offline fallback: returns local records
+      // Offline fallback: returns user-scoped local records only
+      if (typeof window !== "undefined") {
+        const local = localStorage.getItem(storageKey);
+        if (local) {
+          try {
+            records = JSON.parse(local);
+          } catch {
+            records = [];
+          }
+        }
+      }
     }
 
     return records;
   }
 
   /**
-   * Create a new notification in Supabase.
+   * Create a new notification in database for the current user.
    */
   static async createNotification(payload: {
     id?: string;
@@ -71,6 +70,7 @@ export class NotificationService {
     message: string;
     actionUrl?: string;
   }): Promise<NotificationItem> {
+    const storageKey = getUserNotificationKey();
     try {
       const response = await apiClient.post<NotificationItem>("/notifications", payload);
       const saved = {
@@ -78,9 +78,9 @@ export class NotificationService {
         time: "Just now",
       };
       if (typeof window !== "undefined") {
-        const local = localStorage.getItem("quantumx_notifications");
+        const local = localStorage.getItem(storageKey);
         const list = local ? JSON.parse(local) : [];
-        localStorage.setItem("quantumx_notifications", JSON.stringify([saved, ...list].slice(0, 20)));
+        localStorage.setItem(storageKey, JSON.stringify([saved, ...list].slice(0, 20)));
       }
       return saved;
     } catch {
@@ -94,27 +94,28 @@ export class NotificationService {
         time: "Just now",
       };
       if (typeof window !== "undefined") {
-        const local = localStorage.getItem("quantumx_notifications");
+        const local = localStorage.getItem(storageKey);
         const list = local ? JSON.parse(local) : [];
-        localStorage.setItem("quantumx_notifications", JSON.stringify([fallback, ...list].slice(0, 20)));
+        localStorage.setItem(storageKey, JSON.stringify([fallback, ...list].slice(0, 20)));
       }
       return fallback;
     }
   }
 
   /**
-   * Mark a notification as read in Supabase.
+   * Mark a notification as read.
    */
   static async markAsRead(id: string): Promise<void> {
     try {
       await apiClient.patch(`/notifications/${id}/read`);
     } catch {}
     if (typeof window !== "undefined") {
-      const local = localStorage.getItem("quantumx_notifications");
+      const storageKey = getUserNotificationKey();
+      const local = localStorage.getItem(storageKey);
       if (local) {
         const list = JSON.parse(local) as NotificationItem[];
         localStorage.setItem(
-          "quantumx_notifications",
+          storageKey,
           JSON.stringify(list.map((n) => (n.id === id ? { ...n, read: true } : n)))
         );
       }
@@ -122,18 +123,19 @@ export class NotificationService {
   }
 
   /**
-   * Mark all notifications as read in Supabase.
+   * Mark all notifications as read.
    */
   static async markAllAsRead(): Promise<void> {
     try {
       await apiClient.patch("/notifications/read-all");
     } catch {}
     if (typeof window !== "undefined") {
-      const local = localStorage.getItem("quantumx_notifications");
+      const storageKey = getUserNotificationKey();
+      const local = localStorage.getItem(storageKey);
       if (local) {
         const list = JSON.parse(local) as NotificationItem[];
         localStorage.setItem(
-          "quantumx_notifications",
+          storageKey,
           JSON.stringify(list.map((n) => ({ ...n, read: true })))
         );
       }
@@ -141,18 +143,19 @@ export class NotificationService {
   }
 
   /**
-   * Delete a notification from Supabase.
+   * Delete a notification.
    */
   static async deleteNotification(id: string): Promise<void> {
     try {
       await apiClient.delete(`/notifications/${id}`);
     } catch {}
     if (typeof window !== "undefined") {
-      const local = localStorage.getItem("quantumx_notifications");
+      const storageKey = getUserNotificationKey();
+      const local = localStorage.getItem(storageKey);
       if (local) {
         const list = JSON.parse(local) as NotificationItem[];
         localStorage.setItem(
-          "quantumx_notifications",
+          storageKey,
           JSON.stringify(list.filter((n) => n.id !== id))
         );
       }
@@ -160,13 +163,15 @@ export class NotificationService {
   }
 
   /**
-   * Clear all notifications for user from Supabase.
+   * Clear all notifications for user.
    */
   static async clearAll(): Promise<void> {
     try {
       await apiClient.delete("/notifications");
     } catch {}
     if (typeof window !== "undefined") {
+      const storageKey = getUserNotificationKey();
+      localStorage.removeItem(storageKey);
       localStorage.removeItem("quantumx_notifications");
     }
   }

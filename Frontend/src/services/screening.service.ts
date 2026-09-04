@@ -29,29 +29,25 @@ export interface StoredPrediction {
   timestamp?: string;
 }
 
+function getUserScreeningKey(): string {
+  if (typeof window === "undefined") return "quantumx_user_screenings";
+  const email = localStorage.getItem("quantumx_user_email") || "default";
+  return `quantumx_screenings_${email}`;
+}
+
 export class ScreeningService {
   /**
-   * Fetch persistent screening records. Combines backend records and local storage audit log.
+   * Fetch persistent screening records strictly for the current authenticated user.
+   * Returns empty list for fresh accounts.
    */
   static async getScreenings(): Promise<StoredPrediction[]> {
     let records: StoredPrediction[] = [];
-
-    // Check local storage persistent log first
-    if (typeof window !== "undefined") {
-      const local = localStorage.getItem("quantumx_prediction_history");
-      if (local) {
-        try {
-          records = JSON.parse(local);
-        } catch {
-          records = [];
-        }
-      }
-    }
+    const storageKey = getUserScreeningKey();
 
     try {
       const response = await apiClient.get<StoredPrediction[]>("/screenings");
-      if (response.data && response.data.length > 0) {
-        const mapped = response.data.map((s) => ({
+      if (response.data && Array.isArray(response.data)) {
+        records = response.data.map((s) => ({
           ...s,
           patientName: s.patientName || s.patientId,
           disease: s.disease || s.diseaseType || "Breast Cytology (Fine Needle Aspirate)",
@@ -66,97 +62,22 @@ export class ScreeningService {
             : "Recent",
         }));
 
-        // Merge backend records with local storage without duplicates
-        const existingIds = new Set(records.map((r) => r.id));
-        mapped.forEach((m) => {
-          if (!existingIds.has(m.id)) {
-            records.push(m);
-          }
-        });
+        if (typeof window !== "undefined") {
+          localStorage.setItem(storageKey, JSON.stringify(records));
+        }
+        return records;
       }
     } catch {
-      // Offline fallback: returns local records
-    }
-
-    // Default sample cases if totally empty so table is never blank
-    if (records.length === 0) {
-      records = [
-        {
-          id: "QX-BC-5279",
-          patientId: "QX-BC-5279",
-          patientName: "Yuki",
-          patientAge: 55,
-          patientGender: "Female",
-          diseaseType: "Breast Cytology (Fine Needle Aspirate)",
-          disease: "Breast Cancer Screening",
-          cohort: "Fine Needle Aspirate (WDBC)",
-          quantumPrediction: "Benign",
-          quantumRiskScore: 42.4,
-          quantumConfidence: 51.5,
-          classicalPrediction: "Benign",
-          classicalRiskScore: 44.1,
-          classicalConfidence: 70.5,
-          riskLevel: "Low",
-          topDriver: "Cell Size (Radius)",
-          topDriverImpact: 6.6,
-          consensusStatus: "Concordant",
-          quantumExecutionTimeMs: 700.4,
-          classicalExecutionTimeMs: 104.4,
-          timestamp: "Sep 2, 2026, 11:45 PM",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "QX-BC-9287",
-          patientId: "QX-BC-9287",
-          patientName: "Elena Rostova",
-          patientAge: 52,
-          patientGender: "Female",
-          diseaseType: "Breast Cytology (Fine Needle Aspirate)",
-          disease: "Breast Cancer Screening",
-          cohort: "Fine Needle Aspirate (WDBC)",
-          quantumPrediction: "Benign",
-          quantumRiskScore: 35.4,
-          quantumConfidence: 50.6,
-          classicalPrediction: "Benign",
-          classicalRiskScore: 38.2,
-          classicalConfidence: 72.1,
-          riskLevel: "Low",
-          topDriver: "Cell Size (Radius)",
-          topDriverImpact: -5.9,
-          consensusStatus: "Concordant",
-          quantumExecutionTimeMs: 685.2,
-          classicalExecutionTimeMs: 98.1,
-          timestamp: "Sep 2, 2026, 10:12 PM",
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: "QX-BC-4891",
-          patientId: "QX-BC-4891",
-          patientName: "Priya Sharma",
-          patientAge: 58,
-          patientGender: "Female",
-          diseaseType: "Breast Cytology (Fine Needle Aspirate)",
-          disease: "Breast Cancer Screening",
-          cohort: "Fine Needle Aspirate (WDBC)",
-          quantumPrediction: "Malignant",
-          quantumRiskScore: 92.4,
-          quantumConfidence: 94.8,
-          classicalPrediction: "Malignant",
-          classicalRiskScore: 88.1,
-          classicalConfidence: 91.2,
-          riskLevel: "High",
-          topDriver: "Nuclear Area & Perimeter",
-          topDriverImpact: 14.8,
-          consensusStatus: "Concordant",
-          quantumExecutionTimeMs: 712.0,
-          classicalExecutionTimeMs: 112.5,
-          timestamp: "Sep 2, 2026, 09:18 PM",
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-        },
-      ];
-
+      // Offline fallback: returns user-scoped local records only
       if (typeof window !== "undefined") {
-        localStorage.setItem("quantumx_prediction_history", JSON.stringify(records));
+        const local = localStorage.getItem(storageKey);
+        if (local) {
+          try {
+            records = JSON.parse(local);
+          } catch {
+            records = [];
+          }
+        }
       }
     }
 
@@ -164,8 +85,7 @@ export class ScreeningService {
   }
 
   /**
-   * Save a new screening record permanently to the audit log.
-   * Records are immutable and non-deletable for medical compliance.
+   * Save a new screening record to the database for the current user.
    */
   static async createScreening(payload: Partial<StoredPrediction>): Promise<StoredPrediction> {
     const recordId = payload.id || payload.patientId || `QX-BC-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -206,28 +126,27 @@ export class ScreeningService {
       timestamp: nowStr,
     };
 
-    // Save to persistent localStorage audit trail
+    // Save to user-scoped localStorage
     if (typeof window !== "undefined") {
       try {
-        const local = localStorage.getItem("quantumx_prediction_history");
+        const storageKey = getUserScreeningKey();
+        const local = localStorage.getItem(storageKey);
         const list: StoredPrediction[] = local ? JSON.parse(local) : [];
-        // Prepend without duplicate IDs
         const filtered = list.filter((r) => r.id !== newRecord.id);
-        const updated = [newRecord, ...filtered];
-        localStorage.setItem("quantumx_prediction_history", JSON.stringify(updated));
+        localStorage.setItem(storageKey, JSON.stringify([newRecord, ...filtered]));
       } catch (e) {
         console.warn("Could not save screening to localStorage:", e);
       }
     }
 
-    // Try persisting to API/Supabase if available
+    // Persist to backend database (Supabase)
     try {
       await apiClient.post("/screenings", newRecord);
     } catch {}
 
-    // Dispatch real persistent clinical notification
+    // Dispatch persistent clinical notification
     try {
-      NotificationService.createNotification({
+      await NotificationService.createNotification({
         id: `notif-${recordId}`,
         title: `Screening Completed: ${newRecord.patientName}`,
         category: "disease",
@@ -240,10 +159,12 @@ export class ScreeningService {
   }
 
   /**
-   * Clears all screening history records (both local cache and backend database).
+   * Clears all screening history records for the current user.
    */
   static async clearAllScreenings(): Promise<void> {
     if (typeof window !== "undefined") {
+      const storageKey = getUserScreeningKey();
+      localStorage.removeItem(storageKey);
       localStorage.removeItem("quantumx_prediction_history");
     }
     try {

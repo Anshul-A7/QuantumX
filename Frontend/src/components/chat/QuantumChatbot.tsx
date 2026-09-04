@@ -379,9 +379,9 @@ export default function QuantumChatbot() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className={`fixed inset-x-3 bottom-20 sm:inset-auto sm:absolute sm:bottom-16 sm:right-0 ${
               isExpanded
-                ? "sm:w-[660px] h-[82vh] max-h-[820px]"
-                : "sm:w-[420px] h-[580px] max-h-[calc(100vh-120px)]"
-            } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_25px_70px_-15px_rgba(40,30,20,0.35)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
+                ? "sm:w-[580px] h-[72vh] max-h-[640px]"
+                : "sm:w-[380px] h-[470px] max-h-[68vh]"
+            } bg-parchment rounded-3xl border border-hairline/90 shadow-[0_20px_50px_-15px_rgba(40,30,20,0.3)] flex flex-col overflow-hidden transition-all duration-300 z-50`}
           >
             {/* Window Header */}
             <div className="px-5 py-4 border-b border-hairline bg-cream/70 backdrop-blur-md flex items-center justify-between shrink-0">

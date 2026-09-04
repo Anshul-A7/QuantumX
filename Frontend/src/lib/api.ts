@@ -76,12 +76,20 @@ export function getUserData(): Record<string, unknown> | null {
 
 export function clearAuth(): void {
   if (typeof window === 'undefined') return;
+  const userEmail = localStorage.getItem(TOKEN_KEYS.USER_EMAIL);
+  if (userEmail) {
+    localStorage.removeItem(`quantumx_screenings_${userEmail}`);
+    localStorage.removeItem(`quantumx_notifications_${userEmail}`);
+  }
   localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN);
   localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(TOKEN_KEYS.USER_DATA);
   localStorage.removeItem(TOKEN_KEYS.USER_EMAIL);
   localStorage.removeItem(TOKEN_KEYS.USER_NAME);
   localStorage.removeItem(TOKEN_KEYS.USER_AVATAR);
+  localStorage.removeItem('quantumx_prediction_history');
+  localStorage.removeItem('quantumx_notifications');
+  localStorage.removeItem('quantumx_is_new_registration');
 }
 
 export function isAuthenticated(): boolean {
