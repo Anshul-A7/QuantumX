@@ -44,8 +44,13 @@ PROBLEM.md
 SCRATCHPAD.md
 SKILL.md
 
-# User specific ignores
-Models/
+# Large Datasets, Checkpoints, and Binary Records (Ignored from GitHub)
+Models/v2/data/records100/
+Models/v2/data/records500/
+Models/v2/src/checkpoints/
+*.dat
+*.hea
+*.pt
 Plan/
 Research/
 Team Data/
