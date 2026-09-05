@@ -133,6 +133,24 @@ export default function ModelComparisonTab({
         </div>
       </div>
 
+      {/* Discordant Consensus Safety Protocol Alert */}
+      {!isConcordant && (
+        <div className="p-4 bg-amber-50/90 border-b border-amber-200 flex items-start gap-3">
+          <ShieldAlert className="text-amber-600 shrink-0 mt-0.5" size={18} />
+          <div className="space-y-1 text-xs">
+            <h4 className="font-bold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+              <span>Discordant Consensus Detected — Fail-Safe Safety Protocol Active</span>
+              <span className="text-[10px] font-mono px-2 py-0.2 bg-amber-200/70 text-amber-900 rounded font-semibold">
+                High Complexity Biopsy
+              </span>
+            </h4>
+            <p className="text-amber-800 leading-relaxed">
+              Classical engine (CX-01) predicted <strong className="font-semibold text-amber-950">{cxPrediction} ({cxRisk}%)</strong> while Quantum engine (Transfinite-1) predicted <strong className="font-semibold text-amber-950">{tfPrediction} ({tfRisk}%)</strong>. Because single-model blind spots can cause False Negatives, automated clearance is withheld. Secondary molecular confirmation (HER2 / IHC staining or core biopsy) is strongly recommended.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Middle: 2 Side-by-Side Model Summaries Separated by Hairline Divider */}
       <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-hairline border-b border-hairline">
         {/* Left Column: Classical Baseline (CX-01) */}

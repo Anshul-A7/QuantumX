@@ -497,7 +497,13 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                     <span className="text-[10px] text-ink-soft block font-mono uppercase">Primary Risk Driver</span>
                     <strong className="text-xs text-ink">{selectedCase.topDriver || "Cell Size (Radius)"}</strong>
                   </div>
-                  <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full font-bold">
+                  <span
+                    className={`text-[10px] font-mono px-2.5 py-1 rounded-full font-bold uppercase ${
+                      selectedCase.consensusStatus === "Discordant"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : "text-emerald-700 bg-emerald-50 border border-emerald-200"
+                    }`}
+                  >
                     {selectedCase.consensusStatus || "Concordant"}
                   </span>
                 </div>
