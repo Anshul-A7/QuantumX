@@ -128,15 +128,20 @@ export function LegalPageLayout({
         </motion.div>
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="border-t border-white/10 bg-black/60 py-8 px-6 lg:px-12 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span>© 2026 QUANTUMX RESEARCH PLATFORM</span>
-          <div className="flex items-center gap-6">
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</Link>
-            <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
+      {/* Minimal Footer with Medical Disclaimer */}
+      <footer className="border-t border-white/10 bg-black/60 py-8 px-6 lg:px-12 font-mono text-[10px] text-white/40">
+        <div className="max-w-4xl mx-auto space-y-4">
+          <p className="leading-relaxed text-white/40 tracking-wider">
+            <strong className="text-white/70 font-semibold">INVESTIGATIONAL RESEARCH DISCLAIMER:</strong> This platform is a clinical research prototype. It is not intended for primary autonomous medical diagnosis or clinical classification without licensed medical professional oversight. Delivered &ldquo;AS IS&rdquo; for translational research protocols.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/5 uppercase tracking-[0.2em]">
+            <span>© 2026 QUANTUMX RESEARCH PLATFORM</span>
+            <div className="flex items-center gap-6">
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/disclaimer" className="hover:text-white transition-colors">Disclaimer</Link>
+              <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
+            </div>
           </div>
         </div>
       </footer>

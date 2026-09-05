@@ -808,6 +808,18 @@ function Footer() {
         </div>
       </div>
 
+      {/* Clinical Research Regulatory Disclaimer Banner */}
+      <div className="border-t border-white/10 bg-white/[0.02]">
+        <div className="mx-auto max-w-[1400px] px-6 lg:px-10 py-6">
+          <p className="font-mono text-[10px] leading-relaxed text-white/50 tracking-wider">
+            <strong className="text-white/80 font-semibold">INVESTIGATIONAL MEDICAL RESEARCH DISCLAIMER:</strong> This software is an advanced investigational prototype engineered for clinical algorithmic research, quantum benchmarking, and comparative decision support. It is not designed or certified as an autonomous standalone diagnostic device for primary medical diagnosis without qualified physician oversight. Delivered &ldquo;AS IS&rdquo; for authorized translational healthcare research protocols.
+          </p>
+          <p className="font-mono text-[9px] text-white/30 tracking-widest mt-2">
+            Developed for Translational Medical Intelligence &amp; Quantum Machine Learning Research © 2026 — Present.
+          </p>
+        </div>
+      </div>
+
       {/* Bottom bar with subtle parallax */}
       <div ref={barRef} className="border-t border-white/10">
         <div className="mx-auto max-w-[1400px] px-6 lg:px-10 py-6 flex flex-wrap items-center justify-between gap-4 font-mono text-[9px] uppercase tracking-[0.2em] text-white/40">
