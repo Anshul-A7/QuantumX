@@ -14,7 +14,6 @@
 | Member | Technical Role | Assigned Slide & Topic | Core Defense Responsibility | Document Link |
 | :--- | :--- | :--- | :--- | :--- |
 | **Kamran** | `R3-ML`: Classical ML Pipeline, Preprocessing, Benchmarks, SHAP | **Slide 2**: Proposed Solution & Problem Separation | Mathematical failure of classical ML, Euclidean overlap, 8-D Hilbert mapping, Huang $s_K$ screening | [Open Kamran Q&A](<./Question - Machine Learning & Proposed Solution (Kamran).md>) |
-| **Anshul** | `R6-LEADER & QUANTUM` / `R4-INTEGRATION`: Lead & Quantum Architect | **Slide 3**: Technical Approach & **Slide 7**: System Scaling / Open | End-to-end pipeline, Autoencoder, VQC circuit design, PyTorch-PennyLane autograd, IBM QPU validation, Causal Gate Ablation, BVP benchmark, Multimodal vision | [Open Anshul Q&A](<./Question - Lead & Quantum Architect (Anshul).md>) |
 | **Jeevan** | `R2-BACKEND`: FastAPI, Hardware Execution Pipelines, Compute | **Slide 5**: Feasibility (Technical & Hardware Readiness) | IBM QPU vs PennyLane execution, 48-parameter training stability, barren plateau elimination, sub-second latency, thermal noise resilience | [Open Jeevan Q&A](<./Question - Backend & Feasibility Infrastructure (Jeevan).md>) |
 | **Prem** | `R2-BACKEND`: FastAPI, PostgreSQL, Healthcare Protocols, Economics | **Slide 5**: Viability (Clinical, Financial & Compliance) | FHIR/DICOM clinical integration, ₹0.10/₹48 vs ₹12,000 biopsy ROI, 4.2-month break-even, AES-256 / DISHA / HIPAA compliance, cross-disease scalability | [Open Prem Q&A](<./Question - Backend & Viability Architecture (Prem).md>) |
 | **Jagruti** | `R1-FRONTEND`: Next.js 16 UI, Tailwind CSS, 3D Bloch Visualizer | **Slide 6**: Impacts & Target Audience | Clinical impact (>99.5% recall), economic efficiency, rural equity, frontend architecture, WebSockets, real-time telemetry, responsive clinical UX | [Open Jagruti Q&A](<./Question - Frontend Developer (Jagruti).md>) |
@@ -25,7 +24,6 @@
 ## 📁 Direct Navigation Links
 
 * 📄 **Kamran (Slide 2 - ML & Proposed Solution):** [Question - Machine Learning & Proposed Solution (Kamran).md](<./Question - Machine Learning & Proposed Solution (Kamran).md>)
-* 📄 **Anshul (Slide 3 & 7 - Quantum Architecture & Scaling):** [Question - Lead & Quantum Architect (Anshul).md](<./Question - Lead & Quantum Architect (Anshul).md>)
 * 📄 **Jeevan (Slide 5 - Technical Feasibility & Hardware):** [Question - Backend & Feasibility Infrastructure (Jeevan).md](<./Question - Backend & Feasibility Infrastructure (Jeevan).md>)
 * 📄 **Prem (Slide 5 - Clinical & Economic Viability):** [Question - Backend & Viability Architecture (Prem).md](<./Question - Backend & Viability Architecture (Prem).md>)
 * 📄 **Jagruti (Slide 6 - Clinical Impact & Frontend):** [Question - Frontend Developer (Jagruti).md](<./Question - Frontend Developer (Jagruti).md>)
