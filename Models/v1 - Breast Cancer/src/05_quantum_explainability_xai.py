@@ -246,16 +246,15 @@ class CryptographicQuantumReceiptGenerator:
 
 # ==================================================================================================
 if __name__ == "__main__":
+    import os
+    import sys
+    import importlib.util
     logger.info("Executing QuantumX Explainability Engine self-test...")
-    try:
-        from Models.v1.src import VariationalQuantumClassifier
-    except Exception:
-        import importlib.util
-        _cur_dir = os.path.dirname(os.path.abspath(__file__))
-        spec = importlib.util.spec_from_file_location("quantum_circuits", os.path.join(_cur_dir, "03_quantum_circuits.py"))
-        _qc = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(_qc)
-        VariationalQuantumClassifier = _qc.VariationalQuantumClassifier
+    _cur_dir = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("quantum_circuits", os.path.join(_cur_dir, "03_quantum_circuits_and_ansatz.py"))
+    _qc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(_qc)
+    VariationalQuantumClassifier = _qc.VariationalQuantumClassifier
     
     np.random.seed(42)
     X_toy = np.random.uniform(0.1, 2.5, size=(20, 4))

@@ -64,25 +64,46 @@ Models/
 
 ## 4. Execution & CLI Quickstart
 
-All model engines are executable via Python command line or the interactive Jupyter notebook.
+Every module in `Models/v1 - Breast Cancer/src/` is a self-contained, executable script equipped with integrated validation self-tests. You can run any individual component or execute the master training and inference services.
 
 ### Option A: Interactive Research Notebook
 Open [`Models/v1 - Breast Cancer/QuantumX_v1_Training_Pipeline.ipynb`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1%20-%20Breast%20Cancer/QuantumX_v1_Training_Pipeline.ipynb) in Jupyter Lab, VS Code, or Google Colab (with GPU acceleration).
 
-### Option B: Local CLI Execution
+### Option B: Local CLI Execution (Modules 01 to 10)
+
 ```powershell
 # Navigate to repository root
 cd c:\Users\anshu\OneDrive\Desktop\QuantumX
 
-# 1. Execute Master 50-Fold Repeated CV Training Loop
+# --- Core Modules & Quantum Pipeline Engines ---
+# 01. Run Data Preprocessing & Simulated Annealing (ISA) Self-Test
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/01_data_preprocessing_engine.py"
+
+# 02. Run Classical Benchmark Suite Self-Test (XGBoost, SVM, RF, ElasticNet, MLP)
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/02_classical_benchmark_suite.py"
+
+# 03. Run Quantum Circuits, VQC & HQNN Self-Test
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/03_quantum_circuits_and_ansatz.py"
+
+# 04. Run Superconducting Quantum Noise & Richardson ZNE Self-Test
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/04_quantum_noise_and_error_mitigation.py"
+
+# 05. Run QXplain Gate Saliency & OpenQASM 3.0 Receipt Generator
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/05_quantum_explainability_xai.py"
+
+# 06. Execute Master 50-Fold Repeated CV Training & Statistical Verification
 .\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/06_train_and_verification_pipeline.py"
 
-# 2. Run Classical Production Inference Engine (CX-01)
+# --- Production Inference & Publication Visualizers ---
+# 07. Run Dedicated Classical Production Inference Engine (CX-01)
 .\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/07_classical_inference_engine.py"
 
-# 3. Run Hybrid Quantum Production Inference Engine (QX-01)
+# 08. Run Dedicated Hybrid Quantum Production Inference Engine (QX-01)
 .\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/08_quantum_hybrid_inference_engine.py"
 
-# 4. Generate Publication Figures & Dashboards
+# 09. Run Clinical Risk Stratification & Morphometric Evidence Index (MEI) Engine
+.\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/09_clinical_risk_stratification_engine.py"
+
+# 10. Generate High-Resolution Publication Figures & Master Dashboard
 .\Backend\.venv\Scripts\python.exe "Models/v1 - Breast Cancer/src/10_generate_benchmark_graphs.py"
 ```

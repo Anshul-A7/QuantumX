@@ -288,7 +288,10 @@ class HybridQuantumNeuralNetwork(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         encoded = self.classical_encoder(x)
-        q_out = self.qlayer(encoded).to(dtype=torch.float32)
+        if encoded.ndim == 1:
+            encoded = encoded.unsqueeze(0)
+        q_outs = [self.qlayer(encoded[i]) for i in range(encoded.shape[0])]
+        q_out = torch.stack(q_outs).to(dtype=torch.float32)
         logits = self.classification_head(q_out)
         return logits
 
