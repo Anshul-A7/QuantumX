@@ -347,5 +347,5 @@ class QuantumXMasterPipeline:
 # ==================================================================================================
 
 if __name__ == "__main__":
-    pipeline = QuantumXMasterPipeline(n_splits=5, n_repeats=1, n_qubits=8, target_dir="./Models/v1/artifacts")
+    pipeline = QuantumXMasterPipeline(n_splits=5, n_repeats=1, n_qubits=8, target_dir="./Models/v1/artifacts_v1")
     results = pipeline.run_full_pipeline()
