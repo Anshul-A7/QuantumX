@@ -86,18 +86,16 @@ Models/v1 - Breast Cancer/
 │   ├── QuantumX_v1_Training_Convergence_and_Saliency_Execution.png # VQC loss descent & convergence plot
 │   └── QuantumX_v1_Comprehensive_Scientific_Report.md # Formal report with signed OpenQASM 3.0 receipts
 ├── Test Cases - Breast Cancer/            # Multi-modal demo test cases partitioned by diagnosis
-│   ├── Benign/                            # 5 Benign patient test cases across 6 modalities
+│   ├── Benign/                            # 5 Benign patient test cases (Case 01 to 05) across 6 modalities
 │   │   ├── csv/                           # Comma-separated values format
 │   │   ├── tsv/                           # Tab-separated values format
-│   │   ├── images/                        # High-resolution clinical report PNG renders
 │   │   ├── json/                          # Structured JSON schema payloads
 │   │   ├── markdown/                      # Formatted markdown pathology summaries
 │   │   ├── pdf/                           # Multi-page hospital clinical PDF reports
 │   │   └── text/                          # Plain text laboratory results
-│   └── Malignant/                         # 4 Malignant patient test cases across 6 modalities
+│   └── Malignant/                         # 4 Malignant patient test cases (Case 01 to 04) across 6 modalities
 │       ├── csv/                           # Comma-separated values format
 │       ├── tsv/                           # Tab-separated values format
-│       ├── images/                        # High-resolution clinical report PNG renders
 │       ├── json/                          # Structured JSON schema payloads
 │       ├── markdown/                      # Formatted markdown pathology summaries
 │       ├── pdf/                           # Multi-page hospital clinical PDF reports
