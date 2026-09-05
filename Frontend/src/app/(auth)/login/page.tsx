@@ -238,13 +238,13 @@ export default function LoginPage() {
         >
           <motion.img
             src="/images/auth-manifold.jpg"
-            alt="Quantum Manifold Coherence"
+            alt="Quantum Crystalline Manifold"
             animate={{ scale: [1, 1.04, 1], rotate: [0, 0.4, 0] }}
-            transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute inset-0 w-full h-full object-cover object-center opacity-85"
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-90"
           />
           
-          <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/30 to-ink/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-ink/30 pointer-events-none" />
 
           {/* Top Label */}
           <div className="relative z-10">
