@@ -639,3 +639,23 @@ When judges ask: *"How does QuantumX compare against these giant foundation mode
 * **Symbiotic Integration**: In a modern clinical pipeline, classical vision models (like *TotalSegmentator* or *Prov-GigaPath*) extract quantitative cellular/organ contours. **QuantumX then ingests those high-dimensional numerical vectors into its quantum Hilbert space, computing ultra-fast, fail-safe consensus risk triage that can be deployed anywhere at zero marginal cost.**
 
 ---
+
+## 10. Deployed Web Platforms with Similar User Workflows (Register ➔ Input Data ➔ Get AI/Risk Output)
+
+For comparison and presentation context, here is a concise list of established clinical and AI web platforms where users/doctors **register, input patient data/scans, and receive instant automated diagnostic scores or reports**:
+
+| Category | Platform / Website | Organization | Input Modality | Automated Output | Exact Link |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Cancer Genetics** | **CanRisk (BOADICEA)** | Univ. of Cambridge | Age, family history, BRCA1/2 genes, breast density | 10-year & lifetime breast/ovarian cancer risk curves + clinical PDF report | [canrisk.org](https://www.canrisk.org) |
+| **Clinical Decision Support** | **Calculate by QxMD** | QxMD / WebMD | Lab values, blood pressure, renal & cardiac numbers | Instant disease risk scores (ASCVD, CKD, Stroke) & guideline treatment steps | [calculate.qxmd.com](https://calculate.qxmd.com) |
+| **Doctor Risk Calculators** | **MDCalc** | MDCalc (65%+ US docs) | Clinical biomarkers, vitals, hematology numbers | Stratified severity risk %, mortality risk, and clinical next steps | [mdcalc.com](https://www.mdcalc.com) |
+| **Mammography Risk** | **BCSC Risk Calculator** | BCSC Consortium | Age, race, biopsy history, BI-RADS density | 5-year and 10-year invasive breast cancer risk vs. population average | [bcsc-research.org/tools](https://www.bcsc-research.org/tools) |
+| **Cardiology Risk** | **ACC ASCVD Estimator Plus** | American College of Cardiology | Blood pressure, cholesterol, diabetes, smoking | 10-year cardiovascular risk %, lifetime risk %, and medication simulation | [tools.acc.org/ascvd](https://tools.acc.org/ascvd-risk-estimator-plus) |
+| **Medical AI Hub** | **Grand Challenge** | Radboud University / Global AI | Biopsy slides, CT/MRI scans, or clinical datasets | Cloud container executes AI models; outputs visual masks & risk scores | [grand-challenge.org](https://grand-challenge.org) |
+| **Cloud Digital Pathology** | **Paige.ai Portal** | Paige.ai | Whole-slide digital biopsy images | Automated tumor grading, biomarker quantification, and diagnostic reports | [paige.ai](https://paige.ai) |
+| **Cloud 3D Hemodynamics** | **HeartFlow Portal** | HeartFlow Inc. | Coronary CT Angiography scans | Interactive 3D coronary artery tree with fractional flow reserve ($FFR_{ct}$) | [heartflow.com](https://www.heartflow.com) |
+
+> **Key Difference for QuantumX**: While these existing platforms rely strictly on single classical equations or classical neural networks, **QuantumX is the first platform to combine a multi-disease web workflow with a Cloud Hybrid Quantum Hilbert-Space Inference Engine and a Dual-Engine Discordant Consensus Protocol** to prevent False Negatives.
+
+---
+
