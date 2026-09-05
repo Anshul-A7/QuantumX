@@ -32,26 +32,23 @@ The **primary research artifact** is the interactive Jupyter Notebook [`QuantumX
 
 ---
 
-## 📂 Modular Architecture & Source Files
+## 📂 Sequential Modular Architecture ([`Models/v1/src/`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/))
 
-### Primary Interactive Research Artifact
-* [`QuantumX_v1_Training_Pipeline.ipynb`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/QuantumX_v1_Training_Pipeline.ipynb): Self-contained, fully executable Jupyter / Google Colab notebook showcasing the complete training lifecycle, quantum circuit visualization, noise scaling curves, and gate ablation saliency heatmaps.
+The source modules are strictly ordered in a 10-step logical execution sequence:
 
-### Modular Source Pipeline ([`Models/v1/src/`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/))
-
-| File Name | Purpose & Functionality | Key Classes & Methods |
-| :--- | :--- | :--- |
-| [`01_data_preprocessing_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/01_data_preprocessing_engine.py) | **Data Ingestion & Feature Selection Engine**: Ingestion of cytopathology features, zero-leakage fold-isolated preprocessing, metaheuristic Simulated Annealing (ISA) feature selection, and Huang et al. $s_K$ geometric kernel difference calculation. | `load_wdbc_dataset`, `FoldPreprocessor`, `ImprovedSimulatedAnnealingSelector`, `GeometricDifferenceCalculator` |
-| [`02_classical_benchmark_suite.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/02_classical_benchmark_suite.py) | **Classical SOTA Benchmark Suite**: Comprehensive classical classifiers with hyperparameter tuning (XGBoost, Support Vector Machine RBF, Random Forest, ElasticNet Logistic Regression, and PyTorch Deep MLP). | `XGBoostChampion`, `SVMRBFChampion`, `RandomForestChampion`, `ElasticNetLogisticChampion`, `PyTorchMLPChampion`, `evaluate_classifier` |
-| [`03_quantum_circuits_and_ansatz.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/03_quantum_circuits_and_ansatz.py) | **Quantum Circuit & Kernel Engine**: PennyLane 8-qubit quantum state embeddings (Second-Order Pauli-$Z$ ZZ Feature Map, Strongly Entangling Ansatz, Variational Quantum Classifier VQC, Quantum Kernel SVM, and Hybrid Neural Network). | `zz_feature_map`, `strongly_entangling_ansatz`, `VariationalQuantumClassifier`, `QuantumKernelSVM`, `HQNNChampion` |
-| [`04_quantum_noise_and_error_mitigation.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/04_quantum_noise_and_error_mitigation.py) | **Physical Quantum Noise & Error Mitigation**: Emulates physical superconducting QPU noise channels (depolarizing, amplitude/phase damping, readout SPAM errors) and performs Richardson polynomial Zero-Noise Extrapolation (ZNE). | `NoisyQuantumDevice`, `ZeroNoiseExtrapolator` |
-| [`05_quantum_explainability_xai.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/05_quantum_explainability_xai.py) | **Quantum Explainability & Cryptographic Verification**: QXplain causal gate ablation saliency $\mathcal{S}(G_k)$, sub-system Von Neumann entanglement entropy, and cryptographically signed OpenQASM 3.0 circuit receipts. | `compute_input_feature_importance`, `QuantumGateAblator`, `compute_von_neumann_entropy`, `CryptographicQuantumReceiptGenerator` |
-| [`06_train_and_verification_pipeline.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/06_train_and_verification_pipeline.py) | **Master Training Loop & Statistical Evaluation**: Orchestrates 50-fold repeated stratified cross-validation, hyperparameter optimization, model checkpointing, McNemar's $\chi^2$ test, and Wilcoxon signed-rank verification. | `StatisticalSignificanceEngine`, `QuantumXMasterPipeline` |
-| [`aegis_classical_v1.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/aegis_classical_v1.py) | **Standalone Classical Production Inference Endpoint (`CX-01`)**: High-speed, production-grade inference service loading saved weights to evaluate incoming patient vectors via SVM-RBF, XGBoost, and Random Forest. | `AegisClassicalEngine` |
-| [`quantumx_hybrid_v1.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/quantumx_hybrid_v1.py) | **Standalone Quantum Hybrid Production Inference Endpoint (`QX-01`)**: Production-grade inference service executing the 8-Qubit VQC model on PennyLane CPU statevector simulator ($<15\ \text{ms}$) or real IBM Quantum QPUs. | `QuantumXHybridEngine` |
-| [`risk_stratification_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/risk_stratification_engine.py) | **Calibrated Clinical Risk Stratification**: Computes calibrated risk scores, assigns patient clinical triage tiers (Low, Intermediate, Elevated, Critical), and formats recommendations. | `compute_calibrated_clinical_risk` |
-| [`generate_benchmark_graphs.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/generate_benchmark_graphs.py) | **Scientific Publication Visualizer**: Generates high-resolution multi-metric comparison plots, ROC curves, saliency heatmaps, and master benchmark dashboards. | Standalone Visualization Script |
-| [`__init__.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/__init__.py) | **Package Initialization & Symbol Export**: Exposes all pipeline engines and classes for unified modular imports. | Package Initializer |
+| # | File Name | Role in Platform | Key Classes & Methods |
+| :---: | :--- | :--- | :--- |
+| **01** | [`01_data_preprocessing_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/01_data_preprocessing_engine.py) | **Data Ingestion & Feature Selection**: Ingestion of cytopathology features, zero-leakage fold-isolated preprocessing, metaheuristic Simulated Annealing (ISA) feature selection, and Huang et al. $s_K$ geometric difference calculation. | `load_wdbc_dataset`, `FoldPreprocessor`, `ImprovedSimulatedAnnealingSelector`, `GeometricDifferenceCalculator` |
+| **02** | [`02_classical_benchmark_suite.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/02_classical_benchmark_suite.py) | **Classical SOTA Benchmark Suite**: Comprehensive classical classifiers with hyperparameter tuning (XGBoost, SVM-RBF, Random Forest, ElasticNet Logistic Regression, and PyTorch Deep MLP). | `XGBoostChampion`, `SVMRBFChampion`, `RandomForestChampion`, `ElasticNetLogisticChampion`, `PyTorchMLPChampion`, `evaluate_classifier` |
+| **03** | [`03_quantum_circuits_and_ansatz.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/03_quantum_circuits_and_ansatz.py) | **Quantum Circuits & Kernels**: PennyLane 8-qubit quantum state embeddings (Second-Order Pauli-$Z$ ZZ Map, Strongly Entangling Ansatz, Variational Quantum Classifier VQC, Quantum Kernel SVM, and Hybrid QNN). | `zz_feature_map`, `strongly_entangling_ansatz`, `VariationalQuantumClassifier`, `QuantumKernelSVM`, `HQNNChampion` |
+| **04** | [`04_quantum_noise_and_error_mitigation.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/04_quantum_noise_and_error_mitigation.py) | **Physical Quantum Noise & Error Mitigation**: Emulates physical superconducting QPU noise channels (depolarizing, amplitude/phase damping, readout SPAM) and performs Richardson polynomial Zero-Noise Extrapolation (ZNE). | `NoisyQuantumDevice`, `ZeroNoiseExtrapolator` |
+| **05** | [`05_quantum_explainability_xai.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/05_quantum_explainability_xai.py) | **Quantum Explainability (XAI)**: QXplain causal gate ablation saliency $\mathcal{S}(G_k)$, sub-system Von Neumann entanglement entropy, and cryptographically signed OpenQASM 3.0 circuit receipts. | `compute_input_feature_importance`, `QuantumGateAblator`, `compute_von_neumann_entropy`, `CryptographicQuantumReceiptGenerator` |
+| **06** | [`06_train_and_verification_pipeline.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/06_train_and_verification_pipeline.py) | **Master Training Loop & Statistical Evaluation**: Orchestrates 50-fold repeated stratified CV, hyperparameter optimization, model checkpointing, McNemar's $\chi^2$ test, and Wilcoxon signed-rank verification. | `StatisticalSignificanceEngine`, `QuantumXMasterPipeline` |
+| **07** | [`07_classical_inference_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/07_classical_inference_engine.py) | **Standalone Classical Inference Service (`CX-01`)**: High-speed production inference service loading saved weights to evaluate incoming patient vectors via SVM-RBF, XGBoost, and Random Forest with directional SHAP attributions. | `AegisClassicalEngine`, `aegis_engine` |
+| **08** | [`08_quantum_hybrid_inference_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/08_quantum_hybrid_inference_engine.py) | **Standalone Quantum Hybrid Inference Service (`QX-01`)**: Production-grade inference service executing the 8-Qubit VQC model on PennyLane CPU statevector simulator ($<15\ \text{ms}$) or real IBM Quantum QPUs. | `QuantumXHybridEngine`, `quantum_engine` |
+| **09** | [`09_clinical_risk_stratification_engine.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/09_clinical_risk_stratification_engine.py) | **Calibrated Clinical Risk Stratification**: Computes calibrated risk scores, assigns patient clinical triage tiers (Low, Intermediate, Elevated, Critical), and formats recommendations. | `compute_calibrated_clinical_risk`, `calculate_morphometric_evidence_index` |
+| **10** | [`10_generate_benchmark_graphs.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/10_generate_benchmark_graphs.py) | **Scientific Publication Visualizer**: Standalone script generating high-resolution multi-metric comparison plots, ROC curves, saliency heatmaps, and master benchmark dashboards. | Standalone Visualization Script |
+| **PKG** | [`__init__.py`](file:///c:/Users/anshu/OneDrive/Desktop/QuantumX/Models/v1/src/__init__.py) | **Package Initialization & Dynamic Module Loader**: Exposes all pipeline engines and classes for unified modular imports. | Package Initializer |
 
 ---
 
@@ -70,6 +67,12 @@ cd c:\Users\anshu\OneDrive\Desktop\QuantumX
 # Run master training & verification pipeline
 .\Backend\.venv\Scripts\python.exe Models/v1/src/06_train_and_verification_pipeline.py
 
+# Run classical inference
+.\Backend\.venv\Scripts\python.exe Models/v1/src/07_classical_inference_engine.py
+
+# Run quantum hybrid inference
+.\Backend\.venv\Scripts\python.exe Models/v1/src/08_quantum_hybrid_inference_engine.py
+
 # Generate publication benchmark plots
-.\Backend\.venv\Scripts\python.exe Models/v1/src/generate_benchmark_graphs.py
+.\Backend\.venv\Scripts\python.exe Models/v1/src/10_generate_benchmark_graphs.py
 ```

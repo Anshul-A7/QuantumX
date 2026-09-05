@@ -22,7 +22,19 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from risk_stratification_engine import compute_calibrated_clinical_risk
+import importlib.util
+
+_rse_path = os.path.join(SCRIPT_DIR, "09_clinical_risk_stratification_engine.py")
+if os.path.exists(_rse_path):
+    _spec = importlib.util.spec_from_file_location("risk_stratification_engine", _rse_path)
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    compute_calibrated_clinical_risk = _mod.compute_calibrated_clinical_risk
+else:
+    try:
+        from risk_stratification_engine import compute_calibrated_clinical_risk
+    except ImportError:
+        from Models.v1.src import compute_calibrated_clinical_risk
 
 # Locate artifacts directory
 if os.path.exists(os.path.join(SCRIPT_DIR, "artifacts_v1")):

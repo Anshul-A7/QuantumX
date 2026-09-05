@@ -9,9 +9,10 @@ Provides unified access to the sequential execution pipeline:
 - 04_quantum_noise_and_error_mitigation.py : Superconducting Noise Channels (Paper 30) & Zero-Noise Extrapolation
 - 05_quantum_explainability_xai.py         : QXplain Saliency S(G_k), Von Neumann Entropy & OpenQASM 3.0 Receipts
 - 06_train_and_verification_pipeline.py    : 50-Fold Repeated Stratified CV & Statistical Significance Testing
-- aegis_classical_v1.py                    : Dedicated Standalone Classical Inference Service (CX-01)
-- quantumx_hybrid_v1.py                    : Dedicated Standalone Quantum Hybrid Inference Service (QX-01)
-- risk_stratification_engine.py            : Calibrated Clinical Risk Stratification Engine
+- 07_classical_inference_engine.py         : Dedicated Standalone Classical Inference Service (CX-01)
+- 08_quantum_hybrid_inference_engine.py    : Dedicated Standalone Quantum Hybrid Inference Service (QX-01)
+- 09_clinical_risk_stratification_engine.py: Calibrated Clinical Risk Stratification Engine
+- 10_generate_benchmark_graphs.py         : Scientific Publication Visualization & Figure Generator
 ====================================================================================================
 """
 
@@ -31,13 +32,16 @@ def _import_ordered_module(module_name: str, file_name: str):
     spec.loader.exec_module(module)
     return module
 
-# Load numbered modules dynamically
+# Load numbered modules dynamically in sequential order
 data_engine = _import_ordered_module("data_engine", "01_data_preprocessing_engine.py")
 classical_models = _import_ordered_module("classical_models", "02_classical_benchmark_suite.py")
 quantum_circuits = _import_ordered_module("quantum_circuits", "03_quantum_circuits_and_ansatz.py")
 quantum_noise = _import_ordered_module("quantum_noise", "04_quantum_noise_and_error_mitigation.py")
 quantum_xai = _import_ordered_module("quantum_xai", "05_quantum_explainability_xai.py")
 train_engine = _import_ordered_module("train_engine", "06_train_and_verification_pipeline.py")
+classical_inference = _import_ordered_module("classical_inference", "07_classical_inference_engine.py")
+quantum_inference = _import_ordered_module("quantum_inference", "08_quantum_hybrid_inference_engine.py")
+risk_engine = _import_ordered_module("risk_engine", "09_clinical_risk_stratification_engine.py")
 
 # Expose key classes and symbols
 load_wdbc_dataset = data_engine.load_wdbc_dataset
@@ -66,3 +70,13 @@ CryptographicQuantumReceiptGenerator = quantum_xai.CryptographicQuantumReceiptGe
 
 StatisticalSignificanceEngine = train_engine.StatisticalSignificanceEngine
 QuantumXMasterPipeline = train_engine.QuantumXMasterPipeline
+
+AegisClassicalEngine = classical_inference.AegisClassicalEngine
+aegis_engine = classical_inference.aegis_engine
+
+QuantumXHybridEngine = quantum_inference.QuantumXHybridEngine
+quantumx_engine = quantum_inference.quantumx_engine
+quantum_engine = quantumx_engine
+
+compute_calibrated_clinical_risk = risk_engine.compute_calibrated_clinical_risk
+calculate_morphometric_evidence_index = risk_engine.calculate_morphometric_evidence_index
