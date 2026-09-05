@@ -31,7 +31,5 @@
 
 ---
 
-## 🎯 Defense Rules for Team Members
-1. **Answer from First Principles:** Do not use vague marketing buzzwords. Give exact numbers, mathematical formulas, algorithm names, and verified file paths.
-2. **Stay in Your Domain:** If an algorithm question is asked to the Frontend lead, answer the user-facing and telemetry aspect, then pass the core quantum mechanics to the Quantum Architect.
-3. **Stand by the Codebase:** Every claim made in the slides is backed by runnable Python/TypeScript code, 50-fold cross-validation benchmarks, and real IBM Quantum job IDs in the repository.
+## 🎯 Rules for Team Members
+Understand the Project and Slides Thoroughly, Be confident, Do your Best
