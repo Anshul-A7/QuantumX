@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-103",
+  "patient_name": "Mei Lin",
+  "age": 38,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0103",
+  "collection_date": "2026-08-18",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 9.5,
+    "texture_mean": 12.44,
+    "perimeter_mean": 60.34,
+    "area_mean": 273.9,
+    "smoothness_mean": 0.1024,
+    "compactness_mean": 0.0649,
+    "concavity_mean": 0.0295,
+    "concave_points_mean": 0.0207
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Benign (Benign Non-neoplastic lesion)",
+    "ground_truth": "Benign",
+    "notes": "Simple fibrocystic benign breast lesion with small uniform nuclear boundaries.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

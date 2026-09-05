@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-103",
+  "patient_name": "Deborah Vance",
+  "age": 58,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0203",
+  "collection_date": "2026-08-21",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 19.69,
+    "texture_mean": 21.25,
+    "perimeter_mean": 130.0,
+    "area_mean": 1203.0,
+    "smoothness_mean": 0.1096,
+    "compactness_mean": 0.1599,
+    "concavity_mean": 0.1974,
+    "concave_points_mean": 0.1279
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Malignant (Malignant Infiltrating Carcinoma)",
+    "ground_truth": "Malignant",
+    "notes": "High-grade pleomorphic ductal carcinoma. Severe grayscale texture variance and deep notches.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

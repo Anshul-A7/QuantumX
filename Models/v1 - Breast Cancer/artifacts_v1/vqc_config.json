@@ -1,0 +1,10 @@
+{
+  "model_name": "QuantumX-8Qubit-VQC",
+  "version": "1.0.0-PROD",
+  "topology": "8-Qubit All-to-All CNOT Entangling Circuit",
+  "feature_map": "Second-Order Pauli-Z (ZZ Feature Map)",
+  "ansatz_layers": 2,
+  "rotational_parameters": 48,
+  "sha256_weights": "0e083a3ffd1c7f8f7101b98aa20627a937ad9f3a6d831f2898883ce32d5da1ba",
+  "serialized_at": "2026-09-02 14:02:56"
+}

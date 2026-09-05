@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-105",
+  "patient_name": "Fatima Al-Sayed",
+  "age": 50,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0105",
+  "collection_date": "2026-08-22",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 13.03,
+    "texture_mean": 18.42,
+    "perimeter_mean": 82.61,
+    "area_mean": 523.8,
+    "smoothness_mean": 0.0898,
+    "compactness_mean": 0.0376,
+    "concavity_mean": 0.0286,
+    "concave_points_mean": 0.0265
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Benign (Benign Non-neoplastic lesion)",
+    "ground_truth": "Benign",
+    "notes": "Atypical benign ductal hyperplasia with moderate texture variance but normal margin contours.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

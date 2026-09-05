@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-102",
+  "patient_name": "Clara Oswald",
+  "age": 68,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0202",
+  "collection_date": "2026-08-19",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 23.21,
+    "texture_mean": 28.14,
+    "perimeter_mean": 155.8,
+    "area_mean": 1686.0,
+    "smoothness_mean": 0.1238,
+    "compactness_mean": 0.2286,
+    "concavity_mean": 0.2974,
+    "concave_points_mean": 0.1562
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Malignant (Malignant Infiltrating Carcinoma)",
+    "ground_truth": "Malignant",
+    "notes": "Advanced high-grade invasive carcinoma with severe pleomorphism and dense irregular contours.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

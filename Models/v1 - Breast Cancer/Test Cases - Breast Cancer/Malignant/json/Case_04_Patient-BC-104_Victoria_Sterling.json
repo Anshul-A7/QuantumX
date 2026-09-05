@@ -1,0 +1,26 @@
+{
+  "patient_id": "Patient-BC-104",
+  "patient_name": "Victoria Sterling",
+  "age": 64,
+  "gender": "Female",
+  "accession_number": "ACC-2026-0204",
+  "collection_date": "2026-08-23",
+  "specimen_type": "Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)",
+  "biomarkers": {
+    "radius_mean": 17.99,
+    "texture_mean": 20.66,
+    "perimeter_mean": 121.8,
+    "area_mean": 987.9,
+    "smoothness_mean": 0.1145,
+    "compactness_mean": 0.2376,
+    "concavity_mean": 0.2839,
+    "concave_points_mean": 0.1522
+  },
+  "pathologist_findings": {
+    "clinical_impression": "Malignant (Malignant Infiltrating Carcinoma)",
+    "ground_truth": "Malignant",
+    "notes": "Invasive medullary carcinoma with extensive indentation depth and dense cellular clustering.",
+    "signed_by": "Dr. Marcus Vance, MD, FCAP (Chief of Cytopathology)",
+    "institution": "ST. JUDE CYTOLOGY & ONCOLOGY LABORATORY"
+  }
+}

@@ -1,0 +1,2 @@
+patient_id	patient_name	age	gender	accession_number	collection_date	specimen_type	radius_mean	texture_mean	perimeter_mean	area_mean	smoothness_mean	compactness_mean	concavity_mean	concave_points_mean	ground_truth	clinical_impression	notes	signed_by
+Patient-BC-101	Sarah Jenkins	42	Female	ACC-2026-0101	2026-08-15	Fine Needle Aspiration Biopsy (Right/Left Breast Lesion)	11.42	13.25	73.34	399.8	0.0785	0.0402	0.0135	0.0112	Benign	Benign (Benign Non-neoplastic lesion)	Uniform tubular fibroadenoma with smooth circular contours and low cellular density.	Dr. Marcus Vance, MD, FCAP
