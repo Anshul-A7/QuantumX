@@ -85,6 +85,23 @@ Models/v1 - Breast Cancer/
 │   ├── Figure_Master_Benchmark_Dashboard.png # Master 4-panel publication benchmark dashboard
 │   ├── QuantumX_v1_Training_Convergence_and_Saliency_Execution.png # VQC loss descent & convergence plot
 │   └── QuantumX_v1_Comprehensive_Scientific_Report.md # Formal report with signed OpenQASM 3.0 receipts
+├── demo_clinical_reports/                 # Multi-modal demo test cases partitioned by diagnosis
+│   ├── Benign/                            # 5 Benign patient test cases across 6 modalities
+│   │   ├── csv/                           # Comma-separated values format
+│   │   ├── tsv/                           # Tab-separated values format
+│   │   ├── images/                        # High-resolution clinical report PNG renders
+│   │   ├── json/                          # Structured JSON schema payloads
+│   │   ├── markdown/                      # Formatted markdown pathology summaries
+│   │   ├── pdf/                           # Multi-page hospital clinical PDF reports
+│   │   └── text/                          # Plain text laboratory results
+│   └── Malignant/                         # 4 Malignant patient test cases across 6 modalities
+│       ├── csv/                           # Comma-separated values format
+│       ├── tsv/                           # Tab-separated values format
+│       ├── images/                        # High-resolution clinical report PNG renders
+│       ├── json/                          # Structured JSON schema payloads
+│       ├── markdown/                      # Formatted markdown pathology summaries
+│       ├── pdf/                           # Multi-page hospital clinical PDF reports
+│       └── text/                          # Plain text laboratory results
 └── src/                                   # Numbered sequential pipeline source files
     ├── 01_data_preprocessing_engine.py    # Step 01: Ingestion, scaling, ISA feature selection
     ├── 02_classical_benchmark_suite.py    # Step 02: Classical classifiers (XGBoost, SVM, RF, MLP)
