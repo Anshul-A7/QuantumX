@@ -347,5 +347,6 @@ class QuantumXMasterPipeline:
 # ==================================================================================================
 
 if __name__ == "__main__":
-    pipeline = QuantumXMasterPipeline(n_splits=5, n_repeats=1, n_qubits=8, target_dir="./Models/v1/artifacts_v1")
+    _default_artifacts = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "artifacts_v1"))
+    pipeline = QuantumXMasterPipeline(n_splits=5, n_repeats=1, n_qubits=8, target_dir=_default_artifacts)
     results = pipeline.run_full_pipeline()
