@@ -44,10 +44,23 @@ PROBLEM.md
 SCRATCHPAD.md
 SKILL.md
 
-# Large Datasets, Checkpoints, and Binary Records (Ignored from GitHub)
-Models/v2/data/records100/
-Models/v2/data/records500/
-Models/v2/src/checkpoints/
+# Models & Internal Research Documents (Ignored from GitHub)
+Models/v2/
+Models/breast_cancer_quantum_pipeline_deep_dive_and_circuit_mechanics.md
+Models/quantum_pipeline_deep_dive_and_circuit_mechanics.md
+Models/v1 - Breast Cancer/INSIGHTS.md
+INSIGHTS.md
+Models/v1/
+Models/v1/benchmarks/
+Models/v1 - Breast Cancer/benchmarks/
+Models/v1 - Breast Cancer/Test Cases - Breast Cancer/
+Models/v1 - Breast Cancer/artifacts_v1/
+artifacts_v1/
+Test_Reports_Demo/
+Test/
+Tests/
+test_*.py
+*.zip
 *.dat
 *.hea
 *.pt
@@ -61,13 +74,3 @@ Notes on Model Pipeline.md
 QuantumX_Final_Architecture_v3.md
 Ruthless Audit.md
 Thoughts.md
-
-# Benchmark & Export Artifacts (Ignored from GitHub)
-Models/v1/benchmarks/
-Models/v1 - Breast Cancer/benchmarks/
-Models/v1 - Breast Cancer/Test Cases - Breast Cancer/
-Test/
-Tests/
-test_*.py
-artifacts_v1/
-*.zip
