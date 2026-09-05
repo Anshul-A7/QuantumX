@@ -46,6 +46,8 @@ SKILL.md
 
 # Models & Internal Research Documents (Ignored from GitHub)
 Models/v2/
+Models/v1 - Heart Attack (ECG Image)/
+Models/v1 - Cardiovascular Disease/
 Models/breast_cancer_quantum_pipeline_deep_dive_and_circuit_mechanics.md
 Models/quantum_pipeline_deep_dive_and_circuit_mechanics.md
 Models/v1 - Breast Cancer/INSIGHTS.md
