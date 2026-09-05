@@ -85,7 +85,7 @@ Models/v1 - Breast Cancer/
 │   ├── Figure_Master_Benchmark_Dashboard.png # Master 4-panel publication benchmark dashboard
 │   ├── QuantumX_v1_Training_Convergence_and_Saliency_Execution.png # VQC loss descent & convergence plot
 │   └── QuantumX_v1_Comprehensive_Scientific_Report.md # Formal report with signed OpenQASM 3.0 receipts
-├── demo_clinical_reports/                 # Multi-modal demo test cases partitioned by diagnosis
+├── Test Cases - Breast Cancer/            # Multi-modal demo test cases partitioned by diagnosis
 │   ├── Benign/                            # 5 Benign patient test cases across 6 modalities
 │   │   ├── csv/                           # Comma-separated values format
 │   │   ├── tsv/                           # Tab-separated values format

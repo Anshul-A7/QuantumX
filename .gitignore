@@ -65,7 +65,7 @@ Thoughts.md
 # Benchmark & Export Artifacts (Ignored from GitHub)
 Models/v1/benchmarks/
 Models/v1 - Breast Cancer/benchmarks/
-Models/v1 - Breast Cancer/demo_clinical_reports/
+Models/v1 - Breast Cancer/Test Cases - Breast Cancer/
 Test/
 Tests/
 test_*.py
