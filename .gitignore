@@ -63,7 +63,7 @@ Ruthless Audit.md
 Thoughts.md
 
 # Benchmark & Export Artifacts (Ignored from GitHub)
-QuantumX_v1_Benchmark_Artifacts/
+Models/v1/benchmarks/
 Test_Reports_Demo/
 Test/
 Tests/

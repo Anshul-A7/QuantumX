@@ -18,7 +18,8 @@ plt.rcParams["font.sans-serif"] = "DejaVu Sans"
 plt.rcParams["axes.edgecolor"] = "#2d3748"
 plt.rcParams["axes.linewidth"] = 0.9
 
-output_dir = os.path.join(os.getcwd(), "QuantumX_v1_Benchmark_Artifacts")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+output_dir = os.path.abspath(os.path.join(script_dir, "..", "benchmarks"))
 os.makedirs(output_dir, exist_ok=True)
 print(f"[Visualizer] Exporting figures to: {output_dir}")
 
