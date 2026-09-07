@@ -60,5 +60,5 @@ Finally, we validate our platform through **Unified Benchmarking** (Box 10). On 
 
 ---
 
-### Passes to Jeevan (Slide 4: Feasibility) -->
+### Passes to Jeevan (Slide 4: Feasibility) ->
 Now, let us see how this entire architecture moves from design into practical clinical feasibility and hardware readiness. For that, I hand over to **Jeevan**.
