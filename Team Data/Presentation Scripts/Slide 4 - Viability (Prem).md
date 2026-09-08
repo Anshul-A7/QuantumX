@@ -1,3 +1,4 @@
+
 VIABILITY — QuantumX
 
 “QuantumX is viable because it uses a practical hybrid approach—classical computing for data processing and quantum computing where it can add value.”
@@ -12,4 +13,4 @@ Economic Viability: Most development and testing can be performed using simulato
 
 Clinical Viability: The platform can evaluate multiple diseases and datasets, but clinical deployment would require external and prospective validation.
 
-Risk Management: Quantum noise, limited QPU access, small datasets, and overfitting are addressed using noise mitigation, stratified validation, controlled circuits, and classical baselines.
+Risk Management: Quantum noise, limited QPU access, small datasets, and overfitting are addressed using noise mitigation, stratified validation, controlled circuits, and classical baselines.  

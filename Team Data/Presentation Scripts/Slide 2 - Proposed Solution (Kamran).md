@@ -1,53 +1,61 @@
 ## *Slide 2: Proposed Solution (Kamran)*
 
-Thank you, Anshul.
+Thank you, Anshul. 
 
-Respected judges, I am Kamran, and today I am presenting our proposed solution, **QuantumX**.
+It happens because today’s medical AI is blind to the subtle, overlapping signals of developing disease. By the time it catches them, the damage is already done.
 
-Our project is a Hybrid Quantum-Classical Machine Learning Platform for Early Disease Detection.
+That is why we engineered QuantumX across three deadly health conditions:
 
-Let me first explain the problem. In medical diagnosis, early detection is very important. If a disease is detected early, doctors may get more time to plan treatment and manage the patient's condition.
+- **First, Breast Cancer:** We made this our primary test case. Over 2.3 million women are diagnosed each year. If caught at Stage 1, the 5-year survival rate is **99%**. But if it reaches Stage 4, that chance crashes down to **31%**. Worse, routine needle biopsy tests still have an **18% to 20% false-negative rate** because early cancer cells look almost identical to healthy cells.
+- **Second, Heart Attacks:** This is our second core focus because heart disease is the number one killer in the world, taking nearly **20 million lives every year**. What is alarming is that almost **50% of sudden heart attacks** happen in people whose routine resting tests looked completely normal. Standard hospital triage software still misses early warnings around **15% to 18% of the time**.
+- **Third, Neurological Diseases like Dementia:** We chose this as our planned expansion. Over **57 million people** live with dementia worldwide. The disease actually starts developing **15 to 20 years** before memory loss shows up, but local clinics miss over **60% of early cases**, with standard software showing a **20% error rate**.
 
-However, medical data is not always simple. For example, a patient's disease risk may depend on many things together, such as age, blood pressure, cholesterol, genetic information, and other clinical features. Sometimes, the important signal is very small, and it is hidden inside a large amount of data. This creates a challenge for machine learning models.
+#### Why does this happen? Because in early stages, the disease signal is tiny, hidden inside dozens of complex medical numbers.
+
+---
 
 ### First, the problem with classical ML
-On the left side of this slide, we show the limitations of classical machine learning. Classical ML models, such as Random Forest, SVM, and XGBoost, run on normal computers and are already very useful in healthcare.
+On the left side of this slide, we show the limitations of classical machine learning. Today, hospitals use models like Random Forest, Support Vector Machines, and XGBoost to assist doctors.
 
-But when the data becomes very complex, some important relationships between features may be difficult to capture. For example, in breast cancer detection, two cells may look very similar. A small difference in their shape, nucleus, or texture may be important for identifying whether the cell is benign or malignant.
+These models run on normal computers and are very useful. But when medical data becomes complex, they have a major limitation.
 
-If the model cannot learn these subtle differences properly, it may produce a false negative. A false negative means the disease is actually present, but the model predicts that it is not present. This is especially critical in early disease detection because missing a disease may delay further medical examination.
+For example, in breast cancer detection, two cells can look almost identical. A tiny change in their shape, nucleus, or texture is the only clue separating a harmless benign cell from an aggressive malignant tumor.
 
 ### Second, why this problem becomes difficult
-Now, look at the 3D feature-space graph. Here, different features are represented as different dimensions. The problem is that some benign and malignant samples may overlap.
+Now, look at the 3D feature-space graph on the left.
 
-This means that the boundary between the two classes is not always simple. A classical model may find it difficult to separate these overlapping samples correctly. The result can be missed cases, especially when the disease-related pattern is subtle.
+Classical algorithms look at data in flat, Euclidean space. As you can see, the benign and malignant data points overlap heavily. They form a tangled knot.
+A classical model tries to draw a straight or curved line through this cluster, but it cannot separate them cleanly.
 
-So, the main challenge is not simply: *“Can we build a machine learning model?”*  
-The real challenge is: *“Can we capture complex patterns accurately enough to reduce missed disease cases?”*
+When this boundary fails, the model produces a False Negative.
+A false negative means the disease is actually growing in the patient, but the model tells the doctor: "Everything is normal."
 
-### Third, our proposed solution
-Now, let me explain what QuantumX actually is.
+In early diagnosis, classical models can have a 15% to 20% false negative rate. When a model misses a disease, the patient goes home without treatment, losing the critical window when the disease could have been cured.
 
-QuantumX is a medical research platform we built to test whether quantum computing can genuinely improve early disease detection. In our platform, a user can enter patient clinical data—like blood work, vitals, or cellular measurements—and run both standard AI and quantum tools together. The system doesn't just give a prediction; it explains which health factors caused that result and compares both methods side by side on screen. That way, doctors and researchers have a practical software platform where they can see the actual evidence for themselves rather than just guessing.
+And if we try to make classical neural networks deeper to fix this, they fall into an overfitting trap—because medical datasets are small, deep models simply memorize the noise.
 
-### Fourth, core features of our prototype
-To deliver this experience, our working prototype provides four main features:
+So the real challenge is not just training another AI model. The real challenge is: How can we separate these overlapping patterns accurately without overfitting?
 
-First, **Interactive Disease Prediction**—where clinicians can enter patient test metrics and immediately receive early risk assessments.
+### Third, our proposed solution: QuantumX
+This is why we built QuantumX.
 
-Second, **AI Explanation**—the system provides clear clinical insights and visual charts, so doctors understand exactly why an alert was triggered.
+Instead of forcing classical models to draw impossible lines in flat space, QuantumX uses a **Hybrid Quantum-Classical approach**.
 
-Third, **Side-by-Side Benchmarking**—researchers can test and compare classical AI against quantum models on accuracy and false negative rates.
+We take those complex clinical features and encode them into an 8-qubit quantum state. On a classical computer, 8 features are trapped in just 8 flat dimensions where data points crowd and collide. But in quantum computing, 8 qubits unlock an exponential **256-dimensional Hilbert space** ($2^8 = 256$). This vast mathematical space gives crowded, overlapping data points the room they need to separate.
 
-Fourth, **Quantum Hardware Support**—the platform connects directly to both local simulators and real quantum processors like IBM Quantum.
+Next comes the biggest difference: **Quantum Entanglement**. Classical models have a major weakness—they analyze features one by one or in rigid steps, completely missing how subtle changes across multiple markers connect together. But through entanglement, our qubits become interconnected, evaluating all clinical features and their hidden correlations simultaneously as a single connected system.
 
-### Finally, our core objective
-Our primary goal is to prevent late detection and reduce diagnostic errors, helping clinicians catch critical illnesses at their earliest and most treatable stages.
+This naturally untangles overlapping benign and malignant points, making them cleanly separable. And because our quantum circuit uses only **48 simple parameters**, it stays lightweight and completely avoids the overfitting trap of deep neural networks.
 
-To prove this scientifically, QuantumX is built to benchmark our hybrid approach directly against classical models across three key areas: accuracy, computational efficiency, and generalization performance on real biomedical data.
+### Fourth, our working prototype
+On the right is our working prototype. 
 
-That defines the true scope and purpose of QuantumX.
+Its core feature is the **Multi-Disease Screening Engine**. In one unified dashboard, doctors can switch between **Breast Cancer biopsy cells**, **Heart Attack vitals and ECGs**, and **Neurological dementia markers** to get instant, calibrated risk scores.
 
-To explain our technical approach and system architecture, I would now like to hand over back to **Anshul**.
+The platform also provides **visual AI explanations**, **classical model benchmarks**, and direct connections to **real IBM Quantum processors**.
+
+Our goal is simple: stop missed diagnoses and catch serious diseases early when they can still be cured.
+
+To explain our technical architecture and how our Hybrid Model Architecture works, I now hand back to **Anshul**.
 
 ### Passes to Anshul (Slide 3) -->
