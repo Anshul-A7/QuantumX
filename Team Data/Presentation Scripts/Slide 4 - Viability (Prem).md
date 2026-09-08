@@ -1,16 +1,35 @@
-
 VIABILITY — QuantumX
 
-“QuantumX is viable because it uses a practical hybrid approach—classical computing for data processing and quantum computing where it can add value.”
+While feasibility proves our technology works, viability is about real-world adoption—can hospitals actually use and sustain this solution?
 
-Technical Viability: Qiskit simulators allow development and testing, while IBM Quantum hardware can be used for real-world validation.
+Our viability comes down to three practical points:
 
-Training Viability: Our platform combines classical ML with Variational Quantum Circuits (VQC), allowing us to compare both approaches on the same datasets.
+1. Phased Validation Path:
+Medical software cannot be deployed blindly into hospitals. We followed a realistic, step-by-step validation journey: first testing on standard clinical datasets, rigorously benchmarking against established classical baselines, and preparing clear protocols for future hospital pilot trials. This makes our platform scientifically safe and trustworthy.
 
-Deployment Viability: FastAPI provides a lightweight backend, while optimized models can provide rapid prediction through the web platform.
+2. Seamless Workflow Fit:
+Doctors don’t need to learn quantum computing. It fits naturally into their daily routine—they enter standard lab test numbers and receive an instant, clear second opinion.
 
-Economic Viability: Most development and testing can be performed using simulators and cloud-based quantum resources, reducing the need for dedicated quantum hardware.
+3. Multi-Disease Scalability:
+Instead of buying separate, costly software for every condition, QuantumX covers cancer, heart disease, and neurological risks on one unified platform—making it practical and sustainable for long-term hospital use.*
 
-Clinical Viability: The platform can evaluate multiple diseases and datasets, but clinical deployment would require external and prospective validation.
+With our solution feasible and practically viable, let us see the real-world impact it creates. Over to Jagruti.
 
-Risk Management: Quantum noise, limited QPU access, small datasets, and overfitting are addressed using noise mitigation, stratified validation, controlled circuits, and classical baselines.  
+
+---
+
+
+Feasibility ने दिखाया कि technology काम करती है, लेकिन Viability का मतलब है: क्या hospitals इसे actually use और sustain कर सकते हैं?
+
+हमारा solution तीन practical वजहों से fully viable है:
+
+1. Phased Validation Path:
+Medical field में कोई भी tool बिना thorough testing के directly deploy नहीं हो सकता। हमने एक structured, step-by-step validation path follow किया है: verified hospital datasets पर testing, classical models के साथ honest benchmarking, और future clinical trials के लिए clear protocol तैयार करना। यही चीज QuantumX को scientifically trustworthy और clinically viable बनाती है।
+
+2. Easy Doctor Adoption:
+Doctors को quantum physics सीखने की कोई जरूरत नहीं है। यह उनके daily routine में naturally fit बैठता है—बस normal lab values enter करनी हैं और screen पर instant, clear second opinion मिल जाता है।
+
+3. Multi-Disease Platform:
+हर बीमारी के लिए अलग-अलग software खरीदने के बजाय, QuantumX cancer, heart disease और neurological risks को एक ही platform पर cover करता है—जिससे यह hospitals के लिए practically और financially sustainable बनता है।
+
+“अब देखते हैं कि यह practical viability असल दुनिया में क्या impact लाती है। Over to Jagruti.”
