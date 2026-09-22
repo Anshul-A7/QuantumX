@@ -27,6 +27,9 @@ export interface StoredPrediction {
   inputFeatures?: Record<string, number>;
   gateAttributions?: Array<{ name: string; impact: number; description: string }>;
   clinicalNote?: string;
+  imageUrl?: string;
+  imageMeta?: any;
+  telemetryJson?: any;
   createdAt?: string;
   timestamp?: string;
 }
@@ -160,6 +163,9 @@ export class ScreeningService {
       classicalExecutionTimeMs: payload.classicalExecutionTimeMs ?? 104.0,
       inputFeatures: payload.inputFeatures || {},
       clinicalNote: payload.clinicalNote || "",
+      imageUrl: payload.imageUrl,
+      imageMeta: payload.imageMeta,
+      telemetryJson: payload.telemetryJson,
       createdAt: new Date().toISOString(),
       timestamp: nowStr,
     };

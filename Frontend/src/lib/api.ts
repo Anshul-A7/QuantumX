@@ -8,7 +8,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 // ============================================================================
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const TIMEOUT_MS = 60000;
+const TIMEOUT_MS = 120000; // 2 minutes (accommodates free-tier cloud cold starts)
 
 // Token storage keys
 export const TOKEN_KEYS = {

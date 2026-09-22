@@ -36,6 +36,7 @@ class AuthResponse(BaseModel):
     tokenType: str = Field(default="bearer", serialization_alias="tokenType")
     expiresIn: int = Field(default=3600, serialization_alias="expiresIn")
     user: UserProfile
+    isNewUser: bool = Field(default=False, serialization_alias="isNewUser")
 
     model_config = ConfigDict(
         populate_by_name=True,

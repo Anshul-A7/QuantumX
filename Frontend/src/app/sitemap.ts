@@ -73,7 +73,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/predict/chronic-kidney`,
+      url: `${baseUrl}/predict/neurological`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.75,

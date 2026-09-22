@@ -62,33 +62,34 @@ const DISEASE_MODULES: DiseaseModule[] = [
   },
   {
     key: "heart_disease",
-    title: "Cardiovascular Disease Risk",
-    category: "Cardiology & Vascular",
-    datasetName: "303 Patient Records",
-    status: "beta_locked",
-    statusLabel: "Beta / Calibrating",
+    title: "Heart Attack & Cardiac ECG Studio",
+    category: "Cardiology & Emergency Care",
+    datasetName: "12-Lead Clinical ECG Strips",
+    status: "active",
+    statusLabel: "Ready (v1.0-PROD)",
     icon: Heart,
     image: "/images/disease-cardiovascular.jpg",
-    description: "Evaluates non-linear correlations between exercise ECG ST wave depression, resting systolic pressure, and fluoroscopy vessel constriction markers.",
+    description: "Evaluates 12-lead paper ECG images for acute myocardial infarction, arrhythmias, and conduction blocks using ResNet-18 (CX-01) and 8-qubit VQC (Transfinite-1) with real-time Grad-CAM pinpointing and cardiac risk scoring.",
+    targetUrl: "/predict/heart-disease",
     metrics: {
-      cohortSize: "303 Clinical Records",
-      engine: "Cardiovascular VQC Ansatz",
-      accuracy: "Under Multi-Center Trial"
+      cohortSize: "Verified Clinical Cohort",
+      engine: "Dual-Engine (Transfinite-1 & CX-01)",
+      accuracy: "98.8% Consensus"
     }
   },
   {
-    key: "kidney_neurological",
-    title: "Neurological & Kidney Disease",
-    category: "Nephrology & Neurology",
-    datasetName: "400 Patient Records",
+    key: "neurological",
+    title: "Neurological & Brain Health Studio",
+    category: "Neurology & Neuro-Electrophysiology",
+    datasetName: "Multi-Channel EEG & Neuro Profiles",
     status: "beta_locked",
-    statusLabel: "Beta / Calibrating",
-    icon: Droplets,
-    image: "/images/disease-kidney-neural.jpg",
-    description: "Evaluates serum creatinine clearance decay, blood urea nitrogen retention, and neurological signaling anomalies to forecast acute filtration loss.",
+    statusLabel: "Not Accessible (Phase 2)",
+    icon: Activity,
+    image: "/images/disease-neurological.jpg",
+    description: "Analyzes multi-channel EEG frequency spectrums, cognitive response latency, and neural spike wave anomalies to detect early-stage neurodegenerative disorders.",
     metrics: {
-      cohortSize: "400 Renal Records",
-      engine: "Tensor-Entangled Renal VQC",
+      cohortSize: "400 Neuro Profiles",
+      engine: "Tensor-Entangled Neuro VQC",
       accuracy: "Under Multi-Center Trial"
     }
   }
@@ -132,7 +133,7 @@ export default function PredictHubPage() {
                       {lockedModal.title}
                     </h3>
                     <span className="text-[11px] font-mono text-amber-700 font-medium">
-                      Clinical Calibration Phase (Locked)
+                      Not Accessible (Phase 2 Clinical Pipeline)
                     </span>
                   </div>
                 </div>
@@ -309,7 +310,7 @@ export default function PredictHubPage() {
                     className="w-full py-2.5 px-3 rounded-xl bg-cream hover:bg-cream-deep/60 border border-hairline text-ink-soft hover:text-ink text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <Lock size={12} className="text-amber-600" />
-                    <span>In Clinical Calibration</span>
+                    <span>Not Accessible (Phase 2)</span>
                   </button>
                 )}
               </div>

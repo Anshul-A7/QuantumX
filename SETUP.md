@@ -102,7 +102,7 @@ cd QuantumX
    pip install -r requirements.txt
    ```
 5. Set up datasets:
-   Download the WDBC, Cleveland Heart Disease, and CKD datasets and place them in the designated `Backend/data/` folder (or as defined by the data pipeline).
+   Download the WDBC, Cardiac ECG, and Neurological EEG datasets and place them in the designated `Backend/data/` folder (or as defined by the data pipeline).
 
 ---
 

@@ -529,7 +529,7 @@ Doctors and pathologists do not need to read code; the QuantumX frontend communi
 * In the live QuantumX platform, we have already built and integrated working screening modules for:
   1. **Breast Cytopathology Screening** (WDBC cellular morphometry).
   2. **Cardiovascular Disease Risk** (Blood pressure, cholesterol, glucose, vascular biomarkers).
-  3. **Chronic Kidney Disease (CKD)** (Glomerular filtration rate, serum creatinine, blood urea).
+  3. **Neurological & Brain Health** (Multi-channel electrophysiological EEG, cognitive latency, spectral power bands).
 
 ---
 

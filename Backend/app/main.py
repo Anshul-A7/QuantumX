@@ -13,6 +13,7 @@ from app.api.routes.datasets import router as datasets_router
 from app.api.routes.screenings import router as screenings_router
 from app.api.routes.notifications import router as notifications_router
 from app.api.routes.inference import router as inference_router
+from app.api.routes.benchmarks import router as benchmarks_router
 
 
 def humanize_validation_error(err: dict) -> str:
@@ -108,6 +109,7 @@ app.include_router(datasets_router)
 app.include_router(screenings_router)
 app.include_router(notifications_router)
 app.include_router(inference_router)
+app.include_router(benchmarks_router)
 
 
 @app.get("/")

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import { AuthService } from "@/services/auth.service";
+import { useBackendStatus } from "@/services/backend-warmer.service";
 import BrandLogo from "@/components/common/BrandLogo";
 
 declare global {
@@ -50,6 +51,7 @@ const easeOut = [0.16, 1, 0.3, 1] as const;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { isOnline, isWaking, isRenderSleeping } = useBackendStatus();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,6 +62,23 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [waitElapsed, setWaitElapsed] = useState(0);
+
+  // In-flight request timer for cold start detection
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isLoading || isGoogleLoading) {
+      setWaitElapsed(0);
+      interval = setInterval(() => {
+        setWaitElapsed((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setWaitElapsed(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLoading, isGoogleLoading]);
 
   // Strength Criteria Calculation
   const hasMinLength = password.length >= 8;
@@ -120,16 +139,30 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await AuthService.register({
+      const authResponse = await AuthService.register({
         email: email.trim(),
         username: fullName.trim(),
         password,
       });
 
-      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+      const displayName = fullName.trim() || authResponse?.user?.fullName || authResponse?.user?.username || "Doctor";
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("quantumx_user_email", authResponse.user.email);
+        localStorage.setItem("quantumx_user_name", displayName);
+        localStorage.setItem("quantumx_is_new_registration", "true");
+        if (authResponse.user.profileImageUrl) {
+          localStorage.setItem("quantumx_user_avatar", authResponse.user.profileImageUrl);
+        }
+      }
+
+      router.push(`/welcome?name=${encodeURIComponent(displayName)}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to create account.";
-      setErrorMessage(message);
+      const raw = err instanceof Error ? err.message : "Unable to create account.";
+      const cleanMessage = raw.includes("not defined") || raw.includes("ReferenceError")
+        ? "Something went wrong while setting up your workspace. Please try again."
+        : raw;
+      setErrorMessage(cleanMessage);
       setIsLoading(false);
     }
   };
@@ -157,16 +190,19 @@ export default function RegisterPage() {
     try {
       const authResponse = await AuthService.googleLogin(response.credential);
 
+      const rawName = authResponse?.user?.fullName || authResponse?.user?.username || "Doctor";
+      const displayName = rawName.replace(/_/g, " ").trim() || "Doctor";
+
       if (typeof window !== "undefined") {
         localStorage.setItem("quantumx_user_email", authResponse.user.email);
-        localStorage.setItem("quantumx_user_name", authResponse.user.username);
+        localStorage.setItem("quantumx_user_name", displayName);
         localStorage.setItem("quantumx_is_new_registration", "true");
         if (authResponse.user.profileImageUrl) {
           localStorage.setItem("quantumx_user_avatar", authResponse.user.profileImageUrl);
         }
       }
 
-      router.push("/home");
+      router.push(`/welcome?name=${encodeURIComponent(displayName)}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Google authentication failed.";
       setErrorMessage(message);
@@ -291,6 +327,12 @@ export default function RegisterPage() {
               <p className="text-ink-soft text-xs sm:text-sm font-light">
                 Enter your details to create an account
               </p>
+              {isWaking && !isOnline && waitElapsed === 0 && (
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-800 text-[11px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span>Cloud Instance: Booting up from standby (free tier) &bull; Ready shortly</span>
+                </div>
+              )}
             </motion.div>
 
             {/* Error Message */}
@@ -300,10 +342,24 @@ export default function RegisterPage() {
                   initial={{ opacity: 0, height: 0, y: -8 }}
                   animate={{ opacity: 1, height: "auto", y: 0 }}
                   exit={{ opacity: 0, height: 0, y: -8 }}
-                  className="mb-4 p-3.5 rounded-xl bg-red-50/80 border border-red-200 text-red-700 text-xs flex items-center gap-2 overflow-hidden"
+                  className="mb-4 p-3.5 rounded-xl bg-red-50/90 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 overflow-hidden text-left"
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                  <span>{errorMessage}</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5" />
+                  <div className="flex-1 space-y-1">
+                    <p className="leading-relaxed">{errorMessage}</p>
+                    {(errorMessage.includes("booting up") ||
+                      errorMessage.includes("standby") ||
+                      errorMessage.includes("retry") ||
+                      errorMessage.includes("server")) && (
+                      <button
+                        type="button"
+                        onClick={handleRegister}
+                        className="text-[11px] font-semibold text-red-800 underline hover:text-red-900 cursor-pointer pt-0.5 block"
+                      >
+                        Click here to retry registration
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -453,12 +509,41 @@ export default function RegisterPage() {
                 {isLoading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Creating Account...</span>
+                    <span>
+                      {isRenderSleeping && waitElapsed >= 15
+                        ? `Waking Cloud Server (${waitElapsed}s)...`
+                        : "Creating Account..."}
+                    </span>
                   </>
                 ) : (
                   <span>Create Account</span>
                 )}
               </motion.button>
+
+              {/* In-Flight Standby Boot Notification: ONLY when live Render is sleeping and wait exceeds 15s */}
+              <AnimatePresence>
+                {isRenderSleeping && waitElapsed >= 15 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs space-y-1.5 text-left my-1 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-semibold text-[12px] text-amber-800">
+                        <Loader2 size={13} className="animate-spin text-amber-600 shrink-0" />
+                        <span>The Backend is booting up ({waitElapsed}s)</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-900">
+                        Cold Start
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-amber-800/90 leading-relaxed font-light">
+                      To optimize hosting costs, idle cloud instances enter standby. Please wait 1–2 minutes — your registration will complete automatically once the server is ready.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Divider */}
               <div className="relative my-2 flex items-center justify-center">
