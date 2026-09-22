@@ -661,7 +661,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* ========================================================================= */}
       {/* BODY WITH FIXED SIDEBAR AND SCROLLABLE CONTENT */}
       {/* ========================================================================= */}
-      <div className="flex flex-1 pt-14 relative">
+      <div className="flex flex-1 pt-14 relative min-w-0 max-w-full overflow-x-hidden">
         {/* FIXED DESKTOP SIDEBAR */}
         <motion.aside
           initial={false}
@@ -1062,7 +1062,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           initial={false}
           animate={{ marginLeft: sidebarOpen ? 240 : 64 }}
           transition={sidebarTransition}
-          className="flex-1 min-h-[calc(100vh-3.5rem)] px-4 sm:px-6 lg:px-8 py-5 w-full max-md:!ml-0"
+          className="flex-1 min-w-0 max-w-full min-h-[calc(100vh-3.5rem)] px-4 sm:px-6 lg:px-8 py-5 max-md:!ml-0 overflow-x-hidden"
         >
           {children}
         </motion.main>

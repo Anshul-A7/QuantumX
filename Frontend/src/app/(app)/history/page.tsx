@@ -265,7 +265,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-4 max-w-full overflow-x-hidden pb-4"
+      className="space-y-4 w-full min-w-0 max-w-full pb-4"
     >
       {/* Header with Non-Deletable Compliance Badge */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-hairline pb-4">
@@ -285,14 +285,14 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
         </div>
 
         {/* Permanent Audit Trail Seal (Non-Deletable Record Lock) */}
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-mono font-bold shadow-2xs self-start sm:self-auto">
-          <Lock size={13} className="text-emerald-700" />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-mono font-bold shadow-2xs self-start sm:self-auto shrink-0 whitespace-nowrap">
+          <Lock size={13} className="text-emerald-700 shrink-0" />
           <span>Immutable Audit Log · Non-Deletable</span>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
         {/* Search */}
         <div className="relative max-w-sm w-full">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" />
@@ -301,16 +301,16 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
             placeholder="Search by Patient Name, Case ID, Cohort..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-9 pr-3 rounded-xl bg-white border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-quantum/60 shadow-2xs font-sans"
+            className="w-full h-9 pl-9 pr-3 rounded-xl bg-white border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-quantum/60 shadow-2xs font-sans"
           />
         </div>
 
         {/* Risk Filter Buttons */}
-        <div className="flex items-center gap-1.5 p-1 bg-cream/70 rounded-xl border border-hairline text-xs font-sans">
+        <div className="flex items-center gap-1.5 p-1 bg-cream/70 rounded-xl border border-hairline text-xs font-sans shrink-0">
           <button
             type="button"
             onClick={() => setRiskFilter("ALL")}
-            className={`px-3 py-1.5 rounded-lg transition-all text-xs cursor-pointer ${
+            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
               riskFilter === "ALL"
                 ? "bg-white text-ink shadow-xs border border-hairline font-bold"
                 : "text-ink-soft hover:text-ink"
@@ -321,7 +321,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
           <button
             type="button"
             onClick={() => setRiskFilter("High")}
-            className={`px-3 py-1.5 rounded-lg transition-all text-xs cursor-pointer ${
+            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
               riskFilter === "High"
                 ? "bg-red-50 text-red-700 shadow-xs border border-red-200 font-bold"
                 : "text-ink-soft hover:text-ink"
@@ -332,7 +332,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
           <button
             type="button"
             onClick={() => setRiskFilter("Low")}
-            className={`px-3 py-1.5 rounded-lg transition-all text-xs cursor-pointer ${
+            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
               riskFilter === "Low"
                 ? "bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-bold"
                 : "text-ink-soft hover:text-ink"
@@ -382,21 +382,21 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
         </div>
       ) : (
         /* Unified White Clinical Table Card */
-        <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden max-w-full">
-          <div className="overflow-x-auto max-w-full scrollbar-thin scrollbar-thumb-hairline">
-            <table className="min-w-[1100px] w-full text-left text-xs font-sans">
-              <thead className="bg-cream/40 border-b border-hairline text-[10px] font-mono uppercase tracking-wider text-ink-soft">
+        <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden w-full min-w-0">
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-210px)] w-full min-w-0 scrollbar-thin scrollbar-thumb-hairline scrollbar-track-cream/30">
+            <table className="w-full text-left text-xs font-sans min-w-[980px]">
+              <thead className="sticky top-0 bg-[#fbf9f4]/95 backdrop-blur-xs border-b border-hairline text-[10px] font-mono uppercase tracking-wider text-ink-soft z-10">
                 <tr>
-                  <th className="py-3.5 px-4 font-semibold">Case / Patient ID</th>
-                  <th className="py-3.5 px-4 font-semibold">Patient Name</th>
-                  <th className="py-3.5 px-4 font-semibold">Demographics</th>
-                  <th className="py-3.5 px-4 font-semibold">Biopsy Cohort</th>
-                  <th className="py-3.5 px-4 font-semibold text-purple-700">Hybrid Quantum (Transfinite-1)</th>
-                  <th className="py-3.5 px-4 font-semibold text-blue-700">Classical Baseline (CX-01)</th>
-                  <th className="py-3.5 px-4 font-semibold">Key Risk Factor</th>
-                  <th className="py-3.5 px-4 font-semibold">Consensus</th>
-                  <th className="py-3.5 px-4 font-semibold">Test Date</th>
-                  <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Case / Patient ID</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Patient Name</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Demographics</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Biopsy Cohort</th>
+                  <th className="py-2.5 px-3 font-semibold text-purple-700 whitespace-nowrap">Hybrid Quantum (Transfinite-1)</th>
+                  <th className="py-2.5 px-3 font-semibold text-blue-700 whitespace-nowrap">Classical Baseline (CX-01)</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Key Risk Factor</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Consensus</th>
+                  <th className="py-2.5 px-3 font-semibold whitespace-nowrap">Test Date</th>
+                  <th className="py-2.5 px-3 font-semibold text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline text-ink">
@@ -412,27 +412,29 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                       className="hover:bg-cream/20 transition-colors cursor-pointer"
                     >
                       {/* 1. Case ID */}
-                      <td className="py-3.5 px-4 font-mono text-xs font-bold text-quantum whitespace-nowrap">
+                      <td className="py-2.5 px-3 font-mono text-xs font-bold text-quantum whitespace-nowrap">
                         {pred.id}
                       </td>
 
                       {/* 2. Patient Name */}
-                      <td className="py-3.5 px-4 font-bold text-xs text-ink whitespace-nowrap">
+                      <td className="py-2.5 px-3 font-bold text-xs text-ink whitespace-nowrap">
                         {pred.patientName || "Not specified"}
                       </td>
 
                       {/* 3. Demographics */}
-                      <td className="py-3.5 px-4 text-xs text-ink-soft whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-xs text-ink-soft whitespace-nowrap">
                         {pred.patientGender || "Female"} • Age {pred.patientAge || 55}
                       </td>
 
                       {/* 4. Biopsy Cohort */}
-                      <td className="py-3.5 px-4 text-xs text-ink-soft whitespace-nowrap">
-                        {pred.cohort || "Fine Needle Aspirate (WDBC)"}
+                      <td className="py-2.5 px-3 text-xs text-ink-soft whitespace-nowrap">
+                        <span className="max-w-[170px] truncate block" title={pred.cohort || pred.diseaseType || "Fine Needle Aspirate (WDBC)"}>
+                          {pred.cohort || pred.diseaseType || "Fine Needle Aspirate (WDBC)"}
+                        </span>
                       </td>
 
                       {/* 5. Hybrid Quantum (Transfinite-1) */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border ${
                             isMalignant
@@ -446,7 +448,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                       </td>
 
                       {/* 6. Classical Baseline (CX-01) */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           <Activity size={11} className="shrink-0" />
                           <span>{pred.classicalPrediction} ({cRisk}%)</span>
@@ -454,21 +456,23 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                       </td>
 
                       {/* 7. Key Risk Factor */}
-                      <td className="py-3.5 px-4 text-xs whitespace-nowrap font-medium text-ink">
-                        <span>{pred.topDriver || "Cell Size (Radius)"}</span>
-                        {pred.topDriverImpact && (
-                          <span
-                            className={`ml-1 text-[10px] font-mono font-bold ${
-                              pred.topDriverImpact > 0 ? "text-red-600" : "text-emerald-700"
-                            }`}
-                          >
-                            ({pred.topDriverImpact > 0 ? "+" : ""}{pred.topDriverImpact.toFixed(1)}%)
-                          </span>
-                        )}
+                      <td className="py-2.5 px-3 text-xs whitespace-nowrap font-medium text-ink">
+                        <div className="max-w-[190px] truncate" title={`${pred.topDriver || "Cell Size (Radius)"}${pred.topDriverImpact ? ` (${pred.topDriverImpact > 0 ? "+" : ""}${pred.topDriverImpact.toFixed(1)}%)` : ""}`}>
+                          <span>{pred.topDriver || "Cell Size (Radius)"}</span>
+                          {pred.topDriverImpact && (
+                            <span
+                              className={`ml-1 text-[10px] font-mono font-bold ${
+                                pred.topDriverImpact > 0 ? "text-red-600" : "text-emerald-700"
+                              }`}
+                            >
+                              ({pred.topDriverImpact > 0 ? "+" : ""}{pred.topDriverImpact.toFixed(1)}%)
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 8. Consensus */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
                           className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
                             pred.consensusStatus === "Discordant"
@@ -481,12 +485,12 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                       </td>
 
                       {/* 9. Test Date */}
-                      <td className="py-3.5 px-4 text-xs text-ink-soft font-mono whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-xs text-ink-soft font-mono whitespace-nowrap">
                         {pred.timestamp}
                       </td>
 
                       {/* 10. Actions (NO DELETE BUTTON - ONLY VIEW & DOWNLOAD) */}
-                      <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right space-x-1.5 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={(e) => handleViewAnalysis(pred, e)}
