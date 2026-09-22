@@ -159,7 +159,7 @@ The Generic Solution (what everyone else will do):
 | **1** | **Geometric Pre-Screening** | Before training any quantum model, we mathematically compute whether a quantum kernel actually captures *different* structure than the best classical kernel on this specific dataset. If quantum ≈ classical on this data, we honestly say so. | Requires implementing the Huang et al. (2021) geometric difference metric. No library provides this out of the box. Most teams have never heard of it. |
 | **2** | **Quantum Circuit Architecture Search (Q-CAS)** | Instead of copying one fixed circuit from a tutorial, we evaluate multiple circuit designs and pick the one best suited to each dataset's geometry. | Requires custom code to measure expressibility, entangling capability, and barren plateau risk. Most teams use whatever the first tutorial shows. |
 | **3** | **Non-Linear Feature Preservation** | Instead of PCA (which linearizes data), we use autoencoders (neural network-based compression) that preserve the non-linear structure quantum models need. | Requires understanding *why* PCA hurts quantum models — a subtlety most teams miss entirely. |
-| **4** | **Multi-Disease, Multi-Dataset Evaluation** | We don't just classify one disease. We test across breast cancer, cardiovascular disease, and chronic kidney disease — showing where quantum helps and where it doesn't. | Requires building a flexible pipeline, not a one-off notebook. More work, more impressive. |
+| **4** | **Multi-Disease, Multi-Dataset Evaluation** | We don't just classify one disease. We test across breast cancer, cardiovascular disease, and neurological disorders — showing where quantum helps and where it doesn't. | Requires building a flexible pipeline, not a one-off notebook. More work, more impressive. |
 | **5** | **Quantum-Native Explainability (QXplain)** | Beyond standard SHAP (which treats the quantum model as a black box), we implement gate ablation and entanglement attribution — showing *which quantum operations* drove the prediction. | Original research-level contribution. No existing library does this. |
 | **6** | **Real IBM Quantum Hardware Execution** | We run inference and benchmarking on actual IBM QPUs (real superconducting quantum processors), not just simulators. | Most teams won't even try this. We will show verifiable results from real quantum hardware. |
 | **7** | **Honest, Statistically Rigorous Benchmarking** | We use McNemar's test and paired t-tests to report *whether the difference between quantum and classical is statistically significant*. | Requires statistical literacy beyond "compare two accuracy numbers." Shows genuine research maturity. |
@@ -176,7 +176,7 @@ We are targeting **three diseases** — not one — to demonstrate the platform'
 |---|---|---|---|
 | **Breast Cancer** | Most-studied QML benchmark. We MUST include it for credibility and comparability with published research. Strong datasets available. | Tabular (biopsy features), Imaging (histopathology) | #1 cancer in Indian women. ~2.1 lakh new cases/year. |
 | **Cardiovascular Disease** (Heart Attack / Heart Failure risk) | Higher-dimensional feature space (EHR + labs + vitals over time). This is where quantum models have a *better chance* of showing advantage over classical models. | Tabular (clinical features, lab results) | Leading cause of death in India. ~28% of all deaths. |
-| **Chronic Kidney Disease (CKD)** | Clean, well-structured dataset with 24 features including blood tests. Excellent for demonstrating the full pipeline. Common comorbidity with diabetes and heart disease. | Tabular (lab results, clinical indicators) | ~17% of Indian population affected. Often detected too late. |
+| **Neurological Disorders** (Neurodegenerative / Brain Health) | Multi-channel electrophysiological signals (EEG frequencies, latency, cognitive ERP markers). High-dimensional spatio-temporal dynamics where quantum entanglement excels. | Signal / Tabular (EEG spectrum, neuro-cognitive markers) | Rapidly rising burden in India (~30+ million affected by neurological conditions). Early detection crucial. |
 
 ### Why All Three?
 
@@ -205,7 +205,7 @@ What we *will* do:
 | **Wisconsin Breast Cancer (WDBC)** | UCI ML Repository | 569 samples | 30 numeric features from FNA biopsy | Breast Cancer | Industry-standard QML benchmark. Every paper uses it. We MUST include it for credibility. |
 | **Cleveland Heart Disease** | UCI ML Repository / Kaggle | 303 samples, 13 features (core) | Age, sex, cholesterol, blood pressure, ECG, etc. | Cardiovascular | Most-cited heart disease benchmark. Clean, well-documented. |
 | **Framingham Heart Study** | Kaggle | 4,240 samples, 16 features | Demographics, vitals, labs, lifestyle factors | Cardiovascular (10-year risk) | Larger dataset → more robust evaluation. Includes longitudinal risk factors. |
-| **Chronic Kidney Disease** | UCI ML Repository | 400 samples, 24 features | Blood tests (hemoglobin, albumin, etc.), vitals, urinalysis | CKD | Well-structured, multi-feature. Good candidate for quantum feature interaction exploitation. |
+| **Neurological Electrophysiology & EEG** | UCI ML / PhysioNet | 400+ samples, 24 features | Multi-channel spectral EEG bands, reaction latency, evoked potentials | Neurological | High-dimensional, entangled channel interactions. Ideal candidate for quantum feature map exploitation. |
 | **Diabetes 130-US Hospitals** | UCI ML Repository | 100,000+ encounters | 50+ features from EHR | Type 2 Diabetes / Comorbidity | Stretch dataset. Massive scale shows pipeline handles real-world volume. |
 
 ### Stretch / Imaging Dataset
@@ -517,19 +517,19 @@ These are the 10 most important features from the Wisconsin BC dataset (determin
 
 > **Where does a user get these values?** From a **basic medical check-up report**. Blood pressure, cholesterol, blood sugar — these are standard blood test results any clinic provides. Most people have these from their last health check-up.
 
-#### CKD Prediction — Input Fields
+#### Neurological Disorder Screening — Input Fields
 
 | Field | What It Is (Simple) | Unit | Example | Required? |
 |---|---|---|---|---|
-| Age | Patient's age | Years | 55 | ✅ Yes |
-| Blood Pressure | Resting blood pressure | mmHg | 80 | ✅ Yes |
-| Specific Gravity | Urine density | 1.005-1.025 | 1.020 | ✅ Yes |
-| Albumin | Protein in urine | 0-5 (scale) | 1 | ✅ Yes |
-| Blood Sugar | Blood sugar level | Random, mg/dL | 120 | ✅ Yes |
-| Hemoglobin | Blood hemoglobin level | g/dL | 14.5 | ✅ Yes |
-| Serum Creatinine | Kidney function marker | mg/dL | 1.2 | ✅ Yes |
-| Sodium | Blood sodium level | mEq/L | 140 | ⭕ Optional |
-| Potassium | Blood potassium level | mEq/L | 4.5 | ⭕ Optional |
+| Age | Patient's age | Years | 58 | ✅ Yes |
+| Alpha Peak Frequency | Dominant occipital rhythm | Hz | 9.8 | ✅ Yes |
+| Beta / Theta Ratio | Attentional / Cognitive ratio | Ratio | 1.85 | ✅ Yes |
+| Delta Power Density | Slow-wave sleep/pathology marker | μV²/Hz | 12.4 | ✅ Yes |
+| P300 Latency | Cognitive processing speed | ms | 315 | ✅ Yes |
+| Reaction Latency | Motor-cognitive response time | ms | 240 | ✅ Yes |
+| Mini-Mental Score (MMSE) | Cognitive screening baseline | 0-30 scale | 27 | ✅ Yes |
+| Heart Rate Variability (HRV) | Autonomic nervous tone | ms | 45 | ⭕ Optional |
+| Tremor Frequency | Motor perturbation oscillation | Hz | 0.0 | ⭕ Optional |
 
 ### How Missing Values Are Handled
 
@@ -1499,7 +1499,7 @@ QuantumX/
 ├── Models/                   # 💾 Model experiments [R6-LEADER, R3-ML]
 │   ├── breast_cancer/        # Saved models for breast cancer
 │   ├── cardiovascular/       # Saved models for cardiovascular
-│   ├── ckd/                  # Saved models for CKD
+│   ├── neurological/         # Saved models for neurological disorders
 │   └── README.md             # Model experiment tracking
 │
 ├── Plan/                     # 📋 Project planning [R5-DOCS, R6-LEADER]
@@ -1643,7 +1643,7 @@ The data pipeline, classical ML models, SHAP explainability, and benchmarking me
 
 | Phase | Task | Depends On |
 |---|---|---|
-| **Week 1** | Download and explore all three primary datasets (WDBC, Cleveland Heart Disease, CKD). Understand features, distributions, class balance. | Understanding this document |
+| **Week 1** | Download and explore all three primary datasets (WDBC, Cardiac ECG, Neurological EEG). Understand features, distributions, class balance. | Understanding this document |
 | **Week 1** | Build **data validation module** — schema checking, type checking, range validation. | Dataset exploration |
 | **Week 2** | Build **data cleaning pipeline** — KNN imputation, outlier clipping, categorical encoding, StandardScaler. | Validation module |
 | **Week 2** | Build **autoencoder** for non-linear dimensionality reduction. Train on each dataset. Save encoder weights. | Cleaning pipeline |

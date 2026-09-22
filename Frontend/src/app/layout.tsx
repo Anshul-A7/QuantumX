@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Newsreader, Geist, Geist_Mono } from "next/font/google";
+import BackendWarmer from "@/components/common/BackendWarmer";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -161,6 +162,7 @@ export default function RootLayout({
       <body
         className={`${geist.variable} ${newsreader.variable} ${geistMono.variable} antialiased`}
       >
+        <BackendWarmer />
         {children}
       </body>
     </html>

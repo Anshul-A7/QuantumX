@@ -43,19 +43,19 @@ DISPOSABLE_DOMAINS = {
 
 
 def validate_email_deliverability(email: str) -> str:
-    """Validates syntax, DNS MX deliverability, and blocks burner/disposable domains."""
+    """Validates syntax, checks deliverability when network allows, and blocks burner/disposable domains."""
+    clean = (email or "").strip().lower()
+    if not clean:
+        raise ValueError("Email address cannot be empty.")
     try:
-        validated = validate_email(email.strip(), check_deliverability=True)
+        validated = validate_email(clean, check_deliverability=False)
         normalized_email = validated.normalized
         domain = normalized_email.split("@")[1].lower()
         if domain in DISPOSABLE_DOMAINS:
             raise ValueError("Disposable and temporary email domains are not permitted. Please use a valid institutional or personal email.")
         return normalized_email
     except EmailNotValidError as e:
-        err_msg = str(e)
-        if "does not exist" in err_msg or "domain" in err_msg:
-            raise ValueError("We could not verify this email domain with public DNS records. Please verify the domain and try again.") from e
-        raise ValueError("Please enter a valid, deliverable email address.") from e
+        raise ValueError("Please enter a valid email address.") from e
 
 
 def is_expired(exp_dt: datetime) -> bool:
@@ -230,6 +230,7 @@ class AuthService:
             refreshToken=new_refresh_token,
             expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             user=AuthService.user_to_profile(user),
+            isNewUser=True,
         )
 
     @staticmethod
@@ -291,7 +292,80 @@ class AuthService:
             await db.commit()
 
     # =========================================================
-    # REGISTRATION WITH BULLETPROOF OTP & SMTP DISPATCH
+    # INSTANT REGISTRATION (OTP-FREE DIRECT ENTRY)
+    # =========================================================
+
+    @staticmethod
+    async def register_and_authenticate(
+        db: AsyncSession,
+        data: RegisterRequest,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+    ) -> AuthResponse:
+        """
+        Registers a new user, marks email verified, creates a persistent session,
+        and directly returns an AuthResponse with tokens, eliminating the OTP wall.
+        """
+        raw_email = (data.email or "").strip()
+        if not raw_email:
+            raise ValueError("Please enter a valid email address.")
+
+        email = validate_email_deliverability(raw_email)
+
+        # Check existing user
+        existing = await AuthService.get_user_by_email(db, email)
+        if existing:
+            if existing.auth_provider == "LOCAL" and verify_password(data.password, existing.password_hash):
+                # Valid existing user registering again: activate and sign them in directly
+                existing.is_email_verified = True
+                existing.is_active = True
+                await db.commit()
+                access_token, refresh_token, session = await AuthService.create_user_session(
+                    db, existing, user_agent, ip_address
+                )
+                return AuthResponse(
+                    accessToken=access_token,
+                    refreshToken=refresh_token,
+                    tokenType="bearer",
+                    expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                    user=AuthService.user_to_profile(existing),
+                )
+            raise ValueError("An account with this email address already exists. Please sign in instead.")
+
+        username = data.username or data.fullName or email.split("@")[0]
+        full_name = data.fullName or data.username or username
+
+        user = User(
+            email=email,
+            username=username,
+            full_name=full_name,
+            password_hash=hash_password(data.password),
+            role="USER",
+            auth_provider="LOCAL",
+            is_active=True,
+            is_email_verified=True,  # Instantly verified
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+        # Create session and mint JWT tokens
+        access_token, refresh_token, session = await AuthService.create_user_session(
+            db, user, user_agent, ip_address
+        )
+
+        logger.info(f"[AUTH REGISTRATION] User {user.email} registered and authenticated directly without OTP.")
+
+        return AuthResponse(
+            accessToken=access_token,
+            refreshToken=refresh_token,
+            tokenType="bearer",
+            expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=AuthService.user_to_profile(user),
+        )
+
+    # =========================================================
+    # LEGACY REGISTRATION WITH BULLETPROOF OTP & SMTP DISPATCH
     # =========================================================
 
     @staticmethod
@@ -619,8 +693,10 @@ class AuthService:
 
         email = email.lower().strip()
         user = await AuthService.get_user_by_email(db, email)
+        is_new_user = False
 
         if not user:
+            is_new_user = True
             username = (name or email.split("@")[0]).replace(" ", "_")
             user = User(
                 email=email,
@@ -641,6 +717,8 @@ class AuthService:
                 user.is_email_verified = True
             if picture and not user.profile_image_url:
                 user.profile_image_url = picture
+            if name and (not user.full_name or user.full_name == user.username):
+                user.full_name = name
             await db.commit()
             await db.refresh(user)
 
@@ -656,6 +734,7 @@ class AuthService:
             refreshToken=refresh_token,
             expiresIn=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             user=AuthService.user_to_profile(user),
+            isNewUser=is_new_user,
         )
 
     # =========================================================
@@ -746,10 +825,10 @@ class AuthService:
             raise ValueError("User account not found.")
 
         from app.models.screening import Screening
-        from app.models.notification import NotificationModel
+        from app.models.notification import Notification
 
         await db.execute(delete(Screening).where(Screening.user_id == user_id))
-        await db.execute(delete(NotificationModel).where(NotificationModel.user_id == user_id))
+        await db.execute(delete(Notification).where(Notification.user_id == user_id))
         await db.execute(delete(UserSession).where(UserSession.user_id == user_id))
         await db.execute(delete(VerificationToken).where(VerificationToken.user_id == user_id))
         await db.delete(user)

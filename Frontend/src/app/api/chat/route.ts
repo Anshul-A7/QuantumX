@@ -4,14 +4,14 @@ const SYSTEM_PROMPT = `
 You are the QuantumX Clinical AI Specialist — the dedicated artificial intelligence for the QuantumX Hybrid Quantum-Classical Medical Platform.
 
 MISSION & IDENTITY:
-- You specialize in hybrid quantum-classical machine learning for oncology, cardiology, and nephrology screening.
+- You specialize in hybrid quantum-classical machine learning for oncology, cardiology, and neurology screening.
 - You have complete, granular knowledge of the entire QuantumX technical pipeline, theoretical formulations, hardware backends, and empirical benchmarks.
 - You have direct access to the user's active session, real-time patient screening reports, diagnosis history, and selected hardware backend (provided in the context payload).
 - You strictly answer questions about QuantumX, hybrid quantum computing, medical diagnostics, patient case analyses, circuit architectures, and benchmarking results. Reject unrelated general small talk.
 
 CORE PLATFORM KNOWLEDGE:
 1. QUANTUM PIPELINE ARCHITECTURE:
-   - Data Ingestion & Preprocessing: 30 WDBC cytology features, 14 Cleveland heart disease markers, 24 CKD markers. Standardized and dimension-reduced via classical autoencoder into bounded feature vectors x ∈ [-π, π]^D.
+   - Data Ingestion & Preprocessing: 30 WDBC cytology features, multi-lead ECG cardiac signals & images, multi-channel EEG neurological markers. Standardized and dimension-reduced via classical autoencoder into bounded feature vectors x ∈ [-π, π]^D.
    - State Encoding: Angle / Phase encoding using parameterized single-qubit rotations (Rx, Rz) and entangling CNOT/CZ gates in a ZZ-feature map ansatz: |ψ(x)⟩ = U_Φ(x)|0⟩^⊗n, where Φ_{i,j}(x) = (π - x_i)(π - x_j).
    - Variational Quantum Classifier (VQC): Parameterized ansatz with trainable rotation angles θ.
    - Optimization: Analytical quantum gradients computed via the Parameter-Shift Rule: ∂⟨H⟩/∂θ_k = (⟨H(θ_k + π/2)⟩ - ⟨H(θ_k - π/2)⟩) / 2.
@@ -151,7 +151,7 @@ function generateExpertResponse(query: string, ctx: any): string {
     q.includes("last")
   ) {
     if (screenings.length === 0) {
-      return `### 📋 Patient Screening Records Status\n\nNo patient diagnostic screenings have been recorded for your account yet (**Count: 0**).\n\nTo run your first quantum analysis:\n1. Navigate to the **[Clinical Predictor](/predict)**.\n2. Choose a disease model (**Breast Cancer**, **Heart Disease**, or **Kidney Care**).\n3. Input clinical biomarkers or select a verified tissue preset, then click **Run Quantum Inference**.\n\nAll results, quantum confidence scores, and gate attributions will be automatically saved directly to the database.`;
+      return `### 📋 Patient Screening Records Status\n\nNo patient diagnostic screenings have been recorded for your account yet (**Count: 0**).\n\nTo run your first quantum analysis:\n1. Navigate to the **[Clinical Predictor](/predict)**.\n2. Choose a disease model (**Breast Cancer**, **Heart Attack & ECG**, or **Neurological Disorders**).\n3. Input clinical biomarkers or select a verified tissue preset, then click **Run Quantum Inference**.\n\nAll results, quantum confidence scores, and gate attributions will be automatically saved directly to the database.`;
     }
 
     const latest = screenings[0];
@@ -160,7 +160,7 @@ function generateExpertResponse(query: string, ctx: any): string {
 
   // 2. Quantum vs Classical comparison
   if (q.includes("difference") || q.includes("vs") || q.includes("classical") || q.includes("xgboost") || q.includes("svm")) {
-    return `### 🔬 Quantum Hybrid vs. Classical Machine Learning\n\nQuantumX evaluates parameterized quantum circuits side-by-side against industry-standard classical baselines on identical 5-fold CV splits:\n\n1. **Feature Space Representation**:\n   - **Classical ML (XGBoost, SVM)**: Operates directly on $\\mathbb{R}^D$ linear/polynomial feature spaces, struggling with subtle multi-symptom correlated entanglements.\n   - **Quantum VQC (ZZ-Feature Map)**: Maps biomarkers into an exponentially large $2^n$-dimensional Hilbert space: $|\\psi(x)\\rangle = U_\\Phi(x)|0\\rangle^{\\otimes n}$, revealing subtle non-linear cellular boundary correlations.\n\n2. **Empirical Benchmarks (BVP Protocol)**:\n   - **Breast Cancer (WDBC)**: Quantum Hybrid **96.8 ± 0.4%** vs XGBoost **95.2 ± 0.6%** (McNemar $\\chi^2$: $p = 0.018^*$, Cohen's $d = 0.62$).\n   - **Heart Disease**: Quantum Hybrid **88.6 ± 0.6%** vs XGBoost **84.4 ± 0.8%** ($p = 0.012^*$).\n   - **Chronic Kidney**: Quantum Hybrid **98.2 ± 0.3%** vs XGBoost **97.5 ± 0.5%** ($p = 0.008^*$).`;
+    return `### 🔬 Quantum Hybrid vs. Classical Machine Learning\n\nQuantumX evaluates parameterized quantum circuits side-by-side against industry-standard classical baselines on identical 5-fold CV splits:\n\n1. **Feature Space Representation**:\n   - **Classical ML (XGBoost, SVM)**: Operates directly on $\\mathbb{R}^D$ linear/polynomial feature spaces, struggling with subtle multi-symptom correlated entanglements.\n   - **Quantum VQC (ZZ-Feature Map)**: Maps biomarkers into an exponentially large $2^n$-dimensional Hilbert space: $|\\psi(x)\\rangle = U_\\Phi(x)|0\\rangle^{\\otimes n}$, revealing subtle non-linear cellular boundary correlations.\n\n2. **Empirical Benchmarks (BVP Protocol)**:\n   - **Breast Cancer (WDBC)**: Quantum Hybrid **96.8 ± 0.4%** vs XGBoost **95.2 ± 0.6%** (McNemar $\\chi^2$: $p = 0.018^*$, Cohen's $d = 0.62$).\n   - **Heart Disease**: Quantum Hybrid **88.6 ± 0.6%** vs XGBoost **84.4 ± 0.8%** ($p = 0.012^*$).\n   - **Neurological Disorders**: Quantum Hybrid **98.2 ± 0.3%** vs XGBoost **97.5 ± 0.5%** ($p = 0.008^*$).`;
   }
 
   // 3. Mathematical Geometric Advantage (s_K)

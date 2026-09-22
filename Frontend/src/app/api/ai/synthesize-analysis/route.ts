@@ -33,13 +33,48 @@ export async function POST(req: NextRequest) {
       .slice(0, 3)
       .join(", ");
 
+    const isCardiac = body.condition === "cardiac" || body.modality === "ecg" || Boolean(body.lead_detected);
+    const leadDetected = body.lead_detected || body.anatomical_lead || "";
+    const anatomicalRegion = body.anatomical_region || body.vascular_territory || "";
+    const clinicalRec = body.clinical_recommendation || "";
+
     const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
     let aiSynthesis: any = null;
 
     if (geminiApiKey) {
       try {
-        const prompt = `You are a healthcare specialist explaining breast biopsy cytopathology screening results to a patient in clear, compassionate, everyday language.
+        const prompt = isCardiac
+          ? `You are an expert cardiologist explaining 12-lead ECG cardiac screening results to a patient in clear, compassionate, everyday language.
+
+INPUT PATIENT CONTEXT:
+- Patient Name: ${patientName}
+- Age & Gender: ${age} years old, ${gender}
+- Primary Diagnostic Finding: ${prediction} (${confidence}% Certainty)
+- Continuous Cardiac Risk Score: ${risk_score} out of 100
+- Standardized Risk Tier: ${risk_tier} (${risk_tag})
+- Anatomical Lead Trigger: ${leadDetected || "Lead V2"} (${anatomicalRegion || "Septal / LAD Territory"})
+- Clinical Recommendation: ${clinicalRec || "Routine health checkup"}
+
+CRITICAL GENERATION RULES:
+1. Write exactly ONE cohesive, compassionate, and clear summary paragraph (3 to 4 sentences).
+2. Clearly mention the Cardiac Risk Score (${risk_score} out of 100) and the primary finding in plain words.
+3. Explain what the ECG rhythm and lead localization mean in simple language without frightening the patient unnecessarily.
+4. Give reassuring and clear next medical steps based on the clinical recommendation.
+5. DO NOT mention AI, Gemini, models, algorithms, or computer prompts. Write as a caring clinical cardiologist.
+
+OUTPUT FORMAT INSTRUCTION:
+Respond ONLY with valid JSON in this schema:
+\`\`\`json
+{
+  "risk_score": ${risk_score},
+  "risk_tag": "${risk_tag}",
+  "risk_tier": "${risk_tier}",
+  "clinical_impression": "Concise 1-sentence doctor impression.",
+  "summary_paragraph": "Compassionate summary paragraph for the patient."
+}
+\`\`\``
+          : `You are a healthcare specialist explaining breast biopsy cytopathology screening results to a patient in clear, compassionate, everyday language.
 
 INPUT PATIENT CONTEXT:
 - Patient Name: ${patientName}
@@ -63,20 +98,16 @@ CRITICAL GENERATION RULES:
 6. DO NOT mention AI, Gemini, models, algorithms, or computer prompts. Write as an empathetic health specialist.
 
 OUTPUT FORMAT INSTRUCTION:
-You MUST respond with valid JSON matching the following schema and format:
-
-EXAMPLE JSON RESPONSE FORMAT:
+Respond ONLY with valid JSON in this schema:
 \`\`\`json
 {
   "risk_score": ${risk_score},
   "risk_tag": "${risk_tag}",
   "risk_tier": "${risk_tier}",
-  "clinical_impression": "Reassuring healthy cell architecture with minimal risk.",
-  "summary_paragraph": "The biopsy screening for ${patientName} shows reassuring results (${confidence}% certainty) with a low risk score of ${risk_score} out of 100 (${risk_tag.replace(/_/g, ' ')}). The examined cells are of standard, healthy size with smooth, even borders characteristic of typical non-cancerous breast tissue. No urgent intervention is required, and continuing with routine periodic checkups is recommended."
+  "clinical_impression": "Concise 1-sentence impression.",
+  "summary_paragraph": "Compassionate summary paragraph for the patient."
 }
-\`\`\`
-
-Respond ONLY with valid JSON.`;
+\`\`\``;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
@@ -105,29 +136,45 @@ Respond ONLY with valid JSON.`;
 
     // High-Signal Fallback Synthesis aligned with Researched Risk Tiers
     if (!aiSynthesis || !aiSynthesis.summary_paragraph) {
-      const isCritical = risk_tag === "CRITICAL_RISK" || risk_score >= 85;
-      const isHigh = risk_tag === "HIGH_RISK" || (risk_score >= 65 && risk_score < 85);
-      const isBorderline = risk_tag === "BORDERLINE" || (risk_score >= 45 && risk_score < 65);
-      const isMild = risk_tag === "MILD_SUSPICION" || (risk_score >= 25 && risk_score < 45);
-
       let fallbackText = "";
       let impression = "";
 
-      if (isCritical) {
-        impression = "High-grade cellular abnormalities requiring urgent clinical workup.";
-        fallbackText = `The biopsy screening for ${patientName} shows an elevated risk score of ${risk_score.toFixed(1)} out of 100 with a Critical Risk tag (${confidence.toFixed(1)}% certainty). The examined cells exhibit significant enlargement and irregular, deeply indented borders, indicating noticeable cellular changes. We strongly recommend immediate follow-up with your doctor and surgical oncology team for comprehensive evaluation and guidance.`;
-      } else if (isHigh) {
-        impression = "Elevated cellular irregularity suspicious for neoplasia.";
-        fallbackText = `The biopsy screening for ${patientName} indicates an elevated risk score of ${risk_score.toFixed(1)} out of 100 under the High Risk tag (${confidence.toFixed(1)}% certainty). The cell measurements show noticeable nuclear enlargement and irregular contour patterns. We recommend prompt consultation with your healthcare provider for a core needle biopsy and diagnostic ultrasound review.`;
-      } else if (isBorderline) {
-        impression = "Intermediate cellular atypia occupying the borderline transition zone.";
-        fallbackText = `The biopsy screening for ${patientName} shows borderline measurements with a moderate risk score of ${risk_score.toFixed(1)} out of 100 under the Borderline Atypia tag (${confidence.toFixed(1)}% certainty). The cells show slight variations in size and mild contour irregularities, which often represent benign changes but warrant closer inspection. We advise scheduling a follow-up ultrasound or checkup with your doctor to monitor tissue stability.`;
-      } else if (isMild) {
-        impression = "Mild reactive cellular variation favoring benign tissue.";
-        fallbackText = `The biopsy screening for ${patientName} shows favorable results with a low-to-moderate risk score of ${risk_score.toFixed(1)} out of 100 under the Mild Suspicion tag (${confidence.toFixed(1)}% certainty). The examined cells are predominantly uniform with only slight reactive variations consistent with non-cancerous breast tissue. A routine follow-up checkup in 6 months is recommended to confirm ongoing stability.`;
+      if (isCardiac) {
+        if (prediction === "Myocardial Infarction" || risk_score >= 85) {
+          impression = "Acute myocardial injury pattern requiring immediate emergency catheterization.";
+          fallbackText = `The 12-lead ECG evaluation for ${patientName} demonstrates acute ischemic changes with a critical cardiac risk score of ${risk_score.toFixed(1)} out of 100 (${confidence.toFixed(1)}% certainty). The primary changes were identified in ${leadDetected || "Lead V2 / Anterior leads"} (${anatomicalRegion || "coronary territory"}). Immediate evaluation at an emergency cardiology facility or catheterization lab is strongly advised.`;
+        } else if (prediction === "Abnormal Heartbeat" || (risk_score >= 60 && risk_score < 85)) {
+          impression = "Cardiac conduction disturbance / rhythm irregularity requiring electrophysiology review.";
+          fallbackText = `The 12-lead ECG evaluation for ${patientName} shows an irregular rhythm pattern with an elevated cardiac risk score of ${risk_score.toFixed(1)} out of 100 (${confidence.toFixed(1)}% certainty). The conduction variations were mapped predominantly to ${leadDetected || "Lead II / Rhythm strip"}. Continuous 24-hour telemetric monitoring and consultation with a cardiologist are recommended to ensure electrical rhythm stability.`;
+        } else if (prediction === "History of MI" || (risk_score >= 35 && risk_score < 60)) {
+          impression = "Prior localized myocardial scarring with preserved baseline stability.";
+          fallbackText = `The 12-lead ECG evaluation for ${patientName} demonstrates localized electrical changes characteristic of prior ischemic scarring, reflecting a moderate cardiac risk score of ${risk_score.toFixed(1)} out of 100. The findings correspond to ${leadDetected || "inferior/septal leads"}. A follow-up echocardiogram to quantify ventricular function and guideline-directed medical checkup is advised.`;
+        } else {
+          impression = "Normal physiological sinus rhythm with healthy electrical conduction.";
+          fallbackText = `Good news: the 12-lead ECG screening for ${patientName} reveals normal physiological sinus rhythm (${confidence.toFixed(1)}% certainty) with a low cardiac risk score of ${risk_score.toFixed(1)} out of 100. All wave intervals across ${leadDetected || "all 12 leads"} reflect healthy, balanced electrical conduction. Routine preventative checkups and standard heart-healthy habits are recommended.`;
+        }
       } else {
-        impression = "Reassuring healthy cell architecture well within normal benign limits.";
-        fallbackText = `Good news: the biopsy test for ${patientName} shows reassuring and healthy results (${confidence.toFixed(1)}% certainty) with a low risk score of ${risk_score.toFixed(1)} out of 100 under the Low Risk tag. The examined cells are of standard, healthy size with smooth, even borders characteristic of typical, non-cancerous breast tissue. Continuing with your routine periodic checkups is recommended.`;
+        const isCritical = risk_tag === "CRITICAL_RISK" || risk_score >= 85;
+        const isHigh = risk_tag === "HIGH_RISK" || (risk_score >= 65 && risk_score < 85);
+        const isBorderline = risk_tag === "BORDERLINE" || (risk_score >= 45 && risk_score < 65);
+        const isMild = risk_tag === "MILD_SUSPICION" || (risk_score >= 25 && risk_score < 45);
+
+        if (isCritical) {
+          impression = "High-grade cellular abnormalities requiring urgent clinical workup.";
+          fallbackText = `The biopsy screening for ${patientName} shows an elevated risk score of ${risk_score.toFixed(1)} out of 100 with a Critical Risk tag (${confidence.toFixed(1)}% certainty). The examined cells exhibit significant enlargement and irregular, deeply indented borders, indicating noticeable cellular changes. We strongly recommend immediate follow-up with your doctor and surgical oncology team for comprehensive evaluation and guidance.`;
+        } else if (isHigh) {
+          impression = "Elevated cellular irregularity suspicious for neoplasia.";
+          fallbackText = `The biopsy screening for ${patientName} indicates an elevated risk score of ${risk_score.toFixed(1)} out of 100 under the High Risk tag (${confidence.toFixed(1)}% certainty). The cell measurements show noticeable nuclear enlargement and irregular contour patterns. We recommend prompt consultation with your healthcare provider for a core needle biopsy and diagnostic ultrasound review.`;
+        } else if (isBorderline) {
+          impression = "Intermediate cellular atypia occupying the borderline transition zone.";
+          fallbackText = `The biopsy screening for ${patientName} shows borderline measurements with a moderate risk score of ${risk_score.toFixed(1)} out of 100 under the Borderline Atypia tag (${confidence.toFixed(1)}% certainty). The cells show slight variations in size and mild contour irregularities, which often represent benign changes but warrant closer inspection. We advise scheduling a follow-up ultrasound or checkup with your doctor to monitor tissue stability.`;
+        } else if (isMild) {
+          impression = "Mild reactive cellular variation favoring benign tissue.";
+          fallbackText = `The biopsy screening for ${patientName} shows favorable results with a low-to-moderate risk score of ${risk_score.toFixed(1)} out of 100 under the Mild Suspicion tag (${confidence.toFixed(1)}% certainty). The examined cells are predominantly uniform with only slight reactive variations consistent with non-cancerous breast tissue. A routine follow-up checkup in 6 months is recommended to confirm ongoing stability.`;
+        } else {
+          impression = "Reassuring healthy cell architecture well within normal benign limits.";
+          fallbackText = `Good news: the biopsy test for ${patientName} shows reassuring and healthy results (${confidence.toFixed(1)}% certainty) with a low risk score of ${risk_score.toFixed(1)} out of 100 under the Low Risk tag. The examined cells are of standard, healthy size with smooth, even borders characteristic of typical, non-cancerous breast tissue. Continuing with your routine periodic checkups is recommended.`;
+        }
       }
 
       aiSynthesis = {

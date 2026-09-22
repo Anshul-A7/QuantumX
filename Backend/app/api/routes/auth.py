@@ -68,26 +68,32 @@ def set_auth_cookies(response: Response, auth_data: AuthResponse) -> None:
 
 @router.post(
     "/register",
-    response_model=MessageResponse,
+    response_model=AuthResponse,
     status_code=status.HTTP_201_CREATED,
 )
 async def register(
     data: RegisterRequest,
+    request: Request,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        user = await AuthService.register_user(db, data)
+        user_agent = request.headers.get("user-agent")
+        ip_address = request.client.host if request.client else None
+        auth_data = await AuthService.register_and_authenticate(
+            db=db,
+            data=data,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
 
-    return MessageResponse(
-        message=f"Verification code sent to {user.email}. Please verify your email to access the workspace.",
-        success=True,
-        cooldownSeconds=settings.OTP_RESEND_COOLDOWN_SECONDS,
-    )
+    set_auth_cookies(response, auth_data)
+    return auth_data
 
 
 # =========================================================

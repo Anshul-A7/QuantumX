@@ -1,8 +1,12 @@
 from typing import Dict, Any, Optional
-from fastapi import APIRouter, HTTPException, status
+import io
+import base64
+from pathlib import Path
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 from pydantic import BaseModel, Field
 
 from models_v1 import cx_01_pipeline, transfinite_1_pipeline, aleph_1_pipeline
+from models_v1.heart_v1.cardiac_engine import get_cardiac_engine
 
 router = APIRouter(
     prefix="/inference",
@@ -49,4 +53,110 @@ async def run_breast_cancer_inference(payload: InferenceRequest):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Inference pipeline execution error: {str(e)}"
+        )
+
+
+class CardiacBase64Request(BaseModel):
+    image_base64: str = Field(..., description="Base64 encoded ECG image data string")
+    filename: Optional[str] = Field(default="ecg_upload.jpg")
+    model_name: Optional[str] = Field(default="transfinite_1")
+
+
+@router.post("/cardiac-ecg", status_code=status.HTTP_200_OK)
+async def run_cardiac_ecg_inference(
+    file: Optional[UploadFile] = File(None),
+    payload: Optional[CardiacBase64Request] = None
+):
+    """
+    Executes production Cardiac ECG Dual-Engine Inference:
+      - Classical CX-01 ResNet-18 + Grad-CAM Heatmap
+      - Hybrid Quantum Transfinite-1 8-Qubit VQC
+      - Calibrated 0-100 Continuous Cardiac Risk Score
+      - Anatomical Lead & ST Abnormality Pinpointing
+    """
+    try:
+        engine = get_cardiac_engine()
+        image_bytes = None
+        filename = "ecg_image.jpg"
+
+        if file is not None:
+            image_bytes = await file.read()
+            filename = file.filename or "ecg_image.jpg"
+        elif payload is not None and payload.image_base64:
+            b64_str = payload.image_base64
+            if "," in b64_str:
+                b64_str = b64_str.split(",")[1]
+            image_bytes = base64.b64decode(b64_str)
+            filename = payload.filename or "ecg_image.jpg"
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either an image file upload or image_base64 payload must be provided."
+            )
+
+        telemetry = engine.predict_image(image_bytes, filename=filename)
+        return telemetry
+    except HTTPException:
+        raise
+    except ValueError as ve:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(ve)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cardiac ECG inference failed: {str(e)}"
+        )
+
+
+class CardiacDemoRequest(BaseModel):
+    sample_type: str = Field(..., description="'mi' | 'normal' | 'history_mi' | 'arrhythmia'")
+
+
+@router.post("/cardiac-demo", status_code=status.HTTP_200_OK)
+async def run_cardiac_demo_inference(payload: CardiacDemoRequest):
+    """
+    Runs instant inference on verified clinical sample ECG cases.
+    """
+    try:
+        sample_key = payload.sample_type.lower().strip()
+        sample_map = {
+            "mi": ("Frontend/public/samples/ecg/sample-mi.jpg", "Acute_MI_Lead_V2_V6.jpg"),
+            "normal": ("Frontend/public/samples/ecg/sample-normal.jpg", "Normal_Sinus_Rhythm.jpg"),
+            "history_mi": ("Frontend/public/samples/ecg/sample-history-mi.jpg", "Prior_Infarct_Lead_II.jpg"),
+            "arrhythmia": ("Frontend/public/samples/ecg/sample-arrhythmia.jpg", "Conduction_Arrhythmia.jpg"),
+        }
+
+        if sample_key not in sample_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown sample_type '{sample_key}'. Choose from: {list(sample_map.keys())}"
+            )
+
+        rel_path, display_name = sample_map[sample_key]
+        repo_root = Path(__file__).resolve().parents[4]
+        img_path = repo_root / rel_path
+
+        if not img_path.exists():
+            img_path = Path(__file__).resolve().parents[3] / rel_path
+
+        if not img_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Sample file not found at {img_path}"
+            )
+
+        with open(img_path, "rb") as f:
+            data = f.read()
+
+        engine = get_cardiac_engine()
+        telemetry = engine.predict_image(data, filename=display_name)
+        return telemetry
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cardiac demo inference failed: {str(e)}"
         )

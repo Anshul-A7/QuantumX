@@ -1,4 +1,5 @@
 import { apiClient, setTokens, setUserData, clearAuth, getRefreshToken, getAccessToken, initAuthSession } from '../lib/api';
+import { isLiveRenderPlatform } from './backend-warmer.service';
 
 // ============================================================================
 // QUANTUMX — AUTHENTICATION & SESSION SERVICE
@@ -22,6 +23,7 @@ export interface AuthResponse {
   tokenType?: string;
   expiresIn?: number;
   user: UserProfile;
+  isNewUser?: boolean;
 }
 
 export interface MessageResponse {
@@ -38,8 +40,11 @@ export interface ApiErrorResponse {
 }
 
 function extractErrorMessage(error: unknown): string {
-  if (error && typeof error === 'object' && 'response' in error) {
-    const axiosError = error as {
+  if (error && typeof error === 'object') {
+    const err = error as {
+      code?: string;
+      message?: string;
+      request?: unknown;
       response?: {
         data?: {
           detail?: string | Array<{ msg?: string; loc?: string[] }>;
@@ -50,7 +55,31 @@ function extractErrorMessage(error: unknown): string {
       };
     };
 
-    const data = axiosError.response?.data;
+    const isLiveRender = isLiveRenderPlatform();
+
+    // Cloud cold-start timeout or Gateway timeout ONLY on live Render platform
+    if (
+      isLiveRender &&
+      (err.code === 'ECONNABORTED' ||
+       err.code === 'ETIMEDOUT' ||
+       err.message?.includes('timeout') ||
+       err.response?.status === 504 ||
+       err.response?.status === 502 ||
+       err.response?.status === 503)
+    ) {
+      return 'The cloud server is waking up from standby. Please wait a moment and try again.';
+    }
+
+    // Standard connection failure
+    if (
+      err.message?.includes('Network Error') ||
+      err.message?.includes('ECONNREFUSED') ||
+      (!err.response && err.request)
+    ) {
+      return 'Unable to connect to the backend server. Please verify the server is running and try again.';
+    }
+
+    const data = err.response?.data;
     if (data) {
       if (typeof data.detail === 'string' && data.detail.trim()) {
         return data.detail;
@@ -66,47 +95,49 @@ function extractErrorMessage(error: unknown): string {
       }
     }
 
-    if (!axiosError.response || axiosError.response.status === 0) {
-      return 'Unable to reach the server. Please check your connection and try again.';
+    if (!err.response || err.response.status === 0) {
+      return isLiveRender
+        ? 'The cloud server is waking up from standby. Please wait a moment and try again.'
+        : 'Unable to connect to the backend server. Please try again.';
     }
-    if (axiosError.response?.status === 401) {
+    if (err.response?.status === 401) {
       return 'Invalid credentials or session expired. Please sign in again.';
     }
-    if (axiosError.response?.status === 403) {
+    if (err.response?.status === 403) {
       return 'Access denied. Please check your account status.';
     }
-    if (axiosError.response?.status === 429) {
+    if (err.response?.status === 429) {
       return 'Rate limit exceeded. Please wait a moment before trying again.';
     }
-    if (axiosError.response?.status && axiosError.response.status >= 500) {
-      return 'A server error occurred. Please try again later.';
+    if (err.response?.status && err.response.status >= 500) {
+      return 'The backend server is initializing or encountered a temporary issue. Please wait 1–2 minutes and retry.';
     }
-  }
-  if (error && typeof error === 'object' && 'message' in error) {
-    const msg = (error as { message: string }).message;
-    if (msg.includes('Network Error') || msg.includes('ECONNREFUSED')) {
-      return 'Unable to reach the server. Please ensure the backend is running.';
+    if (err.message) {
+      if (err.message.includes('status code 400') || err.message.includes('status code 422')) {
+        return 'Please check your information and try again.';
+      }
+      return err.message;
     }
-    if (msg.includes('status code 400') || msg.includes('status code 422')) {
-      return 'Please check your information and try again.';
-    }
-    return msg;
   }
   return 'An unexpected error occurred. Please try again.';
 }
 
 export class AuthService {
   /**
-   * Register a new user with email and password.
+   * Register a new user with email and password and authenticate immediately without OTP.
    */
   static async register(payload: {
     username: string;
     email: string;
     password: string;
     fullName?: string;
-  }): Promise<MessageResponse> {
+  }): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post<MessageResponse>('/auth/register', payload);
+      const response = await apiClient.post<AuthResponse>('/auth/register', payload);
+      if (response.data.accessToken) {
+        setTokens(response.data.accessToken, response.data.refreshToken);
+        setUserData(response.data.user as unknown as Record<string, unknown>);
+      }
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));

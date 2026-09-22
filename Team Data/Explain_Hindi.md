@@ -159,7 +159,7 @@ Generic Solution (jo baaki sab karenge):
 | **1** | **Geometric Pre-Screening** | Koi bhi quantum model train karne se pehle, hum mathematically compute karte hain ki quantum kernel actually *different* structure capture karta hai ya nahi classical kernel se is specific dataset pe. Agar quantum ≈ classical is data pe, toh hum honestly bol dete hain. | Huang et al. (2021) geometric difference metric implement karna padta hai. Koi library ye out of the box nahi deti. Zyaadatar teams ne iske baare mein suna bhi nahi hai. |
 | **2** | **Quantum Circuit Architecture Search (Q-CAS)** | Tutorial se ek fixed circuit copy karne ki jagah, hum multiple circuit designs evaluate karte hain aur har dataset ke geometry ke liye best wala pick karte hain. | Custom code chahiye expressibility, entangling capability, aur barren plateau risk measure karne ke liye. Zyaadatar teams pehli tutorial ka circuit use karti hain. |
 | **3** | **Non-Linear Feature Preservation** | PCA ki jagah (jo data ko linearize karta hai), hum autoencoders use karte hain (neural network-based compression) jo non-linear structure preserve karti hai jo quantum models ko chahiye. | Ye samajhna padta hai ki PCA quantum models ko kyun hurt karta hai — ek subtlety jo zyaadatar teams completely miss karti hain. |
-| **4** | **Multi-Disease, Multi-Dataset Evaluation** | Hum sirf ek disease classify nahi karte. Hum breast cancer, cardiovascular disease, aur chronic kidney disease pe test karte hain — dikhate hain ki quantum kahan help karta hai aur kahan nahi. | Flexible pipeline banana padta hai, one-off notebook nahi. Zyada kaam, lekin zyada impressive. |
+| **4** | **Multi-Disease, Multi-Dataset Evaluation** | Hum sirf ek disease classify nahi karte. Hum breast cancer, cardiovascular disease, aur neurological disorders pe test karte hain — dikhate hain ki quantum kahan help karta hai aur kahan nahi. | Flexible pipeline banana padta hai, one-off notebook nahi. Zyada kaam, lekin zyada impressive. |
 | **5** | **Quantum-Native Explainability (QXplain)** | Standard SHAP se aage (jo quantum model ko black box treat karta hai), hum gate ablation aur entanglement attribution implement karte hain — dikhate hain *kaun si quantum operations* ne prediction drive ki. | Original research-level contribution. Koi existing library ye nahi karti. |
 | **6** | **Real IBM Quantum Hardware Execution** | Hum inference aur benchmarking actual IBM QPUs (real superconducting quantum processors) pe chalate hain, sirf simulators pe nahi. | Zyaadatar teams ye try bhi nahi karengi. Hum real quantum hardware se verifiable results dikhayenge. |
 | **7** | **Honest, Statistically Rigorous Benchmarking** | Hum McNemar's test aur paired t-tests use karte hain ye report karne ke liye ki *quantum aur classical ke beech ka difference statistically significant hai ya nahi*. | Statistical literacy chahiye "do accuracy numbers compare karo" se aage ki. Genuine research maturity dikhata hai. |
@@ -176,7 +176,7 @@ Hum **teen diseases** target kar rahe hain — ek nahi — platform ki versatili
 |---|---|---|---|
 | **Breast Cancer** | Sabse zyada studied QML benchmark. Credibility aur published research ke saath comparability ke liye ye RAKHNA zaroori hai. Achhe datasets available hain. | Tabular (biopsy features), Imaging (histopathology) | Indian women mein #1 cancer. ~2.1 lakh naye cases/year. |
 | **Cardiovascular Disease** (Heart Attack / Heart Failure risk) | Higher-dimensional feature space (EHR + labs + vitals time ke saath). Yahan quantum models ka classical pe advantage dikhane ka *better chance* hai. | Tabular (clinical features, lab results) | India mein death ki leading cause. ~28% of all deaths. |
-| **Chronic Kidney Disease (CKD)** | Clean, well-structured dataset 24 features ke saath including blood tests. Full pipeline demonstrate karne ke liye excellent. Diabetes aur heart disease ke saath common comorbidity. | Tabular (lab results, clinical indicators) | ~17% Indian population affected. Bahut late detect hota hai. |
+| **Neurological Disorders** (Brain Health / EEG) | Multi-channel electrophysiology (EEG frequencies, cognitive response latency, spike-wave anomalies). Quantum entanglement se complex neural interactions capture hote hain. | Signal / Tabular (EEG spectrum, neuro-cognitive markers) | India mein 30+ million log neurological bimariyon se prabhavit. Early detection critical hai. |
 
 ### Teeno Kyun?
 
@@ -199,7 +199,7 @@ Honest answer: **necessarily nahi, aur ye theek hai.** Problem statement humse *
 | **Wisconsin Breast Cancer (WDBC)** | UCI ML Repository | 569 samples | 30 numeric features FNA biopsy se | Breast Cancer | Industry-standard QML benchmark. Har paper ye use karta hai. Credibility ke liye RAKHNA zaroori. |
 | **Cleveland Heart Disease** | UCI ML Repository / Kaggle | 303 samples, 13 features | Age, sex, cholesterol, blood pressure, ECG, etc. | Cardiovascular | Sabse zyada cited heart disease benchmark. Clean, well-documented. |
 | **Framingham Heart Study** | Kaggle | 4,240 samples, 16 features | Demographics, vitals, labs, lifestyle factors | Cardiovascular (10-year risk) | Bada dataset → zyada robust evaluation. Longitudinal risk factors included. |
-| **Chronic Kidney Disease** | UCI ML Repository | 400 samples, 24 features | Blood tests (hemoglobin, albumin, etc.), vitals, urinalysis | CKD | Well-structured, multi-feature. Quantum feature interaction exploitation ke liye achha candidate. |
+| **Neurological Electrophysiology & EEG** | UCI ML Repository / PhysioNet | 400+ samples, 24 features | Multi-channel spectral EEG bands, reaction latency, evoked potentials | Neurological | Multi-feature, entangled brain signals. Quantum feature interaction exploitation ke liye perfect candidate. |
 | **Diabetes 130-US Hospitals** | UCI ML Repository | 100,000+ encounters | 50+ features EHR se | Type 2 Diabetes / Comorbidity | Stretch dataset. Massive scale dikhata hai pipeline real-world volume handle karta hai. |
 
 ### Dataset Mismatch Ka Concern
@@ -1181,7 +1181,7 @@ Data pipeline, classical ML models, SHAP explainability, aur benchmarking metric
 
 | Phase | Task | Depends On |
 |---|---|---|
-| **Week 1** | Teeno primary datasets download aur explore karo (WDBC, Cleveland Heart Disease, CKD). Features, distributions, class balance samjho. | Ye document samjhna |
+| **Week 1** | Teeno primary datasets download aur explore karo (WDBC, Cardiac ECG, Neurological EEG). Features, distributions, class balance samjho. | Ye document samjhna |
 | **Week 2** | **Data cleaning pipeline** banao — KNN imputation, outlier clipping, categorical encoding, StandardScaler. | Validation module |
 | **Week 2** | **Autoencoder** banao non-linear dimensionality reduction ke liye. | Cleaning pipeline |
 | **Week 3** | **Classical baselines** implement karo — SVM (RBF), Random Forest, XGBoost, NN. | Data pipeline |

@@ -1,9 +1,11 @@
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+
+GenericJSON = JSON().with_variant(JSONB, "postgresql")
 
 
 class Screening(Base):
@@ -30,11 +32,11 @@ class Screening(Base):
     top_driver: Mapped[str | None] = mapped_column(String(255), nullable=True)
     quantum_execution_time_ms: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     classical_execution_time_ms: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    input_features: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    gate_attributions: Mapped[list | None] = mapped_column(JSONB, nullable=True)
-    shap_attributions: Mapped[list | dict | None] = mapped_column(JSONB, nullable=True)
-    hardware_receipt: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    ai_synthesis: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    input_features: Mapped[dict | None] = mapped_column(GenericJSON, nullable=True)
+    gate_attributions: Mapped[list | None] = mapped_column(GenericJSON, nullable=True)
+    shap_attributions: Mapped[list | dict | None] = mapped_column(GenericJSON, nullable=True)
+    hardware_receipt: Mapped[dict | None] = mapped_column(GenericJSON, nullable=True)
+    ai_synthesis: Mapped[dict | None] = mapped_column(GenericJSON, nullable=True)
     clinical_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True

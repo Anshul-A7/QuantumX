@@ -429,15 +429,13 @@ export default function AccountPage() {
       <div className="p-5 sm:p-6 rounded-2xl bg-parchment border border-hairline shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-serif text-lg font-medium text-ink flex items-center gap-2">
-              <Stethoscope size={16} className="text-quantum" /> Clinical Diagnostic Pipelines
-            </h3>
+            <h3 className="font-serif text-base font-medium text-ink">Authorized Clinical Pipelines</h3>
             <p className="text-xs text-ink-soft font-light">
-              Full access is granted to all 3 oncology screening engines with dual quantum-classical consensus.
+              Scientific protocol validation status across QuantumX diagnostic models.
             </p>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
-            3/3 Pipelines Online
+            1 Active • 2 Offline
           </span>
         </div>
 
@@ -445,48 +443,48 @@ export default function AccountPage() {
           {/* Pipeline 1: Breast Oncology */}
           <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-xs text-ink">Breast Oncology (WDBC)</span>
-              <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                98.2% Accuracy
+              <span className="font-semibold text-xs text-ink">Breast Cytology (WDBC)</span>
+              <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">
+                87.9% VQC / 98.2% SVM
               </span>
             </div>
             <p className="text-[11px] text-ink-soft font-light leading-snug">
-              Fine Needle Aspirate (FNA) cytology analysis using 8-Qubit Quantum Kernel + QSVC with 30 morphological features.
+              Fine Needle Aspirate (FNA) cytology analysis using 8-Qubit VQC with 48 parameterized rotation gates.
             </p>
             <div className="text-[10px] font-mono text-quantum pt-1">
-              Model: QSVC-WDBC-v2.4 • Status: Ready
+              Model: Transfinite-1 (8Q ZZ) • Status: Active
             </div>
           </div>
 
-          {/* Pipeline 2: Pulmonary Oncology */}
-          <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2">
+          {/* Pipeline 2: Cardiovascular */}
+          <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2 opacity-80">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-xs text-ink">Pulmonary (LC-25000)</span>
-              <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                97.6% Accuracy
+              <span className="font-semibold text-xs text-ink">Cardiovascular Risk</span>
+              <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-semibold">
+                Not Accessible
               </span>
             </div>
             <p className="text-[11px] text-ink-soft font-light leading-snug">
-              Lung adenocarcinoma & squamous cell carcinoma histopathology evaluated via Variational Quantum Classifier (VQC).
+              Multi-lead ECG waveform and cardiac stress telemetry currently in offline validation against MIMIC-IV.
             </p>
-            <div className="text-[10px] font-mono text-quantum pt-1">
-              Model: VQC-LC25K-v1.8 • Status: Ready
+            <div className="text-[10px] font-mono text-amber-700 pt-1">
+              Phase 2 Pipeline • Offline Calibration
             </div>
           </div>
 
-          {/* Pipeline 3: Cervical Oncology */}
-          <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2">
+          {/* Pipeline 3: Neurological Disorders */}
+          <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2 opacity-80">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-xs text-ink">Cervical (SIPaKMeD)</span>
-              <span className="text-[9px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                96.8% Accuracy
+              <span className="font-semibold text-xs text-ink">Neurological Disorders</span>
+              <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-semibold">
+                Not Accessible
               </span>
             </div>
             <p className="text-[11px] text-ink-soft font-light leading-snug">
-              Pap-smear cytomorphological single-cell clustering with Quantum Neural Network (QNN) feature maps.
+              Multi-channel EEG spectral dynamics and cognitive latency indices undergoing prospective validation.
             </p>
-            <div className="text-[10px] font-mono text-quantum pt-1">
-              Model: QNN-SIPAK-v3.1 • Status: Ready
+            <div className="text-[10px] font-mono text-amber-700 pt-1">
+              Phase 2 Pipeline • Offline Calibration
             </div>
           </div>
         </div>

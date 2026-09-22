@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -15,7 +15,6 @@ import {
   Sliders,
   ShieldCheck,
   Play,
-  Pause,
   FlaskConical,
   BarChart3,
   HelpCircle,
@@ -26,6 +25,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
 
 interface ScreeningFeedback {
   id: string;
@@ -50,77 +50,58 @@ interface ProgressionPoint {
   y: number;
 }
 
-const SAMPLE_DATASET: Omit<ScreeningFeedback, "status">[] = [
-  { id: "QX-101", patientName: "Patient #101", disease: "Breast Cancer Screening", quantumPrediction: "Malignant (High Risk)", quantumConfidence: 94.8, topDriver: "Nuclear Area & Concavity", riskLevel: "High", actualGroundTruth: "High" },
-  { id: "QX-102", patientName: "Patient #102", disease: "Heart Disease Risk", quantumPrediction: "Heart Disease (High Risk)", quantumConfidence: 91.2, topDriver: "ECG ST Depression", riskLevel: "High", actualGroundTruth: "High" },
-  { id: "QX-103", patientName: "Patient #103", disease: "Kidney Health Profile", quantumPrediction: "Normal Function (Low Risk)", quantumConfidence: 97.4, topDriver: "Creatinine Clearance", riskLevel: "Low", actualGroundTruth: "Low" },
-  { id: "QX-104", patientName: "Patient #104", disease: "Breast Cancer Screening", quantumPrediction: "Benign Tissue (Low Risk)", quantumConfidence: 93.6, topDriver: "Cellular Smoothness", riskLevel: "Low", actualGroundTruth: "Low" },
-  { id: "QX-105", patientName: "Patient #105", disease: "Heart Disease Risk", quantumPrediction: "Normal Heart Function (Low Risk)", quantumConfidence: 89.1, topDriver: "Exercise Heart Rate", riskLevel: "Low", actualGroundTruth: "High" }, // Miss
-  { id: "QX-106", patientName: "Patient #106", disease: "Kidney Health Profile", quantumPrediction: "Chronic Kidney Disease (High Risk)", quantumConfidence: 95.8, topDriver: "Serum Urea Nitrogen", riskLevel: "High", actualGroundTruth: "High" },
-  { id: "QX-107", patientName: "Patient #107", disease: "Breast Cancer Screening", quantumPrediction: "Malignant (High Risk)", quantumConfidence: 96.1, topDriver: "Concave Notch Count", riskLevel: "High", actualGroundTruth: "High" },
-  { id: "QX-108", patientName: "Patient #108", disease: "Heart Disease Risk", quantumPrediction: "Heart Disease (High Risk)", quantumConfidence: 92.7, topDriver: "Fluoroscopy Vessels", riskLevel: "High", actualGroundTruth: "High" },
-  { id: "QX-109", patientName: "Patient #109", disease: "Kidney Health Profile", quantumPrediction: "Normal Function (Low Risk)", quantumConfidence: 98.2, topDriver: "Specific Gravity", riskLevel: "Low", actualGroundTruth: "Low" },
-  { id: "QX-110", patientName: "Patient #110", disease: "Breast Cancer Screening", quantumPrediction: "Benign Tissue (Low Risk)", quantumConfidence: 94.0, topDriver: "Compact Perimeter", riskLevel: "Low", actualGroundTruth: "Low" },
-];
-
 export default function ModelAnalysisPage() {
   const [screenings, setScreenings] = useState<ScreeningFeedback[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<ProgressionPoint | null>(null);
-  const streamTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load screenings from history
-  const loadHistoryAndFeedback = () => {
-    if (typeof window !== "undefined") {
-      try {
-        const storedHistory = localStorage.getItem("quantumx_prediction_history");
-        const storedFeedback = localStorage.getItem("quantumx_model_feedback");
+  // Load real authenticated user screenings
+  const loadHistoryAndFeedback = async () => {
+    if (typeof window === "undefined") return;
 
-        let baseList: ScreeningFeedback[] = [];
-        if (storedHistory) {
-          const parsed = JSON.parse(storedHistory);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            baseList = parsed.map((item) => ({
-              id: item.id,
-              patientName: item.patientName,
-              disease: item.disease,
-              quantumPrediction: item.quantumPrediction,
-              quantumConfidence: item.quantumConfidence,
-              topDriver: item.topDriver,
-              riskLevel: item.riskLevel,
-              status: "pending" as const,
-            }));
-          }
-        }
+    try {
+      setIsRefreshing(true);
+      const storedFeedback = localStorage.getItem("quantumx_model_feedback");
+      const feedbackMap: Record<string, { status: "correct" | "incorrect"; actualGroundTruth?: "High" | "Low" }> =
+        storedFeedback ? JSON.parse(storedFeedback) : {};
 
-        // If no user screening history yet, initialize with 5 initial demonstration trials
-        if (baseList.length === 0) {
-          baseList = SAMPLE_DATASET.slice(0, 5).map((item) => ({
-            ...item,
-            status: item.id === "QX-105" ? ("incorrect" as const) : ("correct" as const),
-          }));
-        }
+      const mapToScreeningFeedback = (items: StoredPrediction[]): ScreeningFeedback[] => {
+        return items.map((item) => {
+          const fb = feedbackMap[item.id];
+          return {
+            id: item.id,
+            patientName: item.patientName || `Patient #${item.id.slice(-4)}`,
+            disease: item.disease || item.diseaseType || "Breast Cytopathology (WDBC)",
+            quantumPrediction: item.quantumPrediction,
+            quantumConfidence: item.quantumConfidence || 90.0,
+            topDriver: item.topDriver || "Nuclear Area & Concavity",
+            riskLevel: item.riskLevel === "High" ? ("High" as const) : ("Low" as const),
+            status: fb ? fb.status : ("pending" as const),
+            actualGroundTruth: fb?.actualGroundTruth,
+          };
+        });
+      };
 
-        // Merge saved feedback if any
-        if (storedFeedback) {
-          const feedbackMap: Record<string, { status: "correct" | "incorrect"; actualGroundTruth?: "High" | "Low" }> =
-            JSON.parse(storedFeedback);
-          baseList = baseList.map((item) => {
-            if (feedbackMap[item.id]) {
-              return {
-                ...item,
-                status: feedbackMap[item.id].status,
-                actualGroundTruth: feedbackMap[item.id].actualGroundTruth,
-              };
-            }
-            return item;
-          });
-        }
-
-        setScreenings(baseList);
-      } catch (err) {
-        console.error("Failed to load model analysis data:", err);
+      // 1. Instant load from cached user screenings
+      const cached = ScreeningService.getCachedScreenings();
+      if (cached && cached.length > 0) {
+        setScreenings(mapToScreeningFeedback(cached));
+      } else {
+        setScreenings([]);
       }
+
+      // 2. Fetch real database records for this account
+      const liveRecords = await ScreeningService.getScreenings();
+      if (liveRecords && liveRecords.length > 0) {
+        setScreenings(mapToScreeningFeedback(liveRecords));
+      } else if (!cached || cached.length === 0) {
+        setScreenings([]);
+      }
+    } catch (err) {
+      console.error("Failed to load model analysis data:", err);
+      setScreenings([]);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -179,40 +160,7 @@ export default function ModelAnalysisPage() {
     }
   };
 
-  // Real-time Live Stream simulation toggle
-  useEffect(() => {
-    if (isStreaming) {
-      streamTimerRef.current = setInterval(() => {
-        setScreenings((prev) => {
-          const nextIndex = prev.length;
-          const template = SAMPLE_DATASET[nextIndex % SAMPLE_DATASET.length];
-          const newId = `QX-LIVE-${Date.now().toString().slice(-4)}`;
-          const isAccurate = Math.random() > 0.08; // 92% real quantum accuracy rate
 
-          const newTrial: ScreeningFeedback = {
-            ...template,
-            id: newId,
-            patientName: `Live Stream Patient #${nextIndex + 1}`,
-            status: isAccurate ? "correct" : "incorrect",
-            actualGroundTruth: isAccurate
-              ? template.riskLevel
-              : template.riskLevel === "High"
-              ? "Low"
-              : "High",
-          };
-          return [...prev, newTrial];
-        });
-      }, 2200);
-    } else {
-      if (streamTimerRef.current) {
-        clearInterval(streamTimerRef.current);
-      }
-    }
-
-    return () => {
-      if (streamTimerRef.current) clearInterval(streamTimerRef.current);
-    };
-  }, [isStreaming]);
 
   // Calculate Ruthless Real-Time Metrics
   const evaluatedCases = screenings.filter((s) => s.status !== "pending");
@@ -233,16 +181,16 @@ export default function ModelAnalysisPage() {
     }
   });
 
-  const accuracy = totalEvaluated > 0 ? (((tp + tn) / totalEvaluated) * 100).toFixed(1) : "0.0";
-  const precision = tp + fp > 0 ? ((tp / (tp + fp)) * 100).toFixed(1) : "0.0";
-  const recall = tp + fn > 0 ? ((tp / (tp + fn)) * 100).toFixed(1) : "0.0";
+  const accuracy = totalEvaluated > 0 ? (((tp + tn) / totalEvaluated) * 100).toFixed(1) : "—";
+  const precision = tp + fp > 0 ? ((tp / (tp + fp)) * 100).toFixed(1) : "—";
+  const recall = tp + fn > 0 ? ((tp / (tp + fn)) * 100).toFixed(1) : "—";
   const f1 =
-    parseFloat(precision) + parseFloat(recall) > 0
+    precision !== "—" && recall !== "—" && parseFloat(precision) + parseFloat(recall) > 0
       ? (
           (2 * (parseFloat(precision) * parseFloat(recall))) /
           (parseFloat(precision) + parseFloat(recall))
         ).toFixed(1)
-      : "0.0";
+      : "—";
 
   // Compute Real-Time Sequential Dynamic Progression Points for the SVG Graph
   const progressionPoints: ProgressionPoint[] = [];
@@ -324,25 +272,16 @@ export default function ModelAnalysisPage() {
             <ArrowRight size={12} className="text-parchment/70" />
           </Link>
 
-          {/* Live Simulation Stream Toggle */}
+          {/* Sync Real Screening Records from Database */}
           <button
             type="button"
-            onClick={() => setIsStreaming(!isStreaming)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-              isStreaming
-                ? "bg-emerald-600 text-white border-emerald-600 animate-pulse"
-                : "bg-white border-hairline hover:bg-cream text-ink"
-            }`}
+            onClick={() => loadHistoryAndFeedback()}
+            disabled={isRefreshing}
+            className="px-3 py-1.5 rounded-xl border border-hairline bg-white hover:bg-cream text-ink text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-60"
+            title="Sync authentic patient screenings from Supabase and live backend"
           >
-            {isStreaming ? (
-              <>
-                <Pause size={13} /> Streaming Live Trials...
-              </>
-            ) : (
-              <>
-                <Play size={13} className="text-quantum" /> Stream Live Trials
-              </>
-            )}
+            <RefreshCw size={13} className={`text-quantum ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>{isRefreshing ? "Syncing Records..." : "Sync Live Records"}</span>
           </button>
 
           <button
@@ -364,10 +303,10 @@ export default function ModelAnalysisPage() {
             <HelpTooltip text="Percentage of evaluated cases where QuantumX's prediction matched verified medical findings." />
           </div>
           <div className="font-serif text-2xl sm:text-3xl text-quantum font-light">
-            {accuracy}%
+            {accuracy !== "—" ? `${accuracy}%` : "—"}
           </div>
           <p className="text-[11px] text-ink-soft font-light">
-            {tp + tn} of {totalEvaluated} cases verified
+            {totalEvaluated > 0 ? `${tp + tn} of ${totalEvaluated} cases verified` : "No cases evaluated yet"}
           </p>
         </div>
 
@@ -378,10 +317,10 @@ export default function ModelAnalysisPage() {
             <HelpTooltip text="Ratio of true high-risk cases among all cases QuantumX flagged as high risk (minimizes false alarms)." />
           </div>
           <div className="font-serif text-2xl sm:text-3xl text-ink font-light">
-            {precision}%
+            {precision !== "—" ? `${precision}%` : "—"}
           </div>
           <p className="text-[11px] text-ink-soft font-light">
-            {tp} TP / {tp + fp} Positive Calls
+            {tp + fp > 0 ? `${tp} TP / ${tp + fp} Positive Calls` : "No positive calls yet"}
           </p>
         </div>
 
@@ -392,10 +331,10 @@ export default function ModelAnalysisPage() {
             <HelpTooltip text="Ability of the quantum model to catch all true disease cases without missing any." />
           </div>
           <div className="font-serif text-2xl sm:text-3xl text-emerald-700 font-light">
-            {recall}%
+            {recall !== "—" ? `${recall}%` : "—"}
           </div>
           <p className="text-[11px] text-ink-soft font-light">
-            {tp} Caught / {tp + fn} Actual High Risk
+            {tp + fn > 0 ? `${tp} Caught / ${tp + fn} Actual High Risk` : "No high risk cases yet"}
           </p>
         </div>
 
@@ -406,10 +345,10 @@ export default function ModelAnalysisPage() {
             <HelpTooltip text="Balanced score between precision and sensitivity across difficult diagnostic cases." />
           </div>
           <div className="font-serif text-2xl sm:text-3xl text-ink font-light">
-            {f1}%
+            {f1 !== "—" ? `${f1}%` : "—"}
           </div>
           <p className="text-[11px] text-ink-soft font-light">
-            {totalEvaluated} total verified patients
+            {totalEvaluated > 0 ? `${totalEvaluated} total verified patients` : "Awaiting patient screenings"}
           </p>
         </div>
       </div>
@@ -467,7 +406,7 @@ export default function ModelAnalysisPage() {
           <div className="p-3 rounded-xl bg-cream/40 border border-hairline text-[11px] text-ink-soft space-y-1 font-mono">
             <div className="flex justify-between">
               <span>Diagnostic Accuracy Rate:</span>
-              <span className="font-semibold text-quantum">{accuracy}%</span>
+              <span className="font-semibold text-quantum">{accuracy !== "—" ? `${accuracy}%` : "—"}</span>
             </div>
             <div className="flex justify-between">
               <span>Noise Error Resilience:</span>
@@ -607,7 +546,7 @@ export default function ModelAnalysisPage() {
           <div className="flex items-center justify-between pt-2 border-t border-hairline text-[11px] font-mono text-ink-soft">
             <div className="flex items-center gap-2">
               <span className="w-3 h-0.5 bg-quantum inline-block" />
-              <span>Quantum VQC Model ({accuracy}%)</span>
+              <span>Quantum VQC Model ({accuracy !== "—" ? `${accuracy}%` : "Awaiting Data"})</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-0.5 bg-ink-soft/60 border-t border-dashed inline-block" />
@@ -640,9 +579,9 @@ export default function ModelAnalysisPage() {
           <div className="p-8 rounded-xl bg-cream/40 border border-hairline text-center space-y-3">
             <Inbox size={22} className="text-ink-soft mx-auto" />
             <div className="space-y-1 max-w-sm mx-auto">
-              <p className="font-medium text-ink text-xs">No screening predictions run yet in this session</p>
+              <p className="font-medium text-ink text-xs">No patient screenings found in database</p>
               <p className="text-[11px] text-ink-soft font-light">
-                Run a test in the Patient Diagnosis tab or click "Stream Live Trials" above to see the real-time evaluation engine in action.
+                Run an authentic screening in Clinical Diagnostics to audit real quantum predictions, evaluate clinical concordances, and benchmark live model metrics.
               </p>
             </div>
             <Link
