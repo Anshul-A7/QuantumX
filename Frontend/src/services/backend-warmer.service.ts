@@ -10,6 +10,7 @@
 // ============================================================================
 
 import { useEffect, useState } from "react";
+import { resolveApiBaseUrl } from "@/lib/api";
 
 export interface BackendStatus {
   isOnline: boolean;
@@ -29,15 +30,13 @@ type StatusListener = (status: BackendStatus) => void;
  */
 export function isLiveRenderPlatform(): boolean {
   if (typeof window === "undefined") return false;
-  const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "").toLowerCase();
+  const apiUrl = resolveApiBaseUrl().toLowerCase();
   const isRenderUrl = apiUrl.includes("onrender.com") || apiUrl.includes("render.com");
   const hostname = window.location.hostname.toLowerCase();
   const isLocalHost =
     hostname === "localhost" ||
     hostname === "127.0.0.1" ||
-    hostname.endsWith(".local") ||
-    apiUrl.includes("localhost") ||
-    apiUrl.includes("127.0.0.1");
+    hostname.endsWith(".local");
 
   return isRenderUrl || (!isLocalHost && apiUrl.startsWith("https://"));
 }
@@ -56,11 +55,19 @@ class BackendWarmerService {
   private listeners: Set<StatusListener> = new Set();
   private timerInterval: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private retryTimeout: NodeJS.Timeout | null = null;
+  private isPinging = false;
   private isInitialized = false;
 
   private constructor() {
     if (typeof window !== "undefined") {
       this.status.isRenderLive = isLiveRenderPlatform();
+      try {
+        if (sessionStorage.getItem("quantumx_backend_awake") === "true") {
+          this.status.isOnline = true;
+          this.status.isRenderSleeping = false;
+        }
+      } catch {}
     }
   }
 
@@ -112,27 +119,29 @@ class BackendWarmerService {
   }
 
   /**
-   * Ping backend root or /health endpoint
+   * Ping backend /health endpoint
    */
   public async ping(): Promise<boolean> {
     if (typeof window === "undefined") return false;
+    if (this.isPinging) return false;
+    this.isPinging = true;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = resolveApiBaseUrl();
     const isLive = isLiveRenderPlatform();
     this.status.isRenderLive = isLive;
 
-    // Only start a cold-boot wake timer if we are actually targeting remote Render
+    // Start cold-boot timer if not yet online on a live remote host
     if (isLive && !this.status.isOnline) {
       if (!this.timerInterval) {
         this.status.isWaking = true;
         this.status.wakeTimeSeconds = 0;
-        this.status.isRenderSleeping = false; // Only mark sleeping if delay exceeds threshold
+        this.status.isRenderSleeping = false; // Only mark sleeping after confirmation threshold
         this.notify();
 
         this.timerInterval = setInterval(() => {
           this.status.wakeTimeSeconds += 1;
-          // Genuine cold start: If remote ping takes >= 6 seconds, Render is cold/sleeping
-          if (this.status.wakeTimeSeconds >= 6 && !this.status.isOnline) {
+          // Genuine cold start: If remote ping takes >= 4 seconds, Render is cold/sleeping
+          if (this.status.wakeTimeSeconds >= 4 && !this.status.isOnline) {
             this.status.isRenderSleeping = true;
           }
           this.notify();
@@ -142,7 +151,7 @@ class BackendWarmerService {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
 
       const res = await fetch(`${apiUrl}/health`, {
         method: "GET",
@@ -157,12 +166,20 @@ class BackendWarmerService {
 
       if (res.ok) {
         this.clearTimer();
+        if (this.retryTimeout) {
+          clearTimeout(this.retryTimeout);
+          this.retryTimeout = null;
+        }
         this.status.isOnline = true;
         this.status.isWaking = false;
         this.status.isRenderSleeping = false;
         this.status.lastChecked = Date.now();
         this.status.error = null;
+        try {
+          sessionStorage.setItem("quantumx_backend_awake", "true");
+        } catch {}
         this.notify();
+        this.isPinging = false;
         return true;
       } else {
         throw new Error(`Health check status: ${res.status}`);
@@ -171,15 +188,25 @@ class BackendWarmerService {
       const errorMsg = err instanceof Error ? err.message : "Connection failed";
       this.status.lastChecked = Date.now();
       this.status.error = errorMsg;
-      // On live Render, a connection failure while waiting confirms container is spinning up
+
+      // On live Render, failure or timeout confirms container is cold-booting
       if (isLive) {
         this.status.isWaking = true;
         this.status.isRenderSleeping = true;
+
+        // Schedule rapid retry every 2.5s while sleeping so we immediately detect wakeup
+        if (!this.status.isOnline) {
+          if (this.retryTimeout) clearTimeout(this.retryTimeout);
+          this.retryTimeout = setTimeout(() => {
+            this.ping();
+          }, 2500);
+        }
       } else {
         this.status.isWaking = false;
         this.status.isRenderSleeping = false;
       }
       this.notify();
+      this.isPinging = false;
       return false;
     }
   }
@@ -197,8 +224,13 @@ class BackendWarmerService {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    if (this.retryTimeout) {
+      clearTimeout(this.retryTimeout);
+      this.retryTimeout = null;
+    }
     this.listeners.clear();
     this.isInitialized = false;
+    this.isPinging = false;
   }
 }
 

@@ -8,6 +8,7 @@ import { Eye, EyeOff, Loader2, X } from "lucide-react";
 import { AuthService } from "@/services/auth.service";
 import { useBackendStatus } from "@/services/backend-warmer.service";
 import BrandLogo from "@/components/common/BrandLogo";
+import BackendStandbyBanner from "@/components/common/BackendStandbyBanner";
 
 declare global {
   interface Window {
@@ -118,38 +119,6 @@ export default function LoginPage() {
       router.push("/home");
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Invalid email or password.";
-      const isConnectionError =
-        raw.includes("Unable to connect") ||
-        raw.includes("Network Error") ||
-        raw.includes("server is running") ||
-        raw.includes("standby") ||
-        raw.includes("failed to fetch") ||
-        raw.includes("ECONNREFUSED") ||
-        raw.includes("timeout");
-
-      if (isConnectionError) {
-        // Fallback: seamless authenticated clinician session so user is never blocked
-        const displayName = email.split("@")[0] || "Doctor";
-        if (typeof window !== "undefined") {
-          const fallbackUser = {
-            id: `usr_${Date.now()}`,
-            email: email.trim(),
-            username: displayName,
-            fullName: displayName,
-            role: "clinician",
-            isVerified: true,
-          };
-          const fallbackToken = `qtx_${btoa(email.trim())}_${Date.now()}`;
-          localStorage.setItem("quantumx_access_token", fallbackToken);
-          localStorage.setItem("quantumx_refresh_token", fallbackToken);
-          localStorage.setItem("quantumx_user_data", JSON.stringify(fallbackUser));
-          localStorage.setItem("quantumx_user_email", email.trim());
-          localStorage.setItem("quantumx_user_name", displayName);
-        }
-        router.push("/home");
-        return;
-      }
-
       if (raw === "EMAIL_NOT_VERIFIED") {
         router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
         return;
@@ -374,6 +343,7 @@ export default function LoginPage() {
               <p className="text-ink-soft text-xs sm:text-sm font-light">
                 Enter your email and password to sign in
               </p>
+              <BackendStandbyBanner />
             </motion.div>
 
             {/* Error Message */}
@@ -471,41 +441,12 @@ export default function LoginPage() {
                 {isLoading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>
-                      {isRenderSleeping && waitElapsed >= 15
-                        ? `Waking Cloud Server (${waitElapsed}s)...`
-                        : "Signing In..."}
-                    </span>
+                    <span>Signing In...</span>
                   </>
                 ) : (
                   <span>Sign In</span>
                 )}
               </motion.button>
-
-              {/* In-Flight Standby Boot Notification: ONLY when live Render is sleeping and wait exceeds 15s */}
-              <AnimatePresence>
-                {isRenderSleeping && waitElapsed >= 15 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs space-y-1.5 text-left my-1 shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-semibold text-[12px] text-amber-800">
-                        <Loader2 size={13} className="animate-spin text-amber-600 shrink-0" />
-                        <span>The Backend is booting up ({waitElapsed}s)</span>
-                      </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-200/60 text-amber-900">
-                        Cold Start
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-amber-800/90 leading-relaxed font-light">
-                      To optimize hosting costs, idle cloud instances enter standby. Please wait 1–2 minutes — authentication will complete automatically once the server is ready.
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {/* Divider */}
               <div className="relative my-3 flex items-center justify-center">

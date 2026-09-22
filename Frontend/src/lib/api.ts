@@ -198,7 +198,7 @@ apiClient.interceptors.response.use(
 
       try {
         const response = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
+          `${resolveApiBaseUrl()}/auth/refresh`,
           { refreshToken: refreshToken || undefined },
           {
             withCredentials: true,
@@ -223,12 +223,17 @@ apiClient.interceptors.response.use(
         isRefreshing = false;
 
         return apiClient(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: unknown) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        clearAuth();
-        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register') && !window.location.pathname.startsWith('/verify-email')) {
-          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        
+        // Only clear auth and redirect if the refresh token was explicitly rejected by the server
+        const status = axios.isAxiosError(refreshError) ? refreshError.response?.status : undefined;
+        if (status === 401 || status === 403) {
+          clearAuth();
+          if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register') && !window.location.pathname.startsWith('/verify-email')) {
+            window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+          }
         }
         return Promise.reject(refreshError);
       }
@@ -266,7 +271,7 @@ export async function initAuthSession(): Promise<Record<string, unknown> | null>
   if (refreshToken) {
     try {
       const refreshRes = await axios.post(
-        `${API_BASE_URL}/auth/refresh`,
+        `${resolveApiBaseUrl()}/auth/refresh`,
         { refreshToken },
         { withCredentials: true }
       );
@@ -276,8 +281,11 @@ export async function initAuthSession(): Promise<Record<string, unknown> | null>
         setUserData(user);
       }
       return user;
-    } catch {
-      clearAuth();
+    } catch (err: unknown) {
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      if (status === 401 || status === 403) {
+        clearAuth();
+      }
       return null;
     }
   }

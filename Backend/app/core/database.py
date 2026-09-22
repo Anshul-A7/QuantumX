@@ -1,3 +1,4 @@
+import asyncio
 import os
 from collections.abc import AsyncGenerator
 
@@ -62,8 +63,11 @@ async def init_db() -> None:
     import app.models  # Registers User, UserSession, VerificationToken, Screening, Notification
 
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        async def _connect_primary():
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+
+        await asyncio.wait_for(_connect_primary(), timeout=5.0)
         print("[QuantumX Backend] Primary database connected and schema initialized.")
     except Exception as db_err:
         print(f"[QuantumX Backend] Remote DB connection note: {db_err}")
