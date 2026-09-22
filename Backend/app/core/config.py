@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # DATABASE
     # =========================================================
 
-    DATABASE_URL: str
+    DATABASE_URL: str = "sqlite+aiosqlite:///./quantumx.db"
 
     # =========================================================
     # JWT & SESSION CONFIGURATION (7-DAY SLIDING WINDOW)
