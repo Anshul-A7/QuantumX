@@ -7,7 +7,24 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 // refresh on 401, HTTPOnly cookie credentials, and seamless queue replay.
 // ============================================================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export function resolveApiBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_API_URL && process.env.NEXT_PUBLIC_API_URL.trim() !== '') {
+    // If running on an HTTPS domain (like Vercel), don't allow http://localhost
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && process.env.NEXT_PUBLIC_API_URL.startsWith('http://localhost')) {
+      return 'https://quantumx-34qu.onrender.com';
+    }
+    return process.env.NEXT_PUBLIC_API_URL.trim();
+  }
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return 'https://quantumx-34qu.onrender.com';
+    }
+  }
+  return 'http://localhost:8000';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const TIMEOUT_MS = 120000; // 2 minutes (accommodates free-tier cloud cold starts)
 
 // Token storage keys
@@ -28,6 +45,17 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+});
+
+// Dynamically ensure HTTPS live backend on any deployed environment
+apiClient.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      config.baseURL = 'https://quantumx-34qu.onrender.com';
+    }
+  }
+  return config;
 });
 
 // ----------------------------------------------------------------------------
