@@ -20,17 +20,39 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
 import numpy as np
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms
-from PIL import Image
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import pennylane as qml
 
-logger = logging.getLogger("QuantumX.CardiacEngine")
+try:
+    import torch
+    import torch.nn as nn
+    import torchvision.models as models
+    from torchvision import transforms
+    TORCH_AVAILABLE = True
+except ImportError as _torch_err:
+    torch = None
+    nn = None
+    models = None
+    transforms = None
+    TORCH_AVAILABLE = False
+    logger.warning(f"PyTorch not available in runtime: {_torch_err}. Cardiac neural inference will operate in fallback mode.")
+
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
+
+try:
+    import pennylane as qml
+    PENNYLANE_AVAILABLE = True
+except ImportError:
+    qml = None
+    PENNYLANE_AVAILABLE = False
 
 BASE_DIR = Path(__file__).resolve().parent
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
@@ -56,33 +78,60 @@ CLINICAL_TITLES = {
 }
 
 # ImageNet normalization standard for ResNet-18
-IMAGE_TRANSFORM = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
+if TORCH_AVAILABLE and transforms is not None:
+    IMAGE_TRANSFORM = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+else:
+    IMAGE_TRANSFORM = None
 
 N_QUBITS = 8
 N_LAYERS = 2
-qdev = qml.device("default.qubit", wires=N_QUBITS)
 
-@qml.qnode(qdev, interface="torch", diff_method="backprop")
-def cardiac_vqc_circuit(inputs, weights):
-    qml.AngleEmbedding(inputs, wires=range(N_QUBITS), rotation='Y')
-    qml.StronglyEntanglingLayers(weights, wires=range(N_QUBITS))
-    return [qml.expval(qml.PauliZ(i)) for i in range(N_QUBITS)]
+if PENNYLANE_AVAILABLE and TORCH_AVAILABLE and qml is not None:
+    try:
+        qdev = qml.device("default.qubit", wires=N_QUBITS)
 
-wshape = qml.StronglyEntanglingLayers.shape(n_layers=N_LAYERS, n_wires=N_QUBITS)
+        @qml.qnode(qdev, interface="torch", diff_method="backprop")
+        def cardiac_vqc_circuit(inputs, weights):
+            qml.AngleEmbedding(inputs, wires=range(N_QUBITS), rotation='Y')
+            qml.StronglyEntanglingLayers(weights, wires=range(N_QUBITS))
+            return [qml.expval(qml.PauliZ(i)) for i in range(N_QUBITS)]
+
+        wshape = qml.StronglyEntanglingLayers.shape(n_layers=N_LAYERS, n_wires=N_QUBITS)
+    except Exception as _q_init_err:
+        logger.warning(f"PennyLane circuit initialization skipped: {_q_init_err}")
+        cardiac_vqc_circuit = None
+        wshape = (N_LAYERS, N_QUBITS, 3)
+else:
+    cardiac_vqc_circuit = None
+    wshape = (N_LAYERS, N_QUBITS, 3)
 
 
 class CardiacDualEngine:
     def __init__(self):
+        self.is_available = bool(TORCH_AVAILABLE)
+        if not TORCH_AVAILABLE:
+            logger.warning("CardiacDualEngine initialized in standby mode (torch not available in environment).")
+            self.device = None
+            self.classical_model = None
+            self.bottleneck = None
+            self.quantum_weights = None
+            self.readout_head = None
+            return
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.classical_model = None
         self.bottleneck = None
         self.quantum_weights = None
         self.readout_head = None
-        self._load_models()
+        try:
+            self._load_models()
+        except Exception as e:
+            logger.error(f"Failed to load cardiac models: {e}. Operating in standby.")
+            self.is_available = False
 
     def _resolve_model_path(self) -> Path:
         if MODEL_PATH.exists():
@@ -435,18 +484,28 @@ class CardiacDualEngine:
           - Continuous Cardiac Risk Score calculation
           - Dual-Engine consensus analysis
         """
-        import cv2
+        if not self.is_available or self.classical_model is None or not TORCH_AVAILABLE:
+            raise RuntimeError("Cardiac neural engine is in standby mode. Neural runtime packages are initializing.")
+
         t_start = time.time()
         
         # ── 0. Clinical Domain & Non-ECG Rejection Guardrail ─────────────────
         is_valid, rejection_reason, oriented_bgr = self.validate_and_orient_ecg(image_bytes)
-        if not is_valid or oriented_bgr is None:
+        if not is_valid:
             logger.warning(f"Non-ECG Image Rejected [{filename}]: {rejection_reason}")
             raise ValueError(rejection_reason)
 
         # Convert oriented BGR matrix to RGB PIL Image for standard PyTorch preprocessing
-        oriented_rgb = cv2.cvtColor(oriented_bgr, cv2.COLOR_BGR2RGB)
-        orig_img = Image.fromarray(oriented_rgb)
+        if oriented_bgr is not None:
+            try:
+                import cv2
+                oriented_rgb = cv2.cvtColor(oriented_bgr, cv2.COLOR_BGR2RGB)
+                orig_img = Image.fromarray(oriented_rgb)
+            except Exception:
+                orig_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        else:
+            orig_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
         tensor = IMAGE_TRANSFORM(orig_img).unsqueeze(0).to(self.device)
 
         # ── 1. Classical CX-01 Inference ──────────────────────────────────────

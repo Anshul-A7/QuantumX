@@ -479,7 +479,7 @@ export default function LoginPage() {
                   </>
                 )}
               </motion.button>
-              <div id="g_id_signin_hidden" className="hidden" aria-hidden="true" />
+              <div id="g_id_signin_hidden" style={{ position: "absolute", top: "-9999px", left: "-9999px", opacity: 0.001, pointerEvents: "none" }} aria-hidden="true" />
             </form>
           </div>
 

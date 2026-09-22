@@ -529,7 +529,7 @@ export default function RegisterPage() {
                   </>
                 )}
               </motion.button>
-              <div id="g_id_signin_hidden_reg" className="hidden" aria-hidden="true" />
+              <div id="g_id_signin_hidden_reg" style={{ position: "absolute", top: "-9999px", left: "-9999px", opacity: 0.001, pointerEvents: "none" }} aria-hidden="true" />
             </form>
           </div>
 
