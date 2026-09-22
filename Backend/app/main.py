@@ -85,7 +85,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
-# CORS configuration allowing Next.js frontend on port 3000
+# CORS configuration allowing Next.js frontend on port 3000 and all Vercel domains
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -93,6 +93,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         settings.FRONTEND_URL,
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:.*|http://127\.0\.0\.1:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional
 import io
 import base64
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Request
 from pydantic import BaseModel, Field
 
 from models_v1 import cx_01_pipeline, transfinite_1_pipeline, aleph_1_pipeline
@@ -64,8 +64,8 @@ class CardiacBase64Request(BaseModel):
 
 @router.post("/cardiac-ecg", status_code=status.HTTP_200_OK)
 async def run_cardiac_ecg_inference(
+    request: Request,
     file: Optional[UploadFile] = File(None),
-    payload: Optional[CardiacBase64Request] = None
 ):
     """
     Executes production Cardiac ECG Dual-Engine Inference:
@@ -79,16 +79,36 @@ async def run_cardiac_ecg_inference(
         image_bytes = None
         filename = "ecg_image.jpg"
 
-        if file is not None:
-            image_bytes = await file.read()
-            filename = file.filename or "ecg_image.jpg"
-        elif payload is not None and payload.image_base64:
-            b64_str = payload.image_base64
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            data = await request.json()
+            b64_str = data.get("image_base64", "")
             if "," in b64_str:
                 b64_str = b64_str.split(",")[1]
-            image_bytes = base64.b64decode(b64_str)
-            filename = payload.filename or "ecg_image.jpg"
+            if b64_str:
+                image_bytes = base64.b64decode(b64_str)
+            filename = data.get("filename") or "ecg_image.jpg"
+        elif file is not None:
+            image_bytes = await file.read()
+            filename = file.filename or "ecg_image.jpg"
         else:
+            # Check form data fields
+            try:
+                form = await request.form()
+                if "file" in form and hasattr(form["file"], "read"):
+                    upload = form["file"]
+                    image_bytes = await upload.read()
+                    filename = getattr(upload, "filename", "ecg_image.jpg")
+                elif "image_base64" in form:
+                    b64_str = str(form["image_base64"])
+                    if "," in b64_str:
+                        b64_str = b64_str.split(",")[1]
+                    image_bytes = base64.b64decode(b64_str)
+                    filename = str(form.get("filename", "ecg_image.jpg"))
+            except Exception:
+                pass
+
+        if not image_bytes:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Either an image file upload or image_base64 payload must be provided."

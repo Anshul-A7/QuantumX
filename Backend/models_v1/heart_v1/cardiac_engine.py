@@ -19,6 +19,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
+logger = logging.getLogger("QuantumX.CardiacEngine")
+
 import numpy as np
 
 try:

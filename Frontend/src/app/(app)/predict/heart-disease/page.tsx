@@ -415,23 +415,23 @@ export default function HeartDiseaseStudioPage() {
       let res: Response;
 
       if (selectedReferenceKey) {
-        // Direct reference sample route
-        res = await fetch("http://127.0.0.1:8000/inference/cardiac-demo", {
+        // Direct reference sample route through Next.js API
+        res = await fetch("/api/inference/cardiac-demo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sample_type: selectedReferenceKey }),
         });
       } else if (imageFile) {
-        // Real user uploaded file via FormData
+        // Real user uploaded file via FormData through Next.js API
         const formData = new FormData();
         formData.append("file", imageFile);
-        res = await fetch("http://127.0.0.1:8000/inference/cardiac-ecg", {
+        res = await fetch("/api/inference/cardiac-ecg", {
           method: "POST",
           body: formData,
         });
       } else {
-        // Real base64 upload
-        res = await fetch("http://127.0.0.1:8000/inference/cardiac-ecg", {
+        // Real base64 upload through Next.js API
+        res = await fetch("/api/inference/cardiac-ecg", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
