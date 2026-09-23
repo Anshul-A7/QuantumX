@@ -129,9 +129,11 @@ class CardiacDualEngine:
         self.bottleneck = None
         self.quantum_weights = None
         self.readout_head = None
+        self.load_error = None
         try:
             self._load_models()
         except Exception as e:
+            self.load_error = f"{type(e).__name__}: {str(e)}"
             logger.error(f"Failed to load cardiac models: {e}. Operating in standby.")
             self.is_available = False
 
@@ -487,7 +489,15 @@ class CardiacDualEngine:
           - Dual-Engine consensus analysis
         """
         if not self.is_available or self.classical_model is None or not TORCH_AVAILABLE:
-            raise RuntimeError("Cardiac neural engine is in standby mode. Neural runtime packages are initializing.")
+            reasons = []
+            if not TORCH_AVAILABLE:
+                reasons.append("PyTorch runtime is not installed")
+            if getattr(self, "load_error", None):
+                reasons.append(str(self.load_error))
+            elif self.classical_model is None:
+                reasons.append("Cardiac CNN model weights not loaded")
+            reason_str = " | ".join(reasons) if reasons else "Neural runtime packages are initializing."
+            raise RuntimeError(f"Cardiac neural engine is in standby mode ({reason_str})")
 
         t_start = time.time()
         

@@ -126,7 +126,22 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    cardiac_status = {"error": "unavailable"}
+    try:
+        from models_v1.heart_v1.cardiac_engine import get_cardiac_engine, TORCH_AVAILABLE, PENNYLANE_AVAILABLE
+        engine = get_cardiac_engine()
+        cardiac_status = {
+            "torch_available": TORCH_AVAILABLE,
+            "pennylane_available": PENNYLANE_AVAILABLE,
+            "engine_available": engine.is_available,
+            "classical_model_loaded": engine.classical_model is not None,
+            "load_error": getattr(engine, "load_error", None),
+        }
+    except Exception as e:
+        cardiac_status = {"error": str(e)}
+
     return {
         "status": "healthy",
         "service": "quantum-ml-platform-backend",
+        "cardiac_engine": cardiac_status,
     }

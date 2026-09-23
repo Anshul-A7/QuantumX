@@ -68,6 +68,7 @@ test_*.py
 *.dat
 *.hea
 *.pt
+!Backend/models_v1/heart_v1/artifacts/*.pt
 *.pkl
 Plan/
 Research/
