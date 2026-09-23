@@ -115,29 +115,42 @@ async function inferBreastCancer(record: ParsedRecord): Promise<any> {
 
 // ── Cardiac ECG Inference ───────────────────────────────────────────────────────
 
-async function inferCardiacEcg(record: ParsedRecord): Promise<any> {
+async function inferCardiacEcg(record: ParsedRecord, retries = 2): Promise<any> {
   let base64Data = record.imageBase64 || "";
   if (base64Data.includes(",")) {
     base64Data = base64Data.split(",")[1];
   }
 
-  const response = await fetch("/api/inference/cardiac-ecg", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      image_base64: base64Data,
-      filename: record.imageName || `${record.patientName || record.patientId}.jpg`,
-      model_name: "transfinite_1",
-    }),
-    signal: AbortSignal.timeout(60000),
-  });
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch("/api/inference/cardiac-ecg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_base64: base64Data,
+          filename: record.imageName || `${record.patientName || record.patientId}.jpg`,
+          model_name: "transfinite_1",
+        }),
+        signal: AbortSignal.timeout(45000),
+      });
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.detail || `Cardiac ECG inference failed with status ${response.status}`);
+      if (response.status === 429 && attempt < retries) {
+        // Exponential backoff on rate limit
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        continue;
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || `Cardiac ECG inference failed with status ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err: any) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
   }
-
-  return response.json();
 }
 
 // ── Batch Execution Engine ──────────────────────────────────────────────────────
@@ -192,8 +205,8 @@ export async function executeBatch(
 
   const startTime = performance.now();
 
-  // Process in micro-batches of 5 concurrent requests
-  const CONCURRENCY = 5;
+  // Paced concurrency: 2 for heavy cardiac image matrices to prevent rate-limit ceilings, 5 for numerical biomarkers
+  const CONCURRENCY = diseaseType === "cardiac_ecg" ? 2 : 5;
 
   for (let i = 0; i < allRecords.length; i += CONCURRENCY) {
     const batch = allRecords.slice(i, i + CONCURRENCY);
@@ -244,7 +257,7 @@ export async function executeBatch(
             result.prediction?.prediction_label ||
             result.prediction?.class_name ||
             "Normal";
-          cPred = result.classical_engine?.prediction || qPred;
+          cPred = result.classical_engine?.prediction || result.prediction?.class_name || qPred;
           qRisk = result.risk_stratification?.cardiac_risk_score ?? result.composite_risk_score ?? 15;
           cRisk = qRisk;
           qConf = result.quantum_engine?.quantum_confidence_pct ?? result.prediction?.confidence_pct ?? 95;
@@ -256,12 +269,14 @@ export async function executeBatch(
             result.pinpointing_gradcam?.lead_detected ||
             result.risk_stratification?.primary_driver ||
             "Lead V2 (Septal)";
-          consensusStatus =
-            result.dual_engine_consensus?.status === "Discordant"
-              ? "Discordant"
-              : qPred === cPred
-                ? "Concordant"
-                : "Discordant";
+
+          const isConcordant =
+            result.dual_engine_consensus?.concordant !== undefined
+              ? result.dual_engine_consensus.concordant
+              : result.dual_engine_consensus?.status?.toLowerCase().includes("concordant") ||
+                qPred === cPred;
+
+          consensusStatus = isConcordant ? "Concordant" : "Discordant";
         } else {
           const dc = result.dual_comparison;
           const tfResult = dc?.transfinite_1 || result;
@@ -326,6 +341,10 @@ export async function executeBatch(
     });
 
     await Promise.allSettled(promises);
+
+    if (diseaseType === "cardiac_ecg" && i + CONCURRENCY < allRecords.length) {
+      await new Promise((r) => setTimeout(r, 120));
+    }
   }
 
   // Final stats
