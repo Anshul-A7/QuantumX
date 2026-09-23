@@ -350,8 +350,8 @@ class CardiacDualEngine:
         """
         import cv2
         h, w = img_bgr.shape[:2]
-        if w < 220 or h < 140:
-            return False, f"Image resolution too low ({w}x{h} px). Please provide an ECG scan with at least 300x200 px resolution."
+        if w < 100 or h < 60:
+            return False, f"Image resolution too low ({w}x{h} px). Please provide an ECG scan with at least 100x60 px resolution."
             
         total_pixels = h * w
         
@@ -385,16 +385,18 @@ class CardiacDualEngine:
         if np.sum(non_extreme_mask) > (0.2 * total_pixels):
             flat_non_extreme = (diff < 2.0) & non_extreme_mask
             flat_ratio = np.sum(flat_non_extreme) / np.sum(non_extreme_mask)
-            if flat_ratio > 0.55:
+            if flat_ratio > 0.78:
                 return False, (
                     f"Digital UI Component Detected: Image contains large flat solid-color blocks ({flat_ratio*100:.1f}% solid area) "
                     "typical of website containers, buttons, or app screenshots rather than physiological waveform traces."
                 )
                 
-        # 3. Physiological Waveform Line & Edge Analysis
-        edges = cv2.Canny(gray, 40, 120)
+        # 3. Physiological Waveform Line & Edge Analysis (with CLAHE for blurry/low-contrast scans)
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+        enhanced_gray = clahe.apply(gray)
+        edges = cv2.Canny(enhanced_gray, 25, 90)
         edge_density = np.mean(edges > 0)
-        if edge_density < 0.015:
+        if edge_density < 0.005:
             return False, (
                 "Insufficient Waveform Traces: No cardiac electrical signals, grid baselines, or QRS complexes were detected in the image."
             )

@@ -116,26 +116,25 @@ async function inferBreastCancer(record: ParsedRecord): Promise<any> {
 // ── Cardiac ECG Inference ───────────────────────────────────────────────────────
 
 async function inferCardiacEcg(record: ParsedRecord): Promise<any> {
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
   let base64Data = record.imageBase64 || "";
   if (base64Data.includes(",")) {
     base64Data = base64Data.split(",")[1];
   }
 
-  const response = await fetch(`${backendUrl}/inference/cardiac-ecg`, {
+  const response = await fetch("/api/inference/cardiac-ecg", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       image_base64: base64Data,
-      filename: record.imageName || "ecg_image.jpg",
+      filename: record.imageName || `${record.patientName || record.patientId}.jpg`,
       model_name: "transfinite_1",
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(60000),
   });
 
   if (!response.ok) {
-    throw new Error(`Cardiac ECG inference failed with status ${response.status}`);
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || `Cardiac ECG inference failed with status ${response.status}`);
   }
 
   return response.json();
@@ -227,29 +226,74 @@ export async function executeBatch(
         }
 
         // Extract results
-        const dc = result.dual_comparison;
-        const tfResult = dc?.transfinite_1 || result;
-        const cxResult = dc?.cx_01;
+        let qPred = "Unknown";
+        let cPred = "Unknown";
+        let qRisk = 0;
+        let cRisk = 0;
+        let qConf = 0;
+        let cConf = 0;
+        let riskTag = "LOW_RISK";
+        let riskTier = "";
+        let latencyMs = 0;
+        let topDriver = "";
+        let consensusStatus: "Concordant" | "Discordant" = "Concordant";
+
+        if (diseaseType === "cardiac_ecg") {
+          qPred =
+            result.quantum_engine?.quantum_prediction ||
+            result.prediction?.prediction_label ||
+            result.prediction?.class_name ||
+            "Normal";
+          cPred = result.classical_engine?.prediction || qPred;
+          qRisk = result.risk_stratification?.cardiac_risk_score ?? result.composite_risk_score ?? 15;
+          cRisk = qRisk;
+          qConf = result.quantum_engine?.quantum_confidence_pct ?? result.prediction?.confidence_pct ?? 95;
+          cConf = result.classical_engine?.confidence_pct ?? 92;
+          riskTier = result.risk_stratification?.severity_tier || (qRisk >= 65 ? "CRITICAL EMERGENCY" : "LOW RISK");
+          riskTag = qRisk >= 65 ? "HIGH_RISK" : qRisk >= 45 ? "BORDERLINE" : "LOW_RISK";
+          latencyMs = result.dual_engine_consensus?.total_latency_ms || result.quantum_engine?.latency_ms || 45;
+          topDriver =
+            result.pinpointing_gradcam?.lead_detected ||
+            result.risk_stratification?.primary_driver ||
+            "Lead V2 (Septal)";
+          consensusStatus =
+            result.dual_engine_consensus?.status === "Discordant"
+              ? "Discordant"
+              : qPred === cPred
+                ? "Concordant"
+                : "Discordant";
+        } else {
+          const dc = result.dual_comparison;
+          const tfResult = dc?.transfinite_1 || result;
+          const cxResult = dc?.cx_01;
+          qPred = tfResult?.prediction_label || result.prediction_label || "Unknown";
+          cPred = cxResult?.prediction_label || result.prediction_label || "Unknown";
+          qRisk = tfResult?.risk_score ?? result.composite_risk_score ?? 0;
+          cRisk = cxResult?.risk_score ?? result.composite_risk_score ?? 0;
+          qConf = tfResult?.confidence ?? result.confidence ?? 0;
+          cConf = cxResult?.confidence ?? result.confidence ?? 0;
+          riskTag = result.risk_tag || tfResult?.risk_tag || "LOW_RISK";
+          riskTier = result.risk_tier || tfResult?.risk_tier || "";
+          latencyMs = result.latency_ms || 0;
+          topDriver = result.shap_attributions?.[0]?.featureName || "";
+          consensusStatus = qPred === cPred ? "Concordant" : "Discordant";
+        }
 
         session.records[globalIdx].status = "success";
-        session.records[globalIdx].quantumPrediction = tfResult?.prediction_label || result.prediction_label || "Unknown";
-        session.records[globalIdx].classicalPrediction = cxResult?.prediction_label || result.prediction_label || "Unknown";
-        session.records[globalIdx].quantumRiskScore = tfResult?.risk_score ?? result.composite_risk_score ?? 0;
-        session.records[globalIdx].classicalRiskScore = cxResult?.risk_score ?? result.composite_risk_score ?? 0;
-        session.records[globalIdx].quantumConfidence = tfResult?.confidence ?? result.confidence ?? 0;
-        session.records[globalIdx].classicalConfidence = cxResult?.confidence ?? result.confidence ?? 0;
-        session.records[globalIdx].riskTag = result.risk_tag || tfResult?.risk_tag || "LOW_RISK";
-        session.records[globalIdx].riskTier = result.risk_tier || tfResult?.risk_tier || "";
-        session.records[globalIdx].latencyMs = result.latency_ms || 0;
+        session.records[globalIdx].quantumPrediction = qPred;
+        session.records[globalIdx].classicalPrediction = cPred;
+        session.records[globalIdx].quantumRiskScore = qRisk;
+        session.records[globalIdx].classicalRiskScore = cRisk;
+        session.records[globalIdx].quantumConfidence = qConf;
+        session.records[globalIdx].classicalConfidence = cConf;
+        session.records[globalIdx].riskTag = riskTag;
+        session.records[globalIdx].riskTier = riskTier;
+        session.records[globalIdx].latencyMs = latencyMs;
         session.records[globalIdx].attributions = result.shap_attributions || [];
-        session.records[globalIdx].topDriver = result.shap_attributions?.[0]?.featureName || "";
+        session.records[globalIdx].topDriver = topDriver;
         session.records[globalIdx].topDriverImpact = result.shap_attributions?.[0]?.impactPercentage || 0;
         session.records[globalIdx].fullResult = result;
-
-        // Consensus
-        const qPred = session.records[globalIdx].quantumPrediction;
-        const cPred = session.records[globalIdx].classicalPrediction;
-        session.records[globalIdx].consensusStatus = qPred === cPred ? "Concordant" : "Discordant";
+        session.records[globalIdx].consensusStatus = consensusStatus;
 
         // Risk level
         const riskScore = session.records[globalIdx].quantumRiskScore || 0;

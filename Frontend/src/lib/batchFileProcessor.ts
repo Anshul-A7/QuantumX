@@ -19,6 +19,7 @@
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { parseMedicalReportFile } from "./medicalReportParser";
+import { type DiseaseTarget } from "./uploadValidator";
 
 // ── Constants ───────────────────────────────────────────────────────────────────
 
@@ -402,9 +403,66 @@ async function parseJSON(file: File): Promise<BatchParseResult> {
   return parseJSONFiles([file]);
 }
 
-// ── ZIP Parser ──────────────────────────────────────────────────────────────────
+// ── PDF ECG Image Extractor ────────────────────────────────────────────────────
 
-async function parseZIP(file: File): Promise<BatchParseResult> {
+/**
+ * Extracts embedded 12-lead ECG JPEG images from PDF byte streams.
+ */
+export function extractEcgImageFromPdfBytes(bytes: Uint8Array): { bytes: Uint8Array; dataUrl: string } | null {
+  const len = bytes.length;
+  let bestStart = -1;
+  let bestEnd = -1;
+  let maxLen = 0;
+
+  for (let i = 0; i < len - 4; i++) {
+    // Check for JPEG SOI (Start of Image): 0xFF, 0xD8, 0xFF
+    if (bytes[i] === 0xff && bytes[i + 1] === 0xd8 && bytes[i + 2] === 0xff) {
+      const start = i;
+      // Search for JPEG EOI (End of Image): 0xFF, 0xD9
+      for (let j = start + 3; j < len - 1; j++) {
+        if (bytes[j] === 0xff && bytes[j + 1] === 0xd9) {
+          const imgLen = j + 2 - start;
+          // An ECG recording is typically > 5KB
+          if (imgLen > maxLen && imgLen > 5000) {
+            maxLen = imgLen;
+            bestStart = start;
+            bestEnd = j + 2;
+          }
+          i = j + 1;
+          break;
+        }
+      }
+    }
+  }
+
+  if (bestStart !== -1 && bestEnd !== -1) {
+    const sub = bytes.subarray(bestStart, bestEnd);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let k = 0; k < sub.length; k += chunkSize) {
+      binary += String.fromCharCode.apply(null, Array.from(sub.subarray(k, k + chunkSize)));
+    }
+    const base64 = btoa(binary);
+    return {
+      bytes: sub,
+      dataUrl: `data:image/jpeg;base64,${base64}`,
+    };
+  }
+
+  return null;
+}
+
+export async function extractEcgImageFromPdfFile(file: File): Promise<string | null> {
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  const result = extractEcgImageFromPdfBytes(bytes);
+  return result ? result.dataUrl : null;
+}
+
+export async function parseZIP(
+  file: File,
+  targetDisease?: DiseaseTarget,
+): Promise<BatchParseResult> {
   const warnings: string[] = [];
   const errors: string[] = [];
 
@@ -416,6 +474,8 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
     const imageFiles: { name: string; data: Uint8Array }[] = [];
     const csvFiles: { name: string; text: string }[] = [];
     const jsonFiles: { name: string; text: string }[] = [];
+    const pdfFiles: { name: string; data: Uint8Array }[] = [];
+    const txtFiles: { name: string; text: string }[] = [];
 
     const imageExtensions = new Set(["jpg", "jpeg", "png", "webp", "bmp"]);
     const csvExtensions = new Set(["csv", "tsv"]);
@@ -438,12 +498,88 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
       } else if (ext === "json") {
         const text = new TextDecoder().decode(data);
         jsonFiles.push({ name, text });
+      } else if (ext === "pdf") {
+        pdfFiles.push({ name, data });
+      } else if (ext === "txt") {
+        const text = new TextDecoder().decode(data);
+        txtFiles.push({ name, text });
       }
     }
 
-    // Determine primary content type
-    if (imageFiles.length > 0 && csvFiles.length === 0 && jsonFiles.length === 0) {
-      // Image batch → ECG mode
+    // ── If Cardiac ECG mode and archive contains PDFs, inspect them for embedded ECG images ──
+    if (targetDisease === "cardiac_ecg" && pdfFiles.length > 0) {
+      for (const pdf of pdfFiles) {
+        const ecgImage = extractEcgImageFromPdfBytes(pdf.data);
+        if (ecgImage) {
+          imageFiles.push({
+            name: pdf.name.replace(/\.pdf$/i, ".jpg"),
+            data: ecgImage.bytes,
+          });
+        }
+      }
+    }
+
+    // ── Modality Gatekeeper: Heart Attack / Cardiac ECG ──
+    if (targetDisease === "cardiac_ecg") {
+      if (imageFiles.length === 0 && (csvFiles.length > 0 || jsonFiles.length > 0 || pdfFiles.length > 0 || txtFiles.length > 0)) {
+        const summary = [
+          csvFiles.length > 0 ? `${csvFiles.length} CSV/TSV` : "",
+          jsonFiles.length > 0 ? `${jsonFiles.length} JSON` : "",
+          pdfFiles.length > 0 ? `${pdfFiles.length} pathology PDF report(s)` : "",
+          txtFiles.length > 0 ? `${txtFiles.length} TXT report(s)` : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
+        return {
+          success: false,
+          inputMode: "zip",
+          detectedDisease: "breast_cancer",
+          totalRecords: 0,
+          chunks: [],
+          fileInventory,
+          warnings,
+          errors: [
+            `This ZIP archive contains tabular cellular biomarker data (${summary}), not 12-lead ECG waveforms. The Cardiac ECG Studio exclusively processes 12-lead ECG waveform scans (.JPG, .PNG, .WEBP) or ECG PDFs containing waveform scans. For tabular cellular biomarker screening, please switch to the Breast Cancer Screening Studio.`,
+          ],
+        };
+      }
+    }
+
+    // ── Modality Gatekeeper: Breast Cancer ──
+    if (targetDisease === "breast_cancer") {
+      if (imageFiles.length > 0 && csvFiles.length === 0 && jsonFiles.length === 0 && pdfFiles.length === 0 && txtFiles.length === 0) {
+        return {
+          success: false,
+          inputMode: "zip",
+          detectedDisease: "cardiac_ecg",
+          totalRecords: 0,
+          chunks: [],
+          fileInventory,
+          warnings,
+          errors: [
+            `Image files / ECG scans cannot be processed in the Breast Cancer Screening Studio. This ZIP archive contains ${imageFiles.length} 12-lead ECG image scans. The Breast Cancer Screening Studio exclusively processes tabular biopsy data (.CSV, .JSON, .PDF lab reports). For 12-lead ECG waveform analysis, please switch to the Heart Attack & Cardiac ECG Studio.`,
+          ],
+        };
+      }
+    }
+
+    // 1. Image batch → ECG mode
+    if (imageFiles.length > 0 && csvFiles.length === 0 && jsonFiles.length === 0 && pdfFiles.length === 0 && txtFiles.length === 0) {
+      if (targetDisease === "breast_cancer") {
+        return {
+          success: false,
+          inputMode: "zip",
+          detectedDisease: "cardiac_ecg",
+          totalRecords: 0,
+          chunks: [],
+          fileInventory,
+          warnings,
+          errors: [
+            `Image files cannot be processed in the Breast Cancer Screening Studio. This archive contains ${imageFiles.length} ECG image scans. Please switch to the Heart Attack & Cardiac ECG Studio.`,
+          ],
+        };
+      }
+
       const records: ParsedRecord[] = imageFiles.slice(0, MAX_RECORDS_PER_SESSION).map((img, i) => {
         const base64 = btoa(
           Array.from(img.data)
@@ -472,8 +608,8 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
       };
     }
 
+    // 2. CSV batch
     if (csvFiles.length > 0) {
-      // CSV batch — parse all CSVs and merge
       const allRecords: ParsedRecord[] = [];
       let globalIndex = 0;
 
@@ -531,6 +667,7 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
       };
     }
 
+    // 3. JSON batch
     if (jsonFiles.length > 0) {
       const allRecords: ParsedRecord[] = [];
       let globalIndex = 0;
@@ -565,6 +702,126 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
       };
     }
 
+    // 4. PDF / TXT Clinical Reports batch inside ZIP
+    if (pdfFiles.length > 0 || txtFiles.length > 0) {
+      const allRecords: ParsedRecord[] = [];
+
+      for (const pdfFile of pdfFiles) {
+        try {
+          const blob = new Blob([pdfFile.data as unknown as BlobPart], { type: "application/pdf" });
+          const file = new File([blob], pdfFile.name, { type: "application/pdf" });
+          const parsed = await parseMedicalReportFile(file);
+
+          const cleanFallbackName = pdfFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+          const matchId = pdfFile.name.match(/(Patient-[A-Za-z0-9\-]+|QX-[A-Za-z0-9\-]+)/i);
+          const matchName = pdfFile.name
+            .replace(/^Case_\d+_/i, "")
+            .replace(/^(Patient-[A-Za-z0-9\-]+_)/i, "")
+            .replace(/\.[^.]+$/, "")
+            .replace(/_/g, " ");
+
+          const patientId = matchId
+            ? matchId[1]
+            : (parsed.patientId || parsed.metadata?.patientId || `QX-BATCH-${String(allRecords.length + 1).padStart(4, "0")}`);
+          const patientName = matchName && matchName.trim().length > 1
+            ? matchName.trim()
+            : (parsed.metadata?.patientName || cleanFallbackName);
+
+          allRecords.push({
+            rowIndex: allRecords.length,
+            patientId,
+            patientName,
+            data: parsed.extractedFields || {},
+            rawRow: parsed.extractedFields as any,
+            pdfText: parsed.rawTextPreview,
+          });
+
+          if (allRecords.length >= MAX_RECORDS_PER_SESSION) break;
+        } catch (err: any) {
+          warnings.push(`Could not parse PDF report ${pdfFile.name}: ${err.message}`);
+        }
+      }
+
+      for (const txtFile of txtFiles) {
+        try {
+          const blob = new Blob([txtFile.text], { type: "text/plain" });
+          const file = new File([blob], txtFile.name, { type: "text/plain" });
+          const parsed = await parseMedicalReportFile(file);
+
+          const cleanFallbackName = txtFile.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+          const matchId = txtFile.name.match(/(Patient-[A-Za-z0-9\-]+|QX-[A-Za-z0-9\-]+)/i);
+          const matchName = txtFile.name
+            .replace(/^Case_\d+_/i, "")
+            .replace(/^(Patient-[A-Za-z0-9\-]+_)/i, "")
+            .replace(/\.[^.]+$/, "")
+            .replace(/_/g, " ");
+
+          const patientId = matchId
+            ? matchId[1]
+            : (parsed.patientId || parsed.metadata?.patientId || `QX-BATCH-${String(allRecords.length + 1).padStart(4, "0")}`);
+          const patientName = matchName && matchName.trim().length > 1
+            ? matchName.trim()
+            : (parsed.metadata?.patientName || cleanFallbackName);
+
+          allRecords.push({
+            rowIndex: allRecords.length,
+            patientId,
+            patientName,
+            data: parsed.extractedFields || {},
+            rawRow: parsed.extractedFields as any,
+            pdfText: parsed.rawTextPreview,
+          });
+
+          if (allRecords.length >= MAX_RECORDS_PER_SESSION) break;
+        } catch (err: any) {
+          warnings.push(`Could not parse text report ${txtFile.name}: ${err.message}`);
+        }
+      }
+
+      const mappedCount = allRecords.length > 0 ? Object.keys(allRecords[0].data).length : 0;
+
+      if (targetDisease === "breast_cancer" && (allRecords.length === 0 || mappedCount === 0)) {
+        return {
+          success: false,
+          inputMode: "zip",
+          detectedDisease: "unknown",
+          totalRecords: 0,
+          chunks: [],
+          fileInventory,
+          warnings,
+          errors: [
+            "No breast cancer cytopathology features or FNA biopsy measurements (e.g. radius_mean, texture_mean, perimeter_mean) were found in the uploaded PDF reports. Please upload valid pathology lab reports or CSV/JSON sheets.",
+          ],
+        };
+      }
+
+      if (targetDisease === "cardiac_ecg" && imageFiles.length === 0) {
+        return {
+          success: false,
+          inputMode: "zip",
+          detectedDisease: "breast_cancer",
+          totalRecords: 0,
+          chunks: [],
+          fileInventory,
+          warnings,
+          errors: [
+            "This ZIP archive contains pathology reports, not 12-lead ECG waveforms. For tabular cellular biomarker or biopsy screening, please switch to the Breast Cancer Screening Studio.",
+          ],
+        };
+      }
+
+      return {
+        success: allRecords.length > 0,
+        inputMode: "zip",
+        detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
+        totalRecords: allRecords.length,
+        chunks: chunkRecords(allRecords),
+        fileInventory,
+        warnings,
+        errors: allRecords.length === 0 ? ["No valid patient records could be extracted from PDF/TXT reports in ZIP."] : errors,
+      };
+    }
+
     return {
       success: false,
       inputMode: "zip",
@@ -573,7 +830,7 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
       chunks: [],
       fileInventory,
       warnings,
-      errors: ["ZIP archive does not contain any recognized files (CSV, JSON, or images)."],
+      errors: ["ZIP archive does not contain any recognized files (.CSV, .TSV, .JSON, .PDF, .TXT, or images)."],
     };
   } catch (err: any) {
     return {
@@ -590,7 +847,24 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
 
 // ── Image Bulk Parser ───────────────────────────────────────────────────────────
 
-async function parseImageBulk(files: File[]): Promise<BatchParseResult> {
+async function parseImageBulk(
+  files: File[],
+  targetDisease?: DiseaseTarget,
+): Promise<BatchParseResult> {
+  if (targetDisease === "breast_cancer") {
+    return {
+      success: false,
+      inputMode: "image_bulk",
+      detectedDisease: "cardiac_ecg",
+      totalRecords: 0,
+      chunks: [],
+      warnings: [],
+      errors: [
+        "Image files cannot be processed in the Breast Cancer Screening Studio. This batch contains 12-lead ECG images intended for the Heart Attack & Cardiac ECG Studio. Please switch to Heart Attack & Cardiac ECG Studio or upload cytopathology biopsy data (.CSV, .JSON, .PDF lab reports).",
+      ],
+    };
+  }
+
   const records: ParsedRecord[] = [];
   const warnings: string[] = [];
 
@@ -867,6 +1141,7 @@ async function parseMixedFiles(files: File[]): Promise<BatchParseResult> {
 
 export async function processBatchUpload(
   files: File[],
+  targetDisease?: DiseaseTarget,
 ): Promise<BatchParseResult> {
   if (files.length === 0) {
     return {
@@ -882,17 +1157,61 @@ export async function processBatchUpload(
 
   // 1. Single ZIP file
   if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
-    return parseZIP(files[0]);
+    return parseZIP(files[0], targetDisease);
   }
 
-  // 2. Images (cardiac ECG)
+  // 2. Modality Gate: Cardiac ECG must receive images or ECG zip
+  if (targetDisease === "cardiac_ecg") {
+    const imageExts = new Set(["jpg", "jpeg", "png", "webp", "bmp"]);
+    const hasNonImages = files.some((f) => {
+      const fExt = f.name.split(".").pop()?.toLowerCase() || "";
+      return !imageExts.has(fExt) && fExt !== "zip";
+    });
+    if (hasNonImages) {
+      return {
+        success: false,
+        inputMode: "csv",
+        detectedDisease: "breast_cancer",
+        totalRecords: 0,
+        chunks: [],
+        warnings: [],
+        errors: [
+          "Tabular biomarker data cannot be processed in the Cardiac ECG Studio. The Cardiac ECG Studio exclusively processes 12-lead ECG waveform images (.JPG, .PNG, .WEBP) or ECG PDFs. For tabular cellular biomarker screening, please use the Breast Cancer Screening Studio.",
+        ],
+      };
+    }
+  }
+
+  // 3. Modality Gate: Breast Cancer must receive tabular / report data
+  if (targetDisease === "breast_cancer") {
+    const imageExts = new Set(["jpg", "jpeg", "png", "webp", "bmp"]);
+    const allImages = files.every((f) => {
+      const fExt = f.name.split(".").pop()?.toLowerCase() || "";
+      return imageExts.has(fExt);
+    });
+    if (allImages) {
+      return {
+        success: false,
+        inputMode: "image_bulk",
+        detectedDisease: "cardiac_ecg",
+        totalRecords: 0,
+        chunks: [],
+        warnings: [],
+        errors: [
+          "Image files cannot be processed in the Breast Cancer Screening Studio. The Breast Cancer Screening Studio processes tabular biopsy data (.CSV, .JSON, .PDF lab reports). For 12-lead ECG analysis, please use the Heart Attack & Cardiac ECG Studio.",
+        ],
+      };
+    }
+  }
+
+  // 4. Images (cardiac ECG)
   const imageExts = new Set(["jpg", "jpeg", "png", "webp", "bmp"]);
   const allImages = files.every((f) => {
     const fExt = f.name.split(".").pop()?.toLowerCase() || "";
     return imageExts.has(fExt);
   });
   if (allImages) {
-    return parseImageBulk(files);
+    return parseImageBulk(files, targetDisease);
   }
 
   const imageFiles = files.filter((f) => {
@@ -900,10 +1219,10 @@ export async function processBatchUpload(
     return imageExts.has(fExt);
   });
   if (imageFiles.length > 0 && imageFiles.length === files.length) {
-    return parseImageBulk(imageFiles);
+    return parseImageBulk(imageFiles, targetDisease);
   }
 
-  // 3. Tabular / Structured / Reports Multi-file Handling
+  // 5. Tabular / Structured / Reports Multi-file Handling
   const allJson = files.every((f) => f.name.toLowerCase().endsWith(".json"));
   if (allJson) {
     return parseJSONFiles(files);
@@ -925,6 +1244,6 @@ export async function processBatchUpload(
     return parseReportFiles(files);
   }
 
-  // 4. Mixed files
+  // 6. Mixed files
   return parseMixedFiles(files);
 }

@@ -31,7 +31,7 @@ import { ScreeningService } from "@/services/screening.service";
 import BatchUploadPanel from "@/components/predict/BatchUploadPanel";
 import BatchResultsTable from "@/components/predict/BatchResultsTable";
 import { executeBatch, type BatchSession, type BatchRecord } from "@/services/batch.service";
-import { type BatchParseResult } from "@/lib/batchFileProcessor";
+import { type BatchParseResult, extractEcgImageFromPdfFile } from "@/lib/batchFileProcessor";
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -457,11 +457,62 @@ export default function HeartDiseaseStudioPage() {
     img.src = uploadedImage;
   };
 
-  const handleFileSelect = (file: File) => {
-    if (!file.type.startsWith("image/")) {
+  const handleFileSelect = async (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+
+    // Support ECG PDF recordings
+    if (ext === "pdf" || file.type === "application/pdf") {
+      try {
+        const ecgDataUrl = await extractEcgImageFromPdfFile(file);
+        if (ecgDataUrl) {
+          setUploadedImage(ecgDataUrl);
+          setImageFile(null);
+          setSelectedReferenceKey(null);
+          setTelemetry(null);
+          setValidationError(null);
+          const sizeStr =
+            file.size > 1024 * 1024
+              ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+              : `${(file.size / 1024).toFixed(0)} KB`;
+          const img = new window.Image();
+          img.onload = () => {
+            setImageMeta({
+              name: file.name,
+              size: sizeStr,
+              dimensions: `${img.width} × ${img.height} px (from ECG PDF)`,
+            });
+          };
+          img.src = ecgDataUrl;
+          showToast({
+            title: "ECG Waveform Extracted",
+            message: `12-lead electrocardiogram trace extracted from ${file.name}`,
+            type: "success",
+          });
+          return;
+        } else {
+          showToast({
+            title: "No ECG Waveforms Found in PDF",
+            message:
+              "The uploaded PDF does not contain an embedded 12-lead ECG waveform. For tabular cancer biopsy reports, please switch to Breast Cancer Screening Studio.",
+            type: "warning",
+          });
+          return;
+        }
+      } catch (err) {
+        showToast({
+          title: "PDF Parsing Error",
+          message: "Could not extract ECG image from the uploaded PDF.",
+          type: "warning",
+        });
+        return;
+      }
+    }
+
+    if (!file.type.startsWith("image/") && !["jpg", "jpeg", "png", "webp", "bmp"].includes(ext)) {
       showToast({
         title: "Invalid File Format",
-        message: "Please select an ECG paper strip image (.png, .jpg, .jpeg)",
+        message:
+          "Please select a 12-lead ECG paper strip image (.png, .jpg, .jpeg) or an ECG PDF recording. For tabular biopsy data, please use Breast Cancer Screening Studio.",
         type: "warning",
       });
       return;

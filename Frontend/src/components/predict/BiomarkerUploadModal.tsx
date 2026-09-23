@@ -57,8 +57,28 @@ export default function BiomarkerUploadModal({
     setErrorMessage(null);
     playSound("click");
 
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (["jpg", "jpeg", "png", "webp", "bmp", "gif", "tif", "tiff"].includes(ext) || file.type.startsWith("image/")) {
+      setErrorMessage(
+        `Image files cannot be processed in Breast Cancer screening. "${file.name}" appears to be an image scan. The Breast Cancer Screening Studio exclusively processes tabular biopsy data (.CSV, .JSON, .PDF lab reports). For 12-lead ECG image analysis, please use the Heart Attack & Cardiac ECG Studio.`
+      );
+      setIsProcessing(false);
+      playSound("error");
+      return;
+    }
+
     try {
       const result = await parseMedicalReportFile(file);
+      const nonDefaultMatches = result.fieldMatches?.filter((m) => m.matchType !== "default") || [];
+      if (nonDefaultMatches.length === 0) {
+        setErrorMessage(
+          `No breast cancer cytopathology features or FNA biopsy measurements (e.g. cell radius, texture, perimeter, area) were detected in "${file.name}". Please ensure you upload fine-needle aspirate biopsy reports or CSV/JSON sheets containing standard cellular features.`
+        );
+        setIsProcessing(false);
+        playSound("error");
+        return;
+      }
+
       setParseResult(result);
       setEditableValues({ ...result.extractedFields });
       setPatientId(result.patientId);

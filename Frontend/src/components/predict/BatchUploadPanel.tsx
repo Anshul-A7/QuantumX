@@ -65,10 +65,40 @@ export default function BatchUploadPanel({
       setIsParsing(true);
 
       try {
-        const result = await processBatchUpload(fileArray);
+        const result = await processBatchUpload(fileArray, diseaseTarget);
+
+        if (!result.success || (result.errors && result.errors.length > 0)) {
+          setValidationError(result.errors?.[0] || "Upload validation failed.");
+          setParseResult(result);
+          return;
+        }
+
+        if (result.detectedDisease !== "unknown" && result.detectedDisease !== diseaseTarget) {
+          const msg =
+            diseaseTarget === "cardiac_ecg"
+              ? "Tabular biomarker data cannot be processed in the Cardiac ECG Studio. This batch contains cellular/biomarker data intended for the Breast Cancer Screening Studio. Please switch to Breast Cancer Screening or upload 12-lead ECG images (.JPG, .PNG, .WEBP) or ECG PDFs."
+              : "Image files / ECG scans cannot be processed in the Breast Cancer Screening Studio. This batch contains 12-lead ECG waveforms intended for the Heart Attack & Cardiac ECG Studio. Please switch to Heart Attack & Cardiac ECG Studio or upload cytopathology biopsy data (.CSV, .JSON, .PDF lab reports).";
+          setValidationError(msg);
+          setParseResult({ ...result, success: false, errors: [msg] });
+          return;
+        }
+
+        if (diseaseTarget === "breast_cancer" && result.chunks?.[0]?.records?.[0]) {
+          const fieldCount = Object.keys(result.chunks[0].records[0].data || {}).length;
+          if (fieldCount === 0) {
+            const msg =
+              "No breast cancer cytopathology features or FNA biopsy measurements (e.g. radius_mean, texture_mean, perimeter_mean) were detected in this dataset. Please upload fine-needle aspirate biopsy reports (.PDF, .TXT) or tabular sheets (.CSV, .JSON).";
+            setValidationError(msg);
+            setParseResult({ ...result, success: false, errors: [msg] });
+            return;
+          }
+        }
+
         setParseResult(result);
         onParseComplete(result);
       } catch (err: any) {
+        const errMsg = err.message || "Failed to parse files";
+        setValidationError(errMsg);
         setParseResult({
           success: false,
           inputMode: "csv",
@@ -76,7 +106,7 @@ export default function BatchUploadPanel({
           totalRecords: 0,
           chunks: [],
           warnings: [],
-          errors: [err.message || "Failed to parse files"],
+          errors: [errMsg],
         });
       } finally {
         setIsParsing(false);
@@ -259,14 +289,38 @@ export default function BatchUploadPanel({
 
             {/* Errors */}
             {parseResult.errors.length > 0 && (
-              <div className="px-5 py-3 bg-red-50 border-b border-red-200">
+              <div className="px-5 py-3 bg-red-50 border-b border-red-200 space-y-2">
                 {parseResult.errors.map((err, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <AlertTriangle
-                      size={13}
-                      className="text-red-500 mt-0.5 shrink-0"
-                    />
-                    <p className="text-xs text-red-700">{err}</p>
+                  <div key={i} className="flex flex-col gap-1.5">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle
+                        size={13}
+                        className="text-red-500 mt-0.5 shrink-0"
+                      />
+                      <p className="text-xs text-red-700">{err}</p>
+                    </div>
+                    {diseaseTarget === "breast_cancer" &&
+                      (err.includes("ECG") || err.includes("Heart Attack")) && (
+                        <a
+                          href="/predict/heart-disease"
+                          className="ml-5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1"
+                        >
+                          Switch to Heart Attack & Cardiac ECG Studio →
+                        </a>
+                      )}
+                    {diseaseTarget === "cardiac_ecg" &&
+                      (err.includes("cellular") ||
+                        err.includes("biomarker") ||
+                        err.includes("Breast Cancer") ||
+                        err.includes("biopsy") ||
+                        err.includes("pathology")) && (
+                        <a
+                          href="/predict/breast-cancer"
+                          className="ml-5 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1"
+                        >
+                          Switch to Breast Cancer Screening Studio →
+                        </a>
+                      )}
                   </div>
                 ))}
               </div>
@@ -357,40 +411,41 @@ export default function BatchUploadPanel({
               )}
 
             {/* Execute Button */}
-            {parseResult.success && parseResult.totalRecords > 0 && (
-              <div className="px-5 py-4 flex items-center justify-between">
-                <div className="text-xs text-ink-soft">
-                  <span className="font-semibold text-ink">
-                    {parseResult.totalRecords.toLocaleString()}
-                  </span>{" "}
-                  records ready •{" "}
-                  <span className="font-mono">
-                    {parseResult.detectedDisease === "breast_cancer"
-                      ? "Breast Cancer"
-                      : parseResult.detectedDisease === "cardiac_ecg"
-                        ? "Cardiac ECG"
-                        : "Auto-detect"}
-                  </span>{" "}
-                  pipeline
+            {parseResult.success &&
+              parseResult.totalRecords > 0 &&
+              !validationError &&
+              parseResult.detectedDisease === diseaseTarget && (
+                <div className="px-5 py-4 flex items-center justify-between">
+                  <div className="text-xs text-ink-soft">
+                    <span className="font-semibold text-ink">
+                      {parseResult.totalRecords.toLocaleString()}
+                    </span>{" "}
+                    records ready •{" "}
+                    <span className="font-mono">
+                      {parseResult.detectedDisease === "breast_cancer"
+                        ? "Breast Cancer"
+                        : "Cardiac ECG"}
+                    </span>{" "}
+                    pipeline
+                  </div>
+                  <button
+                    onClick={() => onExecute(parseResult)}
+                    disabled={isExecuting}
+                    className="px-5 py-2.5 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isExecuting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Play size={14} className="text-quantum" />
+                    )}
+                    <span>
+                      {isExecuting
+                        ? "Executing..."
+                        : `Execute Batch (${parseResult.totalRecords.toLocaleString()} records)`}
+                    </span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => onExecute(parseResult)}
-                  disabled={isExecuting}
-                  className="px-5 py-2.5 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isExecuting ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Play size={14} className="text-quantum" />
-                  )}
-                  <span>
-                    {isExecuting
-                      ? "Executing..."
-                      : `Execute Batch (${parseResult.totalRecords.toLocaleString()} records)`}
-                  </span>
-                </button>
-              </div>
-            )}
+              )}
           </motion.div>
         )}
       </AnimatePresence>
