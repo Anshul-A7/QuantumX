@@ -268,10 +268,14 @@ export default function BreastCancerDetailPage() {
   const handleBatchExecute = async (parseResult: BatchParseResult) => {
     setIsBatchExecuting(true);
     try {
+      const batchTitle =
+        parseResult.fileInventory && parseResult.fileInventory.length > 1
+          ? `${parseResult.fileInventory.length} Patient Files (${parseResult.totalRecords} records)`
+          : parseResult.fileInventory?.[0]?.name || "batch_upload.csv";
       const session = await executeBatch(
         parseResult.chunks,
         "breast_cancer",
-        "batch_upload.csv",
+        batchTitle,
         (s) => {
           setBatchSession({ ...s });
           setBatchProgress(s.totalRecords > 0 ? (s.processedCount / s.totalRecords) * 100 : 0);

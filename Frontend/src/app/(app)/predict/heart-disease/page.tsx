@@ -287,10 +287,14 @@ export default function HeartDiseaseStudioPage() {
     setIsBatchExecuting(true);
     setBatchProgress(0);
     try {
+      const batchTitle =
+        parseResult.fileInventory && parseResult.fileInventory.length > 1
+          ? `${parseResult.fileInventory.length} ECG Records (${parseResult.totalRecords} records)`
+          : parseResult.fileInventory?.[0]?.name || "cardiac_ecg_batch.zip";
       const session = await executeBatch(
         parseResult.chunks,
         "cardiac_ecg",
-        "cardiac_ecg_batch.zip",
+        batchTitle,
         (s) => {
           setBatchSession({ ...s });
           setBatchProgress(s.totalRecords > 0 ? (s.processedCount / s.totalRecords) * 100 : 0);

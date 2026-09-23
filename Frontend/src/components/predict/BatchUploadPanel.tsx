@@ -153,7 +153,7 @@ export default function BatchUploadPanel({
             ref={fileInputRef}
             type="file"
             accept={acceptedFormats}
-            multiple={diseaseTarget === "cardiac_ecg"}
+            multiple
             onChange={handleInputChange}
             className="hidden"
           />
@@ -236,7 +236,9 @@ export default function BatchUploadPanel({
                 {getFileIcon(selectedFiles[0]?.name || "file.csv")}
                 <div>
                   <p className="text-sm font-semibold text-ink">
-                    {selectedFiles.map((f) => f.name).join(", ")}
+                    {selectedFiles.length === 1
+                      ? selectedFiles[0].name
+                      : `${selectedFiles.length} files selected (${selectedFiles.slice(0, 2).map((f) => f.name).join(", ")}${selectedFiles.length > 2 ? `, +${selectedFiles.length - 2} more` : ""})`}
                   </p>
                   <p className="text-[11px] text-ink-soft">
                     {parseResult.inputMode.toUpperCase()} •{" "}

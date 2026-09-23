@@ -18,6 +18,7 @@
 
 import Papa from "papaparse";
 import JSZip from "jszip";
+import { parseMedicalReportFile } from "./medicalReportParser";
 
 // ── Constants ───────────────────────────────────────────────────────────────────
 
@@ -279,85 +280,126 @@ async function parseCSV(file: File): Promise<BatchParseResult> {
 
 // ── JSON Parser ─────────────────────────────────────────────────────────────────
 
-async function parseJSON(file: File): Promise<BatchParseResult> {
-  const warnings: string[] = [];
-  const errors: string[] = [];
+function extractRecordFromJSONItem(
+  item: any,
+  fallbackIndex: number,
+  fallbackFileName: string,
+): ParsedRecord | null {
+  if (!item || typeof item !== "object") return null;
 
-  try {
-    const text = await file.text();
-    let parsed = JSON.parse(text);
+  const candidateSource: Record<string, any> = {
+    ...item,
+    ...(typeof item.biomarkers === "object" && item.biomarkers !== null ? item.biomarkers : {}),
+    ...(typeof item.features === "object" && item.features !== null ? item.features : {}),
+    ...(typeof item.measurements === "object" && item.measurements !== null ? item.measurements : {}),
+    ...(typeof item.values === "object" && item.values !== null ? item.values : {}),
+    ...(typeof item.data === "object" && item.data !== null ? item.data : {}),
+  };
 
-    // Normalize: wrap single object in array
-    if (!Array.isArray(parsed)) {
-      parsed = [parsed];
-    }
+  const data: Record<string, number> = {};
 
-    if (parsed.length === 0) {
-      return {
-        success: false,
-        inputMode: "json",
-        detectedDisease: "unknown",
-        totalRecords: 0,
-        chunks: [],
-        warnings: [],
-        errors: ["JSON file contains an empty array."],
-      };
-    }
-
-    const records: ParsedRecord[] = [];
-
-    for (let i = 0; i < Math.min(parsed.length, MAX_RECORDS_PER_SESSION); i++) {
-      const item = parsed[i];
-      const data: Record<string, number> = {};
-
-      for (const [canonical, aliases] of Object.entries(BREAST_CANCER_ALIASES)) {
-        for (const alias of aliases) {
-          const normalizedAlias = normalizeColumnName(alias);
-          for (const key of Object.keys(item)) {
-            if (normalizeColumnName(key) === normalizedAlias) {
-              const num = parseFloat(String(item[key]));
-              if (!isNaN(num)) {
-                data[canonical] = num;
-                break;
-              }
-            }
+  for (const [canonical, aliases] of Object.entries(BREAST_CANCER_ALIASES)) {
+    for (const alias of aliases) {
+      const normalizedAlias = normalizeColumnName(alias);
+      for (const key of Object.keys(candidateSource)) {
+        if (normalizeColumnName(key) === normalizedAlias) {
+          const num = parseFloat(String(candidateSource[key]));
+          if (!isNaN(num)) {
+            data[canonical] = num;
+            break;
           }
-          if (data[canonical] !== undefined) break;
         }
       }
-
-      records.push({
-        rowIndex: i,
-        patientId: item.patient_id || item.patientId || item.id || `QX-BATCH-${String(i + 1).padStart(4, "0")}`,
-        patientName: item.patient_name || item.patientName || item.name || `Patient ${i + 1}`,
-        data,
-        rawRow: item,
-      });
+      if (data[canonical] !== undefined) break;
     }
+  }
 
-    const mappedCount = records.length > 0 ? Object.keys(records[0].data).length : 0;
-    const chunks = chunkRecords(records);
+  const cleanFallbackName = fallbackFileName.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+  const patientId = String(
+    item.patient_id || item.patientId || item.id ||
+    candidateSource.patient_id || candidateSource.patientId || candidateSource.id ||
+    `QX-BATCH-${String(fallbackIndex + 1).padStart(4, "0")}`
+  );
+  const patientName = String(
+    item.patient_name || item.patientName || item.name ||
+    candidateSource.patient_name || candidateSource.patientName || candidateSource.name ||
+    cleanFallbackName
+  );
 
-    return {
-      success: true,
-      inputMode: "json",
-      detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
-      totalRecords: records.length,
-      chunks,
-      warnings,
-      errors,
-    };
-  } catch (err: any) {
+  return {
+    rowIndex: fallbackIndex,
+    patientId,
+    patientName,
+    data,
+    rawRow: candidateSource,
+  };
+}
+
+async function parseJSONFiles(files: File[]): Promise<BatchParseResult> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const records: ParsedRecord[] = [];
+  const fileInventory = files.map((f) => ({
+    name: f.name,
+    type: "json",
+    size: f.size,
+  }));
+
+  for (const file of files) {
+    try {
+      const text = await file.text();
+      let parsed = JSON.parse(text);
+
+      if (!Array.isArray(parsed)) {
+        parsed = [parsed];
+      }
+
+      for (let i = 0; i < parsed.length; i++) {
+        if (records.length >= MAX_RECORDS_PER_SESSION) {
+          warnings.push(`Maximum batch limit of ${MAX_RECORDS_PER_SESSION.toLocaleString()} records reached.`);
+          break;
+        }
+
+        const rec = extractRecordFromJSONItem(parsed[i], records.length, file.name);
+        if (rec) {
+          records.push(rec);
+        }
+      }
+    } catch (err: any) {
+      errors.push(`Error parsing ${file.name}: ${err.message || "Invalid JSON syntax"}`);
+    }
+  }
+
+  if (records.length === 0) {
     return {
       success: false,
       inputMode: "json",
       detectedDisease: "unknown",
       totalRecords: 0,
       chunks: [],
-      warnings: [],
-      errors: [`JSON parsing error: ${err.message}`],
+      fileInventory,
+      warnings,
+      errors: errors.length > 0 ? errors : ["JSON file(s) contain no valid patient records."],
     };
   }
+
+  const mappedCount = Object.keys(records[0]?.data || {}).length;
+  const chunks = chunkRecords(records);
+
+  return {
+    success: true,
+    inputMode: "json",
+    detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
+    totalRecords: records.length,
+    chunks,
+    fileInventory,
+    warnings,
+    errors,
+  };
+}
+
+async function parseJSON(file: File): Promise<BatchParseResult> {
+  return parseJSONFiles([file]);
 }
 
 // ── ZIP Parser ──────────────────────────────────────────────────────────────────
@@ -499,28 +541,11 @@ async function parseZIP(file: File): Promise<BatchParseResult> {
           if (!Array.isArray(items)) items = [items];
 
           for (const item of items) {
-            const data: Record<string, number> = {};
-            for (const [canonical, aliases] of Object.entries(BREAST_CANCER_ALIASES)) {
-              for (const alias of aliases) {
-                const normalizedAlias = normalizeColumnName(alias);
-                for (const key of Object.keys(item)) {
-                  if (normalizeColumnName(key) === normalizedAlias) {
-                    const num = parseFloat(String(item[key]));
-                    if (!isNaN(num)) { data[canonical] = num; break; }
-                  }
-                }
-                if (data[canonical] !== undefined) break;
-              }
+            const rec = extractRecordFromJSONItem(item, globalIndex, jsonFile.name);
+            if (rec) {
+              allRecords.push(rec);
+              globalIndex++;
             }
-
-            allRecords.push({
-              rowIndex: globalIndex,
-              patientId: item.patient_id || item.patientId || item.id || `QX-BATCH-${String(globalIndex + 1).padStart(4, "0")}`,
-              patientName: item.patient_name || item.patientName || item.name || `Patient ${globalIndex + 1}`,
-              data,
-              rawRow: item,
-            });
-            globalIndex++;
             if (globalIndex >= MAX_RECORDS_PER_SESSION) break;
           }
         } catch {
@@ -618,6 +643,226 @@ function chunkRecords(records: ParsedRecord[]): BatchChunk[] {
   return chunks;
 }
 
+// ── Multiple CSV/TSV Parser ───────────────────────────────────────────────────
+
+async function parseCSVFiles(files: File[]): Promise<BatchParseResult> {
+  if (files.length === 1) {
+    const res = await parseCSV(files[0]);
+    res.fileInventory = [
+      {
+        name: files[0].name,
+        type: files[0].name.toLowerCase().endsWith(".tsv") ? "tsv" : "csv",
+        size: files[0].size,
+      },
+    ];
+    return res;
+  }
+
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const records: ParsedRecord[] = [];
+  let combinedColumnMappings: ColumnMapping[] = [];
+  const fileInventory = files.map((f) => ({
+    name: f.name,
+    type: f.name.toLowerCase().endsWith(".tsv") ? "tsv" : "csv",
+    size: f.size,
+  }));
+
+  for (const file of files) {
+    try {
+      const res = await parseCSV(file);
+      if (res.warnings) warnings.push(...res.warnings);
+      if (res.errors && res.errors.length > 0 && !res.success) {
+        errors.push(`${file.name}: ${res.errors.join(", ")}`);
+        continue;
+      }
+      if (res.columnMappings && combinedColumnMappings.length === 0) {
+        combinedColumnMappings = res.columnMappings;
+      }
+      for (const chunk of res.chunks) {
+        for (const rec of chunk.records) {
+          if (records.length >= MAX_RECORDS_PER_SESSION) break;
+          records.push({
+            ...rec,
+            rowIndex: records.length,
+          });
+        }
+      }
+    } catch (err: any) {
+      errors.push(`Failed to parse ${file.name}: ${err.message}`);
+    }
+  }
+
+  if (records.length === 0) {
+    return {
+      success: false,
+      inputMode: "csv",
+      detectedDisease: "unknown",
+      totalRecords: 0,
+      chunks: [],
+      fileInventory,
+      warnings,
+      errors: errors.length > 0 ? errors : ["CSV file(s) contained no parseable rows."],
+    };
+  }
+
+  const mappedCount = Object.keys(records[0]?.data || {}).length;
+  const chunks = chunkRecords(records);
+
+  return {
+    success: true,
+    inputMode: files[0]?.name.toLowerCase().endsWith(".tsv") ? "tsv" : "csv",
+    detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
+    totalRecords: records.length,
+    chunks,
+    columnMappings: combinedColumnMappings,
+    fileInventory,
+    warnings,
+    errors,
+  };
+}
+
+// ── Medical Reports Parser (PDF / TXT Bulk) ───────────────────────────────────
+
+async function parseReportFiles(files: File[]): Promise<BatchParseResult> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const records: ParsedRecord[] = [];
+  const fileInventory = files.map((f) => ({
+    name: f.name,
+    type: f.name.toLowerCase().endsWith(".pdf") ? "pdf" : "txt",
+    size: f.size,
+  }));
+
+  for (const file of files) {
+    try {
+      const parsed = await parseMedicalReportFile(file);
+      const fallbackName = file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
+      const patientId =
+        parsed.patientId ||
+        parsed.metadata?.patientId ||
+        `QX-BATCH-${String(records.length + 1).padStart(4, "0")}`;
+      const patientName = parsed.metadata?.patientName || fallbackName;
+
+      records.push({
+        rowIndex: records.length,
+        patientId,
+        patientName,
+        data: parsed.extractedFields || {},
+        rawRow: parsed.extractedFields as any,
+        pdfText: parsed.rawTextPreview,
+      });
+    } catch (err: any) {
+      errors.push(`Failed to parse report ${file.name}: ${err.message}`);
+    }
+  }
+
+  if (records.length === 0) {
+    return {
+      success: false,
+      inputMode: "pdf_bulk",
+      detectedDisease: "unknown",
+      totalRecords: 0,
+      chunks: [],
+      fileInventory,
+      warnings,
+      errors: errors.length > 0 ? errors : ["No clinical reports could be parsed."],
+    };
+  }
+
+  const mappedCount = Object.keys(records[0]?.data || {}).length;
+  const chunks = chunkRecords(records);
+
+  return {
+    success: true,
+    inputMode: "pdf_bulk",
+    detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
+    totalRecords: records.length,
+    chunks,
+    fileInventory,
+    warnings,
+    errors,
+  };
+}
+
+// ── Mixed Format Parser ────────────────────────────────────────────────────────
+
+async function parseMixedFiles(files: File[]): Promise<BatchParseResult> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const records: ParsedRecord[] = [];
+  const fileInventory = files.map((f) => ({
+    name: f.name,
+    type: f.name.split(".").pop()?.toLowerCase() || "unknown",
+    size: f.size,
+  }));
+
+  for (const file of files) {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    try {
+      if (ext === "json") {
+        const res = await parseJSONFiles([file]);
+        if (res.chunks) {
+          for (const c of res.chunks) {
+            for (const r of c.records) {
+              records.push({ ...r, rowIndex: records.length });
+            }
+          }
+        }
+      } else if (ext === "csv" || ext === "tsv") {
+        const res = await parseCSV(file);
+        if (res.chunks) {
+          for (const c of res.chunks) {
+            for (const r of c.records) {
+              records.push({ ...r, rowIndex: records.length });
+            }
+          }
+        }
+      } else if (ext === "pdf" || ext === "txt") {
+        const res = await parseReportFiles([file]);
+        if (res.chunks) {
+          for (const c of res.chunks) {
+            for (const r of c.records) {
+              records.push({ ...r, rowIndex: records.length });
+            }
+          }
+        }
+      } else {
+        warnings.push(`Skipped unsupported file: ${file.name}`);
+      }
+    } catch (err: any) {
+      errors.push(`Error processing ${file.name}: ${err.message}`);
+    }
+  }
+
+  if (records.length === 0) {
+    return {
+      success: false,
+      inputMode: "csv",
+      detectedDisease: "unknown",
+      totalRecords: 0,
+      chunks: [],
+      fileInventory,
+      warnings,
+      errors: errors.length > 0 ? errors : ["No valid records could be extracted from uploaded files."],
+    };
+  }
+
+  const mappedCount = Object.keys(records[0]?.data || {}).length;
+  const chunks = chunkRecords(records);
+
+  return {
+    success: true,
+    inputMode: "csv",
+    detectedDisease: mappedCount >= 3 ? "breast_cancer" : "unknown",
+    totalRecords: records.length,
+    chunks,
+    fileInventory,
+    warnings,
+    errors,
+  };
+}
+
 // ── Main Entry Point ────────────────────────────────────────────────────────────
 
 export async function processBatchUpload(
@@ -635,52 +880,51 @@ export async function processBatchUpload(
     };
   }
 
-  const file = files[0];
-  const ext = file.name.split(".").pop()?.toLowerCase() || "";
-
-  // Single ZIP file
-  if (ext === "zip") {
-    return parseZIP(file);
+  // 1. Single ZIP file
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
+    return parseZIP(files[0]);
   }
 
-  // Single CSV/TSV
-  if (ext === "csv" || ext === "tsv") {
-    return parseCSV(file);
-  }
-
-  // Single JSON
-  if (ext === "json") {
-    return parseJSON(file);
-  }
-
-  // Multiple image files → image batch
+  // 2. Images (cardiac ECG)
   const imageExts = new Set(["jpg", "jpeg", "png", "webp", "bmp"]);
   const allImages = files.every((f) => {
     const fExt = f.name.split(".").pop()?.toLowerCase() || "";
     return imageExts.has(fExt);
   });
-
   if (allImages) {
     return parseImageBulk(files);
   }
 
-  // Mixed files — attempt to sort
   const imageFiles = files.filter((f) => {
     const fExt = f.name.split(".").pop()?.toLowerCase() || "";
     return imageExts.has(fExt);
   });
-
-  if (imageFiles.length > 0) {
+  if (imageFiles.length > 0 && imageFiles.length === files.length) {
     return parseImageBulk(imageFiles);
   }
 
-  return {
-    success: false,
-    inputMode: "csv",
-    detectedDisease: "unknown",
-    totalRecords: 0,
-    chunks: [],
-    warnings: [],
-    errors: [`Unsupported file type: .${ext}. Accepted formats: CSV, TSV, JSON, ZIP, JPG, PNG.`],
-  };
+  // 3. Tabular / Structured / Reports Multi-file Handling
+  const allJson = files.every((f) => f.name.toLowerCase().endsWith(".json"));
+  if (allJson) {
+    return parseJSONFiles(files);
+  }
+
+  const allCsv = files.every((f) => {
+    const fExt = f.name.split(".").pop()?.toLowerCase() || "";
+    return fExt === "csv" || fExt === "tsv";
+  });
+  if (allCsv) {
+    return parseCSVFiles(files);
+  }
+
+  const allPdfOrTxt = files.every((f) => {
+    const fExt = f.name.split(".").pop()?.toLowerCase() || "";
+    return fExt === "pdf" || fExt === "txt";
+  });
+  if (allPdfOrTxt) {
+    return parseReportFiles(files);
+  }
+
+  // 4. Mixed files
+  return parseMixedFiles(files);
 }
