@@ -147,6 +147,13 @@ class CardiacDualEngine:
 
     def _load_models(self):
         try:
+            import gc
+            if hasattr(torch, "set_num_threads"):
+                try:
+                    torch.set_num_threads(1)
+                except Exception:
+                    pass
+
             m_path = self._resolve_model_path()
             logger.info(f"Loading Cardiac Classical Model from: {m_path}")
             checkpoint = torch.load(m_path, map_location=self.device)
@@ -164,6 +171,8 @@ class CardiacDualEngine:
             model.to(self.device)
             model.eval()
             self.classical_model = model
+            del checkpoint
+            gc.collect()
 
             # Check for trained Hybrid Quantum Model artifact
             if HYBRID_MODEL_PATH.exists():
@@ -195,6 +204,8 @@ class CardiacDualEngine:
                 self.readout_head.load_state_dict(q_ckpt["readout_state_dict"])
                 self.readout_head.to(self.device)
                 self.readout_head.eval()
+                del q_ckpt
+                gc.collect()
                 logger.info("Authentic Hybrid Quantum VQC Model loaded successfully (no logit anchoring).")
             else:
                 # Fallback initialized parameters

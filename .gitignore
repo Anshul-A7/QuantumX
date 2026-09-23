@@ -68,7 +68,8 @@ test_*.py
 *.dat
 *.hea
 *.pt
-!Backend/models_v1/heart_v1/artifacts/*.pt
+!Backend/models_v1/heart_v1/artifacts/cardiac_cnn_production.pt
+!Backend/models_v1/heart_v1/artifacts/cardiac_hybrid_production.pt
 *.pkl
 Plan/
 Research/
