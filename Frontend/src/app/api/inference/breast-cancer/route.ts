@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const maxDuration = 60; // 60-second timeout for serverless function
+
+
 // Empirical WDBC reference statistics for calculation
 const WDBC_BENIGN = {
   radius_mean: { med: 12.20, pct90: 14.45 },

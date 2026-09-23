@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import verifiedSamples from "@/lib/verified_samples.json";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // 60-second timeout for serverless function
 
 function getBackendUrl(): string {
   if (process.env.BACKEND_INTERNAL_URL) return process.env.BACKEND_INTERNAL_URL.replace(/\/$/, "");
