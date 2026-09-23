@@ -359,7 +359,7 @@ export default function BreastCancerDetailPage() {
         fullText = parts.join("\n\n");
       }
     } else if (!isLoadingAi) {
-      fullText = `The biopsy test for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% certainty, yielding a continuous Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult.risk_tier)}).\n\nCell measurements show average cell size of ${formValues.radius_mean || 12.2} micrometers and smoothness of ${formValues.smoothness_mean || 0.1}. ${screeningResult.clinical_action || "Routine checkup and clinical follow-up is advised."}`;
+      fullText = `The biopsy test for ${patientName || "Patient"} was evaluated with ${screeningResult.confidence?.toFixed(1)}% certainty, yielding a continuous Risk Score of ${screeningResult.composite_risk_score?.toFixed(1)} / 100 (${getEssentialRiskLabel(screeningResult)}).\n\nCell measurements show average cell size of ${formValues.radius_mean || 12.2} micrometers and smoothness of ${formValues.smoothness_mean || 0.1}. ${screeningResult.clinical_action || "Routine checkup and clinical follow-up is advised."}`;
     }
 
     if (!fullText) return;
@@ -691,17 +691,95 @@ export default function BreastCancerDetailPage() {
     setSelectedPresetName(null);
   };
 
-  const getRiskColor = (tier: string) => {
-    if (tier?.includes("HIGH") || tier?.includes("MALIGNANT")) return "text-red-700 bg-red-50 border-red-200";
-    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE") || tier?.includes("ATYPICAL")) return "text-amber-700 bg-amber-50 border-amber-200";
-    return "text-emerald-700 bg-emerald-50 border-emerald-200";
+  const getEssentialRiskInfo = (data: any) => {
+    let tier = "";
+    let tag = "";
+    let score: number | null = null;
+    let prediction = "";
+
+    if (typeof data === "string") {
+      tier = data.toUpperCase();
+    } else if (data && typeof data === "object") {
+      tier = String(data.risk_tier || data.riskTier || data.dual_comparison?.transfinite_1?.risk_tier || "").toUpperCase();
+      tag = String(data.risk_tag || data.riskTag || data.dual_comparison?.transfinite_1?.risk_tag || "").toUpperCase();
+      const rawScore = data.composite_risk_score ?? data.risk_score ?? data.dual_comparison?.transfinite_1?.risk_score;
+      if (rawScore !== undefined && rawScore !== null && !isNaN(Number(rawScore))) {
+        score = Number(rawScore);
+      }
+      prediction = String(data.prediction_label || data.quantum_prediction || data.dual_comparison?.transfinite_1?.prediction_label || "").toUpperCase();
+    }
+
+    // Critical Risk (Score >= 85, or CRITICAL in tag/tier)
+    const isCritical =
+      (score !== null && score >= 85) ||
+      tag === "CRITICAL_RISK" ||
+      tag.includes("CRITICAL") ||
+      tier.includes("CRITICAL") ||
+      tier.includes("DIAGNOSTIC OF MALIGNANCY");
+
+    if (isCritical) {
+      return {
+        label: "Critical Risk (Malignant)",
+        color: "text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950/40 dark:border-red-900/50",
+      };
+    }
+
+    // High Risk (Score >= 65, or HIGH / MALIGNAN in tag/tier/prediction)
+    const isHigh =
+      (score !== null && score >= 65) ||
+      tag === "HIGH_RISK" ||
+      tag.includes("HIGH") ||
+      tier.includes("HIGH") ||
+      tier.includes("MALIGNAN") || // Covers MALIGNANT and MALIGNANCY
+      prediction === "MALIGNANT";
+
+    if (isHigh) {
+      return {
+        label: "High Risk (Malignant)",
+        color: "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-400 dark:bg-rose-950/40 dark:border-rose-900/50",
+      };
+    }
+
+    // Borderline Risk (Score >= 45, or BORDERLINE / INDETERMINATE / ATYPICAL)
+    const isBorderline =
+      (score !== null && score >= 45) ||
+      tag === "BORDERLINE" ||
+      tag.includes("BORDERLINE") ||
+      tier.includes("BORDERLINE") ||
+      tier.includes("INDETERMINATE") ||
+      tier.includes("ATYPICAL") ||
+      tier.includes("DYSPLASIA");
+
+    if (isBorderline) {
+      return {
+        label: "Borderline Risk (Atypical)",
+        color: "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/40 dark:border-amber-900/50",
+      };
+    }
+
+    // Mild Suspicion (Score >= 25, or MILD in tag/tier)
+    const isMild =
+      (score !== null && score >= 25) ||
+      tag === "MILD_SUSPICION" ||
+      tag.includes("MILD") ||
+      tier.includes("MILD");
+
+    if (isMild) {
+      return {
+        label: "Mild Suspicion (Probably Benign)",
+        color: "text-amber-600 bg-amber-50/70 border-amber-200/80 dark:text-amber-300 dark:bg-amber-950/30 dark:border-amber-800/40",
+      };
+    }
+
+    // Default: Low Risk (Benign)
+    return {
+      label: "Low Risk (Benign)",
+      color: "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/40 dark:border-emerald-900/50",
+    };
   };
 
-  const getEssentialRiskLabel = (tier: string) => {
-    if (tier?.includes("HIGH") || tier?.includes("MALIGNANT")) return "High Risk (Malignant)";
-    if (tier?.includes("BORDERLINE") || tier?.includes("INDETERMINATE") || tier?.includes("ATYPICAL")) return "Borderline Risk (Atypical)";
-    return "Low Risk (Benign)";
-  };
+  const getRiskColor = (data: any) => getEssentialRiskInfo(data).color;
+  const getEssentialRiskLabel = (data: any) => getEssentialRiskInfo(data).label;
 
   return (
     <motion.div
@@ -1138,8 +1216,8 @@ export default function BreastCancerDetailPage() {
                       {patientName || "Patient"} <span className="text-xs font-mono text-ink-soft">({patientId})</span>
                     </h3>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-bold border shadow-2xs ${getRiskColor(screeningResult.risk_tier)}`}>
-                    {getEssentialRiskLabel(screeningResult.risk_tier)}
+                  <span className={`text-xs px-3 py-1 rounded-full font-bold border shadow-2xs ${getRiskColor(screeningResult)}`}>
+                    {getEssentialRiskLabel(screeningResult)}
                   </span>
                 </div>
 
