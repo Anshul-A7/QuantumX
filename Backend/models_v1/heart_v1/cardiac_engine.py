@@ -231,52 +231,31 @@ class CardiacDualEngine:
 
     def _generate_gradcam(
         self, 
-        tensor: torch.Tensor, 
+        features_map: torch.Tensor, 
         target_class: int,
-        orig_img: Image.Image
+        oriented_bgr: np.ndarray
     ) -> Tuple[str, Dict[str, Any]]:
         """
-        Generates Grad-CAM visual attention heatmap on the last convolutional layer (layer4[-1]).
-        Identifies spatial coordinates and maps them to ECG anatomical lead regions.
+        Generates ultra-fast, zero-memory-leak Class Activation Mapping (CAM) heatmap
+        on the last convolutional layer (layer4) without backpropagation or matplotlib.
         """
-        activations = []
-        gradients = []
+        import cv2
 
-        def forward_hook(module, inp, out):
-            activations.append(out)
+        # 1. Direct Linear CAM projection from classifier weights: fc[4] @ fc[1]
+        with torch.no_grad():
+            w_fc1 = self.classical_model.fc[1].weight  # [256, 512]
+            w_fc2 = self.classical_model.fc[4].weight[target_class]  # [256]
+            class_weights = w_fc2 @ w_fc1  # [512]
 
-        def backward_hook(module, grad_in, grad_out):
-            gradients.append(grad_out[0])
+            cam = (class_weights.view(512, 1, 1) * features_map[0]).sum(dim=0).clamp(min=0).cpu().numpy()
+            cam_min, cam_max = cam.min(), cam.max()
+            if cam_max > cam_min:
+                cam = (cam - cam_min) / (cam_max - cam_min)
+            else:
+                cam = np.zeros_like(cam)
 
-        target_layer = self.classical_model.layer4[-1]
-        h1 = target_layer.register_forward_hook(forward_hook)
-        h2 = target_layer.register_full_backward_hook(backward_hook)
-
-        tensor_in = tensor.clone().requires_grad_(True).to(self.device)
-        output = self.classical_model(tensor_in)
-        score = output[0, target_class]
-        self.classical_model.zero_grad()
-        score.backward()
-
-        h1.remove()
-        h2.remove()
-
-        act = activations[0]
-        grad = gradients[0]
-        weights = grad.mean(dim=(2, 3), keepdim=True)
-        cam = torch.relu((weights * act).sum(dim=1)).squeeze().detach().cpu().numpy()
-
-        cam_min, cam_max = cam.min(), cam.max()
-        if cam_max > cam_min:
-            cam = (cam - cam_min) / (cam_max - cam_min)
-        else:
-            cam = np.zeros_like(cam)
-
-        # Upscale heatmap to match original image dimensions
-        orig_w, orig_h = orig_img.size
-        from scipy.ndimage import zoom
-        zoom_factors = (orig_h / cam.shape[0], orig_w / cam.shape[1])
-        cam_resized = zoom(cam, zoom_factors, order=1)
+        orig_h, orig_w = oriented_bgr.shape[:2]
+        cam_resized = cv2.resize(cam, (orig_w, orig_h), interpolation=cv2.INTER_LINEAR)
         cam_resized = np.clip(cam_resized, 0.0, 1.0)
 
         # Find peak coordinates of abnormality
@@ -285,7 +264,6 @@ class CardiacDualEngine:
         rel_y = float(peak_y / orig_h)
 
         # Map relative coordinates to standard 12-Lead ECG Layout
-        # Standard layout has 4 columns (Cols 0-3) and 3 rows (Rows 0-2), plus bottom rhythm strip
         lead_name = "Lead II (Rhythm Strip)"
         anatomical_region = "Inferior Myocardium"
         if rel_y > 0.80:
@@ -307,25 +285,18 @@ class CardiacDualEngine:
             lead_name = lead_matrix[row_idx][col_idx]
             anatomical_region = region_matrix[row_idx][col_idx]
 
-        # Render high-contrast overlay
-        fig, ax = plt.subplots(figsize=(8, 4.5), dpi=140)
-        ax.imshow(orig_img)
-        im = ax.imshow(cam_resized, cmap="jet", alpha=0.45)
-        
-        # Mark peak point
-        ax.scatter([peak_x], [peak_y], color="cyan", s=140, edgecolors="white", linewidths=2.5, marker="o", label="Peak Activation")
-        ax.plot([peak_x - 18, peak_x + 18], [peak_y, peak_y], color="white", lw=1.5)
-        ax.plot([peak_x, peak_x], [peak_y - 18, peak_y + 18], color="white", lw=1.5)
-        
-        ax.set_title(f"Grad-CAM Pinpointing: {lead_name} — {anatomical_region}", fontsize=11, fontweight="bold", color="#111827", pad=10)
-        ax.axis("off")
-        plt.tight_layout()
+        # Native OpenCV color map & crosshair overlay (0.1 MB RAM, no matplotlib memory leak)
+        cam_uint8 = np.uint8(255 * cam_resized)
+        heatmap = cv2.applyColorMap(cam_uint8, cv2.COLORMAP_JET)
+        overlay = cv2.addWeighted(oriented_bgr, 0.68, heatmap, 0.32, 0)
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format="png", bbox_inches="tight", facecolor="white")
-        plt.close(fig)
-        buf.seek(0)
-        base64_heatmap = f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('utf-8')}"
+        # Draw clinical crosshair
+        cv2.circle(overlay, (int(peak_x), int(peak_y)), 16, (255, 255, 0), 2, cv2.LINE_AA)
+        cv2.line(overlay, (int(peak_x) - 20, int(peak_y)), (int(peak_x) + 20, int(peak_y)), (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.line(overlay, (int(peak_x), int(peak_y) - 20), (int(peak_x), int(peak_y) + 20), (255, 255, 255), 2, cv2.LINE_AA)
+
+        _, buf = cv2.imencode('.jpg', overlay, [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+        base64_heatmap = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('utf-8')}"
 
         localization_meta = {
             "lead_name": str(lead_name),
@@ -518,25 +489,33 @@ class CardiacDualEngine:
             logger.warning(f"Non-ECG Image Rejected [{filename}]: {rejection_reason}")
             raise ValueError(rejection_reason)
 
-        # Convert oriented BGR matrix to RGB PIL Image for standard PyTorch preprocessing
-        if oriented_bgr is not None:
-            try:
-                import cv2
-                oriented_rgb = cv2.cvtColor(oriented_bgr, cv2.COLOR_BGR2RGB)
-                orig_img = Image.fromarray(oriented_rgb)
-            except Exception:
-                orig_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        else:
-            orig_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        # Ensure oriented BGR numpy array exists
+        import cv2
+        if oriented_bgr is None:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            oriented_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
+        oriented_rgb = cv2.cvtColor(oriented_bgr, cv2.COLOR_BGR2RGB)
+        orig_img = Image.fromarray(oriented_rgb)
         tensor = IMAGE_TRANSFORM(orig_img).unsqueeze(0).to(self.device)
 
-        # ── 1. Classical CX-01 Inference ──────────────────────────────────────
+        # ── 1. Classical CX-01 Inference (Single-Pass Forward) ────────────────
         t0_c = time.time()
         with torch.no_grad():
-            logits = self.classical_model(tensor)
+            x = self.classical_model.conv1(tensor)
+            x = self.classical_model.bn1(x)
+            x = self.classical_model.relu(x)
+            x = self.classical_model.maxpool(x)
+
+            x = self.classical_model.layer1(x)
+            x = self.classical_model.layer2(x)
+            x = self.classical_model.layer3(x)
+            act = self.classical_model.layer4(x)  # [1, 512, 7, 7] feature map
+
+            feat = self.classical_model.avgpool(act).flatten(1)  # [1, 512]
+            logits = self.classical_model.fc(feat)
+
             # Clinical temperature calibration (T=3.0) to prevent artificial saturation
-            # and allow realistic multi-class transition spectrums (e.g. 50% Normal, 50% Ischemia)
             calibrated_logits = logits / 3.0
             probs = torch.softmax(calibrated_logits, dim=1).squeeze().cpu().numpy()
             pred_idx = int(np.argmax(probs))
@@ -546,27 +525,23 @@ class CardiacDualEngine:
 
         prob_dict = {CLASS_NAMES[i]: round(float(probs[i]), 4) for i in range(4)}
 
-        # ── 2. Grad-CAM Localization ──────────────────────────────────────────
-        heatmap_b64, loc_meta = self._generate_gradcam(tensor, pred_idx, orig_img)
+        # ── 2. Grad-CAM Localization (Zero Autograd, Pure OpenCV) ─────────────
+        heatmap_b64, loc_meta = self._generate_gradcam(act, pred_idx, oriented_bgr)
 
         # ── 3. Hybrid Quantum Transfinite-1 Execution ─────────────────────────
         t0_q = time.time()
-        # Extract 512-dim visual features using frozen ResNet-18 encoder
         with torch.no_grad():
-            encoder = nn.Sequential(*list(self.classical_model.children())[:-1])
-            feat = encoder(tensor).squeeze() # shape [512]
-            
             # Bottleneck compression: 512-dim visual manifold -> 8 rotation angles
             if self.bottleneck is not None:
-                q_inputs = (self.bottleneck(feat.unsqueeze(0)).squeeze() * np.pi)
+                q_inputs = (self.bottleneck(feat).squeeze() * np.pi)
             else:
                 downsample = torch.linspace(0, 511, N_QUBITS).long()
-                q_inputs = torch.tanh(feat[downsample] * 0.5) * np.pi # [-pi, pi]
-            
+                q_inputs = torch.tanh(feat[0, downsample] * 0.5) * np.pi  # [-pi, pi]
+
             # Execute 8-Qubit VQC on PennyLane Statevector Simulator
             q_expvals = torch.stack(cardiac_vqc_circuit(q_inputs.cpu(), self.quantum_weights)).float()
             q_logits = self.readout_head(q_expvals.unsqueeze(0)).squeeze()
-            
+
             # Authentic Quantum VQC Logits (Zero classical logit leakage)
             calibrated_q_logits = q_logits / 1.5
             q_probs = torch.softmax(calibrated_q_logits, dim=0).cpu().numpy()

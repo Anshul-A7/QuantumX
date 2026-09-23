@@ -155,16 +155,28 @@ async def run_cardiac_demo_inference(payload: CardiacDemoRequest):
             )
 
         rel_path, display_name = sample_map[sample_key]
-        repo_root = Path(__file__).resolve().parents[4]
-        img_path = repo_root / rel_path
+        filename = Path(rel_path).name
 
-        if not img_path.exists():
-            img_path = Path(__file__).resolve().parents[3] / rel_path
+        possible_paths = [
+            Path(__file__).resolve().parents[2] / "samples" / "ecg" / filename,
+            Path(__file__).resolve().parents[3] / "samples" / "ecg" / filename,
+            Path(__file__).resolve().parents[4] / rel_path,
+            Path(__file__).resolve().parents[3] / rel_path,
+            Path.cwd() / "Backend" / "samples" / "ecg" / filename,
+            Path.cwd() / "samples" / "ecg" / filename,
+            Path.cwd() / rel_path,
+        ]
 
-        if not img_path.exists():
+        img_path = None
+        for p in possible_paths:
+            if p.exists():
+                img_path = p
+                break
+
+        if not img_path:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Sample file not found at {img_path}"
+                detail=f"Sample file '{filename}' not found on server filesystem."
             )
 
         with open(img_path, "rb") as f:
