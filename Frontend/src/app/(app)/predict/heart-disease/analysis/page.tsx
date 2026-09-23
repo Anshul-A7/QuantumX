@@ -18,6 +18,7 @@ import {
   Cpu,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { downloadCombinedReport, type ReportPayload } from "@/lib/pdfReportGenerator";
 
 import KeyRiskFactorsTab from "./components/KeyRiskFactorsTab";
 import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
@@ -181,47 +182,87 @@ export default function HeartDiseaseAnalysisPage() {
     (dialCircumference * Math.min(100, Math.max(0, activeRiskScore))) / 100;
 
   const handleDownloadFullReport = () => {
-    const reportContent = `================================================================================
-QUANTUMX CARDIAC HEALTH REPORT: 12-LEAD ECG DOSSIER
-================================================================================
-PATIENT INFORMATION:
-Full Name:          ${patientInfo.name || "Patient"}
-Patient ID:         ${patientInfo.patient_id || "QX-ECG-1001"}
-Demographics:       Age ${patientInfo.age || 55} | Biological Sex: ${patientInfo.gender || "Male"}
-Test Date:          ${patientInfo.intake_date || new Date().toLocaleDateString()}
+    const isCardiacHigh = activeRiskScore >= 60 || currentBadge.label.includes("CRITICAL") || currentBadge.label.includes("HIGH");
 
-ACTIVE EVALUATION ENGINE:
-Model Engine:       ${activeEngineName} (${isHybrid ? "Quantum Hybrid" : "Classical Baseline"})
-Prediction Result:  ${telemetry.prediction.clinical_title} (${activeConfidence.toFixed(1)}% Confidence)
-Cardiac Risk Score: ${activeRiskScore.toFixed(1)} / 100.0
-Risk Category:      ${currentBadge.label}
-Primary Trigger:    ${telemetry.pinpointing_gradcam.lead_detected} (${telemetry.pinpointing_gradcam.anatomical_region})
-Peak Sensitivity:   ${(telemetry.pinpointing_gradcam.activation_peak_score * 100).toFixed(1)}%
+    const fullAiSummary = [
+      aiSynthesis?.summary_paragraph || aiSynthesis?.summary || aiSynthesis?.executive_summary,
+      aiSynthesis?.morphological_breakdown ? `**Electrophysiological & Morphological Breakdown:**\n${aiSynthesis.morphological_breakdown}` : null,
+      aiSynthesis?.clinical_implications ? `**Clinical Implications & Coronary Watershed:**\n${aiSynthesis.clinical_implications}` : null,
+      aiSynthesis?.quantum_advantage_interpretation ? `**Quantum Phase-Space Analysis:**\n${aiSynthesis.quantum_advantage_interpretation}` : null,
+    ].filter(Boolean).join("\n\n");
 
-MULTI-CLASS LIKELIHOOD SPECTRUM:
-${Object.entries(telemetry.prediction.probabilities)
-  .map(([cls, p]: [string, any]) => `- ${cls}: ${(Number(p) * 100).toFixed(2)}%`)
-  .join("\n")}
+    const leadName = telemetry?.pinpointing_gradcam?.lead_detected || "Lead V2 (Septal)";
+    const anatomicalRegion = telemetry?.pinpointing_gradcam?.anatomical_region || "Anteroseptal Wall (LAD Coronary)";
 
-DUAL-ENGINE BENCHMARK COMPARISON:
-- Classical ResNet-18 (CX-01):      ${telemetry.classical_engine.confidence_pct}% Conf | ${telemetry.classical_engine.latency_ms} ms | 11.2M params
-- Quantum VQC (Transfinite-1):      ${telemetry.quantum_engine.quantum_confidence_pct}% Conf | ${telemetry.quantum_engine.latency_ms} ms | 48 params
-- Dual Consensus:                  ${telemetry.dual_engine_consensus.status} (${telemetry.dual_engine_consensus.consensus_confidence}%)
+    const payload: ReportPayload = {
+      patient: {
+        patientName: patientInfo.name || "Patient",
+        patientId: patientInfo.patient_id || "QX-ECG-1001",
+        patientAge: patientInfo.age || 55,
+        patientGender: patientInfo.gender || "Male",
+        diseaseType: "cardiac_ecg",
+        biopsyCohort: "12-Lead Electrocardiogram Rhythm Strip",
+      },
+      biomarkers: [],
+      transfinite1: {
+        engineName: "Transfinite-1",
+        engineDescription: "8-Qubit AngleEmbedding + StronglyEntanglingLayers VQC",
+        modelType: "hybrid",
+        predictionLabel: telemetry?.quantum_engine?.quantum_prediction || telemetry?.prediction?.clinical_title || "Normal",
+        confidence: telemetry?.quantum_engine?.quantum_confidence_pct ?? telemetry?.prediction?.confidence_pct ?? 100,
+        riskScore: activeRiskScore,
+        riskTier: telemetry?.risk_stratification?.severity_tier || currentBadge.label,
+        riskTag: isCardiacHigh ? "CRITICAL_RISK" : "LOW_RISK",
+        clinicalAction: telemetry?.risk_stratification?.clinical_recommendation || "Routine annual cardiovascular follow-up.",
+        latencyMs: telemetry?.quantum_engine?.latency_ms || 54.3,
+        architecture: "8-Qubit Variational Quantum Circuit (256-dim Hilbert space)",
+        attributions: [
+          {
+            featureName: leadName,
+            measuredValue: telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95,
+            baselineValue: 0.1,
+            impactPercentage: (telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95) * 100,
+            direction: isCardiacHigh ? "risk_elevating" : "protective",
+            quantumImpact: `Peak spatial saliency localized to ${anatomicalRegion}`,
+          },
+        ],
+        qubits: 8,
+        ansatz: "StronglyEntanglingLayers (2 Layers)",
+        circuitDepth: 36,
+        cnotCount: 16,
+        variationalParams: 48,
+      },
+      cx01: {
+        engineName: "CX-01 Cardiac Classical",
+        engineDescription: "ResNet-18 Deep Convolutional Neural Network Baseline",
+        modelType: "classical",
+        predictionLabel: telemetry?.classical_engine?.prediction || telemetry?.prediction?.clinical_title || "Normal",
+        confidence: telemetry?.classical_engine?.confidence_pct ?? 100,
+        riskScore: activeRiskScore,
+        riskTier: telemetry?.risk_stratification?.severity_tier || currentBadge.label,
+        riskTag: isCardiacHigh ? "CRITICAL_RISK" : "LOW_RISK",
+        clinicalAction: telemetry?.risk_stratification?.clinical_recommendation || "Routine annual cardiovascular follow-up.",
+        latencyMs: telemetry?.classical_engine?.latency_ms || 35.3,
+        architecture: "ResNet-18 (11.1M Parameters)",
+        attributions: [
+          {
+            featureName: leadName,
+            measuredValue: telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95,
+            baselineValue: 0.1,
+            impactPercentage: (telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95) * 100,
+            direction: isCardiacHigh ? "risk_elevating" : "protective",
+            quantumImpact: "Convolutional gradient activation on 12-lead grid",
+          },
+        ],
+      },
+      consensusStatus: telemetry?.dual_engine_consensus?.is_concordant ? "Concordant" : "Discordant",
+      ecgLeadDetected: leadName,
+      ecgAnatomicalRegion: anatomicalRegion,
+      aiSummary: fullAiSummary || undefined,
+      clinicalAdvice: telemetry?.risk_stratification?.clinical_recommendation,
+    };
 
-QUANTUMX AI CLINICAL SUMMARY:
-${aiSynthesis?.summary_paragraph || aiSynthesis?.summary || telemetry.risk_stratification.clinical_recommendation}
-
-ACTIONABLE CLINICAL RECOMMENDATION:
-${telemetry.risk_stratification.clinical_recommendation}
-================================================================================`;
-
-    const blob = new Blob([reportContent], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Cardiac_Report_${patientInfo.patient_id || "QX_ECG"}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCombinedReport(payload);
   };
 
   return (
@@ -266,7 +307,7 @@ ${telemetry.risk_stratification.clinical_recommendation}
             className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
           >
             <Download size={14} className="text-quantum" />
-            <span>Download Full Report (.txt)</span>
+            <span>Download Report (.pdf)</span>
           </button>
         </div>
       </div>

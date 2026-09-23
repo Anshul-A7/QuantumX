@@ -41,13 +41,18 @@ import {
   CheckSquare,
   FileText,
   Languages,
-  Globe
+  Globe,
+  Users,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import BiomarkerUploadModal from "@/components/predict/BiomarkerUploadModal";
+import BatchUploadPanel from "@/components/predict/BatchUploadPanel";
+import BatchResultsTable from "@/components/predict/BatchResultsTable";
 import { PatientMetadata } from "@/lib/medicalReportParser";
 import { showToast } from "@/components/common/ToastNotification";
 import { ScreeningService } from "@/services/screening.service";
+import { executeBatch, type BatchSession, type BatchRecord } from "@/services/batch.service";
+import { type BatchParseResult } from "@/lib/batchFileProcessor";
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -223,6 +228,13 @@ export default function BreastCancerDetailPage() {
   const [derivedNotes, setDerivedNotes] = useState<Record<string, string>>({});
   const [selectedPresetName, setSelectedPresetName] = useState<string | null>(null);
 
+  // ── Batch Mode State ──────────────────────────────────────────────────
+  const [screeningMode, setScreeningMode] = useState<"single" | "batch">("single");
+  const [batchParseResult, setBatchParseResult] = useState<BatchParseResult | null>(null);
+  const [batchSession, setBatchSession] = useState<BatchSession | null>(null);
+  const [isBatchExecuting, setIsBatchExecuting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+
   // Architecture & Engine Selection
   const [selectedModelFamily, setSelectedModelFamily] = useState<"quantumx_hybrid_v1" | "aegis_classical_v1">("quantumx_hybrid_v1");
   const [executionMode, setExecutionMode] = useState<"simulator" | "real_ibm_qpu">("simulator");
@@ -231,7 +243,7 @@ export default function BreastCancerDetailPage() {
   // Patient Demographics State (Starts Empty & Inputable)
   const [patientName, setPatientName] = useState("");
   const [patientId, setPatientId] = useState("");
-  const [patientAge, setPatientAge] = useState<number | "">("");
+  const [patientAge, setPatientAge] = useState<number | "">("")
   const [patientGender, setPatientGender] = useState("Female");
   const [intakeDate, setIntakeDate] = useState("");
   const [accessionNumber, setAccessionNumber] = useState("");
@@ -251,6 +263,41 @@ export default function BreastCancerDetailPage() {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [isTranslating, setIsTranslating] = useState(false);
   const [baseEnglishSummary, setBaseEnglishSummary] = useState("");
+
+  // ── Batch Handlers ──────────────────────────────────────────────────────
+  const handleBatchExecute = async (parseResult: BatchParseResult) => {
+    setIsBatchExecuting(true);
+    try {
+      const session = await executeBatch(
+        parseResult.chunks,
+        "breast_cancer",
+        "batch_upload.csv",
+        (s) => {
+          setBatchSession({ ...s });
+          setBatchProgress(s.totalRecords > 0 ? (s.processedCount / s.totalRecords) * 100 : 0);
+        },
+      );
+      setBatchSession(session);
+      showToast({ title: "Batch Complete", message: `${session.successCount} of ${session.totalRecords} records processed successfully.`, type: "quantum" });
+    } catch (err: any) {
+      showToast({ title: "Batch Error", message: err.message, type: "warning" });
+    } finally {
+      setIsBatchExecuting(false);
+    }
+  };
+
+  const handleBatchViewDetails = (record: BatchRecord) => {
+    try {
+      const payload = {
+        patientInfo: { name: record.patientName, patient_id: record.patientId, age: 50, gender: "Female" },
+        biomarkers: record.inputData,
+        screeningResult: record.fullResult || {},
+        aiSynthesis: null,
+      };
+      sessionStorage.setItem("quantumx_active_analysis", JSON.stringify(payload));
+    } catch (e) { console.warn(e); }
+    router.push("/predict/breast-cancer/analysis");
+  };
 
   const generateNewPatientIdentity = () => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -732,6 +779,81 @@ export default function BreastCancerDetailPage() {
         </div>
       </div>
 
+      {/* ── SCREENING MODE TOGGLE ── */}
+      <div className="flex items-center gap-2">
+        <div className="inline-flex p-1 rounded-xl bg-white border border-hairline shadow-2xs">
+          <button
+            onClick={() => { setScreeningMode("single"); setBatchSession(null); setBatchParseResult(null); }}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningMode === "single" ? "bg-ink text-parchment shadow-xs" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <User size={14} />
+            Single Patient
+          </button>
+          <button
+            onClick={() => setScreeningMode("batch")}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningMode === "batch" ? "bg-ink text-parchment shadow-xs" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <Users size={14} />
+            Batch Screening
+          </button>
+        </div>
+        {screeningMode === "batch" && batchSession && batchSession.isComplete && (
+          <span className="text-[10px] font-mono px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
+            ✓ {batchSession.successCount} Records Complete
+          </span>
+        )}
+      </div>
+
+      {/* ── BATCH MODE CONTENT ── */}
+      {screeningMode === "batch" && (
+        <div className="space-y-6">
+          {/* Batch Upload Panel */}
+          {!batchSession?.isComplete && (
+            <BatchUploadPanel
+              diseaseTarget="breast_cancer"
+              onParseComplete={(result) => setBatchParseResult(result)}
+              onExecute={handleBatchExecute}
+              isExecuting={isBatchExecuting}
+            />
+          )}
+
+          {/* Batch Progress Bar */}
+          {isBatchExecuting && batchSession && (
+            <div className="rounded-2xl bg-white border border-hairline shadow-xs p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-ink">Processing Batch...</span>
+                <span className="text-xs font-mono text-ink-soft">
+                  {batchSession.processedCount} / {batchSession.totalRecords}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-cream overflow-hidden">
+                <motion.div
+                  className="h-full bg-quantum rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${batchProgress}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Batch Results Table */}
+          {batchSession?.isComplete && (
+            <BatchResultsTable
+              session={batchSession}
+              onViewDetails={handleBatchViewDetails}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── SINGLE MODE CONTENT ── */}
+      {screeningMode === "single" && (
+      <>
       {/* PATIENT INTAKE ACCORDION (INPUTABLE, NOT PRE-FILLED, CLEAN WHITE CARD) */}
       <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
         <button
@@ -1515,6 +1637,8 @@ export default function BreastCancerDetailPage() {
         onClose={() => setIsUploadModalOpen(false)}
         onApplyData={handleApplyExtractedData}
       />
+      </>
+      )}
     </motion.div>
   );
 }

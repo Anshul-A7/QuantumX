@@ -16,6 +16,7 @@ import {
   User,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { downloadCombinedReport, type ReportPayload, type BiomarkerEntry } from "@/lib/pdfReportGenerator";
 
 import KeyRiskFactorsTab, { COMBINED_BIOMARKER_DATA } from "./components/KeyRiskFactorsTab";
 import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
@@ -232,48 +233,86 @@ export default function BreastCancerAnalysisPage() {
       : screeningResult.shap_attributions || []);
 
   const handleDownloadFullReport = () => {
-    const reportContent = `================================================================================
-QUANTUMX DETAILED PATIENT HEALTH REPORT
-================================================================================
-PATIENT INFORMATION:
-Full Name:          ${patientInfo.name || "Test Patient"}
-Patient ID:         ${patientInfo.patient_id || "QX-001"}
-Demographics:       Age ${patientInfo.age || "N/A"} | Biological Sex: ${patientInfo.gender || "Female"}
-Test Date:          ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+    const biomarkerEntries: BiomarkerEntry[] = Object.entries(COMBINED_BIOMARKER_DATA).map(([k, ref]) => ({
+      key: k,
+      label: ref.label,
+      value: biomarkers[k] ?? ref.benignMed,
+      unit: ref.unit,
+      benignMedian: ref.benignMed,
+      normalMax: ref.normalMax,
+    }));
 
-ACTIVE EVALUATION ENGINE:
-Model Engine:       ${activeEngineName} (${isHybrid ? "Quantum Hybrid" : "Classical Baseline"})
-Prediction Result:  ${activePrediction} (${activeConfidence.toFixed(1)}% Confidence)
-Overall Risk Score: ${activeRiskScore.toFixed(1)} / 100.0
-Risk Category:      ${currentBadge.label}
-Cell Abnormality:   ${screeningResult.morphometric_index?.toFixed(1) ?? "0.0"} / 100.0
+    const tfAttrs = (tfData?.shap_attributions?.length ? tfData.shap_attributions : screeningResult.shap_attributions || []);
+    const cxAttrs = (cxData?.shap_attributions?.length ? cxData.shap_attributions : screeningResult.shap_attributions || []);
 
-MEASURED CELL VALUES & RISK FACTORS:
-${Object.entries(COMBINED_BIOMARKER_DATA)
-  .map(([k, ref]) => {
-    const val = biomarkers[k] ?? ref.benignMed;
-    return `- ${ref.label}: ${val} ${ref.unit} (Healthy Avg: ${ref.benignMed} | Normal Limit: ${ref.normalMax})`;
-  })
-  .join("\n")}
+    const mapAttrs = (arr: any[]) => arr.map((a: any) => ({
+      featureName: a.featureName || a.feature_name || "",
+      measuredValue: a.measuredValue || a.measured_value || 0,
+      baselineValue: a.baselineValue || a.baseline_value || 0,
+      impactPercentage: a.impactPercentage || a.impact_percentage || 0,
+      direction: a.direction || "protective" as const,
+      quantumImpact: a.quantumImpact || a.quantum_impact || "",
+    }));
 
-DUAL-ENGINE BENCHMARK COMPARISON:
-- Classical Baseline (CX-01):         ${(cxData?.risk_score ?? cx01CalculatedProb).toFixed(1)}% Risk | Conf: ${(cxData?.confidence ?? 70.5).toFixed(1)}%
-- Quantum Simulator (Transfinite-1): ${(tfData?.risk_score ?? tfCalculatedProb).toFixed(1)}% Risk | Conf: ${(tfData?.confidence ?? 50.6).toFixed(1)}%
+    const fullAiSummary = [
+      aiSynthesis?.executive_summary || aiSynthesis?.summary_paragraph,
+      aiSynthesis?.morphological_breakdown ? `**Morphological Cytopathology Breakdown:**\n${aiSynthesis.morphological_breakdown}` : null,
+      aiSynthesis?.clinical_implications ? `**Clinical Implications & Pathological Staging:**\n${aiSynthesis.clinical_implications}` : null,
+      aiSynthesis?.quantum_advantage_interpretation ? `**Quantum Statevector Interpretation:**\n${aiSynthesis.quantum_advantage_interpretation}` : null,
+    ].filter(Boolean).join("\n\n");
 
-QUANTUMX AI CLINICAL SUMMARY:
-${aiSynthesis?.summary_paragraph || aiSynthesis?.executive_summary || "Automated cell morphology evaluation based on verified clinical database standards."}
+    const payload: ReportPayload = {
+      patient: {
+        patientName: patientInfo.name || "Patient",
+        patientId: patientInfo.patient_id || "QX-001",
+        patientAge: patientInfo.age || 50,
+        patientGender: patientInfo.gender || "Female",
+        diseaseType: "breast_cancer",
+        biopsyCohort: "Fine Needle Aspirate (WDBC)",
+      },
+      biomarkers: biomarkerEntries,
+      transfinite1: {
+        engineName: "Transfinite-1",
+        engineDescription: "8-Qubit ZZ Variational Quantum Classifier (Simulator)",
+        modelType: "hybrid",
+        predictionLabel: tfData?.prediction_label || screeningResult.prediction_label || "Unknown",
+        confidence: tfData?.confidence || screeningResult.confidence || 50,
+        riskScore: tfData?.risk_score || tfCalculatedProb,
+        riskTier: tfData?.risk_tier || screeningResult.risk_tier || "",
+        riskTag: tfData?.risk_tag || screeningResult.risk_tag || "LOW_RISK",
+        iacCategory: screeningResult.iac_category,
+        romEstimate: screeningResult.rom_estimate,
+        clinicalAction: screeningResult.clinical_action || "Routine clinical follow-up.",
+        morphologySummary: screeningResult.morphology_summary,
+        latencyMs: tfData?.latency_ms || screeningResult.latency_ms || 15,
+        architecture: "8-Qubit ZZ Pauli Tensor Map",
+        attributions: mapAttrs(tfAttrs),
+        qubits: 8,
+        ansatz: "StronglyEntanglingLayers",
+        circuitDepth: 36,
+        cnotCount: 16,
+        variationalParams: 48,
+      },
+      cx01: {
+        engineName: "CX-01",
+        engineDescription: "Classical SVM-RBF + XGBoost Ensemble",
+        modelType: "classical",
+        predictionLabel: cxData?.prediction_label || screeningResult.prediction_label || "Unknown",
+        confidence: cxData?.confidence || 70.5,
+        riskScore: cxData?.risk_score || cx01CalculatedProb,
+        riskTier: cxData?.risk_tier || screeningResult.risk_tier || "",
+        riskTag: cxData?.risk_tag || screeningResult.risk_tag || "LOW_RISK",
+        clinicalAction: screeningResult.clinical_action || "Routine clinical follow-up.",
+        latencyMs: cxData?.latency_ms || 2.5,
+        architecture: "30-Feature Regularized Hyperplane",
+        attributions: mapAttrs(cxAttrs),
+      },
+      consensusStatus: dc?.consensus === "CONCORDANT" ? "Concordant" : "Discordant",
+      aiSummary: fullAiSummary || undefined,
+      clinicalAdvice: screeningResult.clinical_action,
+    };
 
-RECOMMENDED NEXT MEDICAL STEPS:
-${screeningResult.clinical_action || "Routine clinical follow-up as advised by healthcare provider."}
-================================================================================`;
-
-    const blob = new Blob([reportContent], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Patient_Report_${patientInfo.patient_id || "QX001"}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCombinedReport(payload);
   };
 
   return (
@@ -318,7 +357,7 @@ ${screeningResult.clinical_action || "Routine clinical follow-up as advised by h
             className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
           >
             <Download size={14} className="text-quantum" />
-            <span>Download Full Report (.txt)</span>
+            <span>Download Report (.pdf)</span>
           </button>
         </div>
       </div>

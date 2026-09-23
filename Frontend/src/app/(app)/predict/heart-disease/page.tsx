@@ -24,9 +24,14 @@ import {
   Loader2,
   Microscope,
   AlertTriangle,
+  Users,
 } from "lucide-react";
 import { showToast } from "@/components/common/ToastNotification";
 import { ScreeningService } from "@/services/screening.service";
+import BatchUploadPanel from "@/components/predict/BatchUploadPanel";
+import BatchResultsTable from "@/components/predict/BatchResultsTable";
+import { executeBatch, type BatchSession, type BatchRecord } from "@/services/batch.service";
+import { type BatchParseResult } from "@/lib/batchFileProcessor";
 
 const LANGUAGES = [
   { code: "en", name: "English", flag: "🇺🇸" },
@@ -163,6 +168,13 @@ export default function HeartDiseaseStudioPage() {
   const [telemetry, setTelemetry] = useState<CardiacTelemetry | null>(null);
   const [viewMode, setViewMode] = useState<"heatmap" | "raw">("heatmap");
 
+  // ── Batch Mode State ──────────────────────────────────────────────────
+  const [screeningMode, setScreeningMode] = useState<"single" | "batch">("single");
+  const [batchParseResult, setBatchParseResult] = useState<BatchParseResult | null>(null);
+  const [batchSession, setBatchSession] = useState<BatchSession | null>(null);
+  const [isBatchExecuting, setIsBatchExecuting] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
+
   // AI Summary, Typewriter & Translation State
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -267,6 +279,121 @@ export default function HeartDiseaseStudioPage() {
       triggerTypewriter(baseEnglishSummary);
     } finally {
       setIsTranslating(false);
+    }
+  };
+
+  // ── Batch Handlers ──────────────────────────────────────────────────────
+  const handleBatchExecute = async (parseResult: BatchParseResult) => {
+    setIsBatchExecuting(true);
+    setBatchProgress(0);
+    try {
+      const session = await executeBatch(
+        parseResult.chunks,
+        "cardiac_ecg",
+        "cardiac_ecg_batch.zip",
+        (s) => {
+          setBatchSession({ ...s });
+          setBatchProgress(s.totalRecords > 0 ? (s.processedCount / s.totalRecords) * 100 : 0);
+        },
+      );
+      setBatchSession(session);
+      showToast({
+        title: "Batch Screening Complete",
+        message: `${session.successCount} of ${session.totalRecords} ECG records processed (${session.highRiskCount} High Risk).`,
+        type: "quantum",
+      });
+    } catch (err: any) {
+      showToast({
+        title: "Batch Execution Error",
+        message: err.message || "Failed to complete cardiac batch execution.",
+        type: "warning",
+      });
+    } finally {
+      setIsBatchExecuting(false);
+    }
+  };
+
+  const handleBatchViewDetails = (record: BatchRecord) => {
+    try {
+      const full = record.fullResult || {};
+      const activeCardiacPayload = {
+        patientInfo: {
+          name: record.patientName,
+          patient_id: record.patientId,
+          age: 55,
+          gender: "Not Specified",
+          intake_date: new Date().toISOString().split("T")[0],
+        },
+        uploadedImage: record.imageBase64 || null,
+        imageMeta: {
+          name: record.imageName || `${record.patientId}.jpg`,
+          size: "Batch Record",
+          dimensions: "12-Lead ECG",
+        },
+        telemetry: full.prediction ? full : {
+          prediction: {
+            class_name: record.quantumPrediction || "Normal",
+            clinical_title: record.quantumPrediction || "Normal Sinus Rhythm",
+            confidence_pct: record.quantumConfidence || 95.0,
+            probabilities: {
+              Normal: record.quantumPrediction === "Normal" ? 0.95 : 0.05,
+              "Myocardial Infarction": record.quantumPrediction?.includes("Infarction") ? 0.92 : 0.02,
+              "History of MI": record.quantumPrediction?.includes("History") ? 0.88 : 0.03,
+              "Abnormal Heartbeat": record.quantumPrediction?.includes("Abnormal") ? 0.85 : 0.04,
+            },
+          },
+          risk_stratification: {
+            cardiac_risk_score: record.quantumRiskScore ?? 15.0,
+            score_scale: "0 - 100",
+            severity_tier: record.riskTier || (record.riskLevel === "High" ? "CRITICAL EMERGENCY" : "LOW RISK"),
+            clinical_recommendation: record.riskLevel === "High"
+              ? "Acute ischemic elevation detected. Immediate cardiology consultation and serial troponin assay recommended."
+              : "Normal cardiac rhythm. Routine preventative check-up in 12 months.",
+            primary_driver: record.topDriver || "Lead V2 (Septal)",
+          },
+          pinpointing_gradcam: {
+            heatmap_image_base64: full.pinpointing_gradcam?.heatmap_image_base64 || "",
+            lead_detected: full.pinpointing_gradcam?.lead_detected || "Lead V2 (Septal)",
+            anatomical_region: full.pinpointing_gradcam?.anatomical_region || "Anteroseptal Junction (LAD)",
+            activation_peak_score: full.pinpointing_gradcam?.activation_peak_score || 0.95,
+            coordinates: full.pinpointing_gradcam?.coordinates || { peak_x: 650, peak_y: 420, rel_x: 0.29, rel_y: 0.35 },
+          },
+          quantum_engine: {
+            signature: "QuantumX Transfinite-1",
+            qubits: 8,
+            ansatz: "8-Qubit AngleEmbedding + StronglyEntanglingLayers (2 Layers)",
+            statevector_backend: "PennyLane default.qubit",
+            quantum_prediction: record.quantumPrediction || "Normal",
+            quantum_confidence_pct: record.quantumConfidence || 95.0,
+            quantum_probabilities: {
+              Normal: 0.95,
+              "Myocardial Infarction": 0.02,
+              "History of MI": 0.03,
+              "Abnormal Heartbeat": 0.04,
+            },
+            variational_parameters: 48,
+            latency_ms: record.latencyMs || 54.32,
+          },
+          classical_engine: {
+            name: "CX-01 Cardiac Classical",
+            architecture: "ResNet-18 Deep Convolutional Neural Network",
+            prediction: record.classicalPrediction || "Normal",
+            confidence_pct: record.classicalConfidence || 92.0,
+            total_parameters: 11178564,
+            latency_ms: 35.31,
+          },
+          dual_engine_consensus: {
+            status: record.consensusStatus || "Concordant",
+            is_concordant: record.consensusStatus === "Concordant",
+            consensus_confidence: record.quantumConfidence || 95.0,
+            total_latency_ms: (record.latencyMs || 54.32) + 35.31,
+          },
+        },
+      };
+      sessionStorage.setItem("quantumx_active_cardiac_analysis", JSON.stringify(activeCardiacPayload));
+      router.push("/predict/heart-disease/analysis");
+    } catch (err) {
+      console.warn("Could not route to cardiac analysis:", err);
     }
   };
 
@@ -682,7 +809,78 @@ export default function HeartDiseaseStudioPage() {
         </div>
       </div>
 
-      {/* PATIENT INTAKE ACCORDION (Clean White Card, Inputable) */}
+      {/* ── SCREENING MODE TOGGLE ── */}
+      <div className="flex items-center gap-2">
+        <div className="inline-flex p-1 rounded-xl bg-white border border-hairline shadow-2xs">
+          <button
+            onClick={() => { setScreeningMode("single"); setBatchSession(null); setBatchParseResult(null); }}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningMode === "single" ? "bg-ink text-parchment shadow-xs" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <User size={14} />
+            Single Patient
+          </button>
+          <button
+            onClick={() => setScreeningMode("batch")}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              screeningMode === "batch" ? "bg-ink text-parchment shadow-xs" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            <Users size={14} />
+            Batch Screening (Bulk ECG / ZIP)
+          </button>
+        </div>
+        {screeningMode === "batch" && batchSession && batchSession.isComplete && (
+          <span className="text-[10px] font-mono px-2 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold">
+            ✓ {batchSession.successCount} Records Complete
+          </span>
+        )}
+      </div>
+
+      {/* ── BATCH MODE CONTENT ── */}
+      {screeningMode === "batch" && (
+        <div className="space-y-6">
+          {!batchSession?.isComplete && (
+            <BatchUploadPanel
+              diseaseTarget="cardiac_ecg"
+              onParseComplete={(result) => setBatchParseResult(result)}
+              onExecute={handleBatchExecute}
+              isExecuting={isBatchExecuting}
+            />
+          )}
+
+          {isBatchExecuting && batchSession && (
+            <div className="rounded-2xl bg-white border border-hairline shadow-xs p-6 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-ink">Processing 12-Lead ECG Batch...</span>
+                <span className="font-mono text-ink-soft">
+                  {batchSession.processedCount} / {batchSession.totalRecords}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-cream overflow-hidden">
+                <motion.div
+                  className="h-full bg-quantum rounded-full"
+                  animate={{ width: `${batchProgress}%` }}
+                  transition={{ duration: 0.2 }}
+                />
+              </div>
+            </div>
+          )}
+
+          {batchSession?.isComplete && (
+            <BatchResultsTable
+              session={batchSession}
+              onViewDetails={handleBatchViewDetails}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ── SINGLE MODE CONTENT ── */}
+      {screeningMode === "single" && (
+        <div className="space-y-6">
+          {/* PATIENT INTAKE ACCORDION (Clean White Card, Inputable) */}
       <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
         <button
           type="button"
@@ -1456,6 +1654,8 @@ export default function HeartDiseaseStudioPage() {
           </motion.div>
         )}
       </div>
+      </div>
+      )}
 
       {/* IBM MODAL (Matching Breast Cancer) */}
       <AnimatePresence>

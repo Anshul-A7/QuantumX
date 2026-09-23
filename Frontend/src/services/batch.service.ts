@@ -517,6 +517,15 @@ export async function exportBatchAsPdfZip(
       };
     });
 
+    const mapAttrs = (arr: any[]) => arr.map((a: any) => ({
+      featureName: a.featureName || a.feature_name || "",
+      measuredValue: a.measuredValue || a.measured_value || 0,
+      baselineValue: a.baselineValue || a.baseline_value || 0,
+      impactPercentage: a.impactPercentage || a.impact_percentage || 0,
+      direction: (a.direction || "protective") as "risk_elevating" | "protective",
+      quantumImpact: a.quantumImpact || a.quantum_impact || "",
+    }));
+
     const payload: ReportPayload = {
       patient: {
         patientName: r.patientName,
@@ -526,47 +535,40 @@ export async function exportBatchAsPdfZip(
         diseaseType: r.diseaseType.includes("Cardiac") ? "cardiac_ecg" : "breast_cancer",
       },
       biomarkers,
-      primaryModel: {
-        modelType: "hybrid",
+      transfinite1: {
         engineName: "Transfinite-1",
         engineDescription: "8-Qubit ZZ Variational Quantum Classifier (Simulator)",
+        modelType: "hybrid",
         predictionLabel: r.quantumPrediction || "Unknown",
         confidence: r.quantumConfidence || 0,
         riskScore: r.quantumRiskScore || 0,
         riskTier: r.riskTier || "",
         riskTag: r.riskTag || "LOW_RISK",
         clinicalAction: "Refer to clinical provider for follow-up.",
-        latencyMs: r.latencyMs || 0,
+        latencyMs: r.latencyMs || 15,
         architecture: "8-Qubit ZZ Pauli Tensor Map",
-        attributions: (r.attributions || []).map((a: any) => ({
-          featureName: a.featureName || a.feature_name || "",
-          measuredValue: a.measuredValue || a.measured_value || 0,
-          baselineValue: a.baselineValue || a.baseline_value || 0,
-          impactPercentage: a.impactPercentage || a.impact_percentage || 0,
-          direction: a.direction || "protective",
-          quantumImpact: a.quantumImpact || a.quantum_impact || "",
-        })),
+        attributions: mapAttrs(r.attributions || []),
         qubits: 8,
         ansatz: "StronglyEntanglingLayers",
         circuitDepth: 36,
         cnotCount: 16,
         variationalParams: 48,
       },
-      comparison: {
-        cx01: {
-          prediction: r.classicalPrediction || "",
-          confidence: r.classicalConfidence || 0,
-          riskScore: r.classicalRiskScore || 0,
-          latencyMs: 2.5,
-        },
-        transfinite1: {
-          prediction: r.quantumPrediction || "",
-          confidence: r.quantumConfidence || 0,
-          riskScore: r.quantumRiskScore || 0,
-          latencyMs: r.latencyMs || 15.0,
-        },
-        consensusStatus: r.consensusStatus || "Concordant",
+      cx01: {
+        engineName: "CX-01",
+        engineDescription: "Classical SVM-RBF + XGBoost Ensemble",
+        modelType: "classical",
+        predictionLabel: r.classicalPrediction || "Unknown",
+        confidence: r.classicalConfidence || 0,
+        riskScore: r.classicalRiskScore || 0,
+        riskTier: r.riskTier || "",
+        riskTag: r.riskTag || "LOW_RISK",
+        clinicalAction: "Refer to clinical provider for follow-up.",
+        latencyMs: 2.5,
+        architecture: "30-Feature Regularized Hyperplane",
+        attributions: mapAttrs(r.attributions || []),
       },
+      consensusStatus: (r.consensusStatus as "Concordant" | "Discordant") || "Concordant",
     };
 
     const blob = generateReportBlob(payload);

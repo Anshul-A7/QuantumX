@@ -19,9 +19,19 @@ import {
   ShieldCheck,
   Activity,
   Microscope,
+  Users,
+  Archive,
+  FileSpreadsheet,
+  FileJson,
+  Clock,
+  AlertTriangle,
+  XCircle,
+  Loader2,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
+import { downloadCombinedReport, type ReportPayload, type BiomarkerEntry } from "@/lib/pdfReportGenerator";
+import { getBatchSessions, type BatchSession, exportBatchAsCSV, exportBatchAsJSON, exportBatchAsPdfZip } from "@/services/batch.service";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -29,6 +39,11 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [riskFilter, setRiskFilter] = useState<"ALL" | "High" | "Low">("ALL");
   const [selectedCase, setSelectedCase] = useState<StoredPrediction | null>(null);
+
+  const [activeHistoryTab, setActiveHistoryTab] = useState<"individual" | "batch">("individual");
+  const [batchSessions, setBatchSessions] = useState<BatchSession[]>([]);
+  const [exportingBatchId, setExportingBatchId] = useState<string | null>(null);
+  const [batchPdfProgress, setBatchPdfProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
 
   useEffect(() => {
     // 1. Instant 0ms cached load
@@ -40,52 +55,103 @@ export default function HistoryPage() {
     ScreeningService.getScreenings().then((records) => {
       setPredictions(records || []);
     });
+    setBatchSessions(getBatchSessions());
   }, []);
+
+  const handleExportBatchPdf = async (session: BatchSession) => {
+    setExportingBatchId(session.batchId);
+    setBatchPdfProgress({ current: 0, total: session.successCount });
+    try {
+      await exportBatchAsPdfZip(session, (current, total) => {
+        setBatchPdfProgress({ current, total });
+      });
+    } catch (err) {
+      console.error("Batch PDF Export failed:", err);
+    } finally {
+      setExportingBatchId(null);
+    }
+  };
 
   const handleExportReport = (pred: StoredPrediction, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
-    const summary = `================================================================================
-QUANTUMX PERMANENT MEDICAL SCREENING RECORD
-================================================================================
-PATIENT INFORMATION:
-Patient Name:         ${pred.patientName || "Not Specified"}
-Case / Patient ID:    ${pred.id}
-Demographics:         ${pred.patientGender || "Female"} • Age: ${pred.patientAge || "N/A"}
-Biopsy Cohort:        ${pred.diseaseType || "Breast Cytology (Fine Needle Aspirate)"}
-Screening Date:       ${pred.timestamp || "N/A"}
+    const isCardiac = (pred.disease || pred.diseaseType || "").toLowerCase().includes("cardiac") || (pred.disease || pred.diseaseType || "").toLowerCase().includes("heart");
 
-DIAGNOSTIC TEST RESULTS:
-1. Hybrid Quantum (Transfinite-1):
-   - Prediction:       ${pred.quantumPrediction}
-   - Risk Score:       ${pred.quantumRiskScore ?? 42.4}%
-   - Model Certainty:  ${pred.quantumConfidence}%
-   - Runtime Latency:  ${pred.quantumExecutionTimeMs ?? 700.4} ms
+    const biomarkers: BiomarkerEntry[] = pred.inputFeatures
+      ? Object.entries(pred.inputFeatures).map(([k, v]) => ({
+          key: k,
+          label: k.replace(/_/g, " "),
+          value: Number(v) || 0,
+          unit: "μm",
+        }))
+      : [];
 
-2. Classical Baseline (CX-01):
-   - Prediction:       ${pred.classicalPrediction}
-   - Risk Score:       ${pred.classicalRiskScore ?? 44.1}%
-   - Model Certainty:  ${pred.classicalConfidence}%
-   - Runtime Latency:  ${pred.classicalExecutionTimeMs ?? 104.4} ms
+    const payload: ReportPayload = {
+      patient: {
+        patientName: pred.patientName || "Patient",
+        patientId: pred.id || pred.patientId || "QX-001",
+        patientAge: pred.patientAge || "N/A",
+        patientGender: pred.patientGender || "Not Specified",
+        diseaseType: isCardiac ? "cardiac_ecg" : "breast_cancer",
+        biopsyCohort: isCardiac ? "12-Lead Electrocardiogram Strip" : "Fine Needle Aspirate (WDBC)",
+      },
+      biomarkers,
+      transfinite1: {
+        engineName: "Transfinite-1",
+        engineDescription: isCardiac ? "8-Qubit AngleEmbedding VQC" : "8-Qubit ZZ Variational Quantum Classifier (Simulator)",
+        modelType: "hybrid",
+        predictionLabel: pred.quantumPrediction || "Unknown",
+        confidence: pred.quantumConfidence || 95.0,
+        riskScore: pred.quantumRiskScore ?? 42.4,
+        riskTier: pred.riskLevel ? `${pred.riskLevel.toUpperCase()} RISK` : "LOW RISK",
+        riskTag: pred.riskLevel === "High" ? "HIGH_RISK" : "LOW_RISK",
+        clinicalAction: "Routine clinical follow-up as advised by healthcare provider.",
+        latencyMs: pred.quantumExecutionTimeMs ?? 54.3,
+        architecture: isCardiac ? "8-Qubit AngleEmbedding + StronglyEntanglingLayers" : "8-Qubit ZZ Pauli Tensor Map",
+        attributions: [
+          {
+            featureName: pred.topDriver || "Primary Saliency Peak",
+            measuredValue: 1.0,
+            baselineValue: 0.5,
+            impactPercentage: Math.abs(pred.topDriverImpact || 25),
+            direction: pred.riskLevel === "High" ? "risk_elevating" : "protective",
+            quantumImpact: "Quantum statevector attribution",
+          },
+        ],
+        qubits: 8,
+        ansatz: "StronglyEntanglingLayers",
+        circuitDepth: 36,
+        cnotCount: 16,
+        variationalParams: 48,
+      },
+      cx01: {
+        engineName: isCardiac ? "CX-01 Cardiac Classical" : "CX-01",
+        engineDescription: isCardiac ? "ResNet-18 Deep Convolutional Baseline" : "Classical SVM-RBF + XGBoost Ensemble",
+        modelType: "classical",
+        predictionLabel: pred.classicalPrediction || "Unknown",
+        confidence: pred.classicalConfidence || 92.0,
+        riskScore: pred.classicalRiskScore ?? 44.1,
+        riskTier: pred.riskLevel ? `${pred.riskLevel.toUpperCase()} RISK` : "LOW RISK",
+        riskTag: pred.riskLevel === "High" ? "HIGH_RISK" : "LOW_RISK",
+        clinicalAction: "Routine clinical follow-up as advised by healthcare provider.",
+        latencyMs: pred.classicalExecutionTimeMs ?? 35.3,
+        architecture: isCardiac ? "ResNet-18 (11.1M Parameters)" : "30-Feature Regularized Hyperplane",
+        attributions: [
+          {
+            featureName: pred.topDriver || "Primary Saliency Peak",
+            measuredValue: 1.0,
+            baselineValue: 0.5,
+            impactPercentage: Math.abs(pred.topDriverImpact || 25),
+            direction: pred.riskLevel === "High" ? "risk_elevating" : "protective",
+            quantumImpact: "Classical perturbation gradient",
+          },
+        ],
+      },
+      consensusStatus: (pred.consensusStatus as "Concordant" | "Discordant") || "Concordant",
+      clinicalAdvice: "Refer to clinical provider for follow-up evaluation.",
+    };
 
-EVALUATION SUMMARY:
-- Consensus Status:    ${pred.consensusStatus || "Concordant"}
-- Primary Risk Factor: ${pred.topDriver || "Cell Size (Radius)"} (${pred.topDriverImpact ? (pred.topDriverImpact > 0 ? "+" : "") + pred.topDriverImpact + "%" : "Evaluated"})
-- Overall Risk Level:  ${pred.riskLevel} Risk Assessment
-
-CLINICAL AUDIT & REGULATORY INTEGRITY:
-Record Status:        Verified Permanent Audit Log
-Immutability:         Locked (Non-Deletable Medical Compliance Record)
-System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
-================================================================================`;
-
-    const blob = new Blob([summary], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Patient_Screening_${pred.id}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCombinedReport(payload);
   };
 
   const handleViewAnalysis = (pred: StoredPrediction, e: React.MouseEvent) => {
@@ -291,57 +357,87 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
-        {/* Search */}
-        <div className="relative max-w-sm w-full">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" />
-          <input
-            type="text"
-            placeholder="Search by Patient Name, Case ID, Cohort..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 rounded-xl bg-white border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-quantum/60 shadow-2xs font-sans"
-          />
-        </div>
-
-        {/* Risk Filter Buttons */}
-        <div className="flex items-center gap-1.5 p-1 bg-cream/70 rounded-xl border border-hairline text-xs font-sans shrink-0">
-          <button
-            type="button"
-            onClick={() => setRiskFilter("ALL")}
-            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
-              riskFilter === "ALL"
-                ? "bg-white text-ink shadow-xs border border-hairline font-bold"
-                : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            All Screenings ({predictions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setRiskFilter("High")}
-            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
-              riskFilter === "High"
-                ? "bg-red-50 text-red-700 shadow-xs border border-red-200 font-bold"
-                : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            High Risk ({predictions.filter((p) => p.riskLevel === "High").length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setRiskFilter("Low")}
-            className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
-              riskFilter === "Low"
-                ? "bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-bold"
-                : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            Low Risk ({predictions.filter((p) => p.riskLevel === "Low").length})
-          </button>
-        </div>
+      {/* View Switcher: Individual Patients vs Batch Screening Sessions */}
+      <div className="flex items-center gap-2 p-1 bg-cream/70 rounded-xl border border-hairline w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveHistoryTab("individual")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            activeHistoryTab === "individual"
+              ? "bg-white text-ink shadow-xs border border-hairline font-bold"
+              : "text-ink-soft hover:text-ink"
+          }`}
+        >
+          <User size={13} />
+          <span>Individual Screenings ({predictions.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveHistoryTab("batch")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            activeHistoryTab === "batch"
+              ? "bg-white text-ink shadow-xs border border-hairline font-bold"
+              : "text-ink-soft hover:text-ink"
+          }`}
+        >
+          <Users size={13} />
+          <span>Batch Screening Sessions ({batchSessions.length})</span>
+        </button>
       </div>
+
+      {activeHistoryTab === "individual" && (
+        <>
+          {/* Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
+            {/* Search */}
+            <div className="relative max-w-sm w-full">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" />
+              <input
+                type="text"
+                placeholder="Search by Patient Name, Case ID, Cohort..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-9 pl-9 pr-3 rounded-xl bg-white border border-hairline text-xs text-ink placeholder:text-ink-soft/60 focus:outline-none focus:border-quantum/60 shadow-2xs font-sans"
+              />
+            </div>
+
+            {/* Risk Filter Buttons */}
+            <div className="flex items-center gap-1.5 p-1 bg-cream/70 rounded-xl border border-hairline text-xs font-sans shrink-0">
+              <button
+                type="button"
+                onClick={() => setRiskFilter("ALL")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
+                  riskFilter === "ALL"
+                    ? "bg-white text-ink shadow-xs border border-hairline font-bold"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                All Screenings ({predictions.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRiskFilter("High")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
+                  riskFilter === "High"
+                    ? "bg-red-50 text-red-700 shadow-xs border border-red-200 font-bold"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                High Risk ({predictions.filter((p) => p.riskLevel === "High").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setRiskFilter("Low")}
+                className={`px-3 py-1 rounded-lg transition-all text-xs cursor-pointer ${
+                  riskFilter === "Low"
+                    ? "bg-emerald-50 text-emerald-700 shadow-xs border border-emerald-200 font-bold"
+                    : "text-ink-soft hover:text-ink"
+                }`}
+              >
+                Low Risk ({predictions.filter((p) => p.riskLevel === "Low").length})
+              </button>
+            </div>
+          </div>
 
       {/* Main Table: Proper Clinical Columns matching Diagnosis Page */}
       {predictions.length === 0 ? (
@@ -504,7 +600,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                           type="button"
                           onClick={(e) => handleExportReport(pred, e)}
                           className="p-1.5 rounded-lg bg-cream hover:bg-cream-deep border border-hairline text-ink-soft hover:text-ink transition-colors cursor-pointer shadow-2xs"
-                          title="Download Patient Record (.txt)"
+                          title="Download Clinical Report (.pdf)"
                         >
                           <Download size={13} />
                         </button>
@@ -515,6 +611,147 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {/* ── BATCH SCREENING SESSIONS VIEW ── */}
+      {activeHistoryTab === "batch" && (
+        <div className="space-y-4">
+          {batchSessions.length === 0 ? (
+            <div className="p-8 sm:p-12 rounded-2xl bg-white border border-hairline shadow-xs text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-cream border border-hairline text-ink-soft mx-auto flex items-center justify-center">
+                <Users size={22} className="text-quantum" />
+              </div>
+              <div className="space-y-1 max-w-md mx-auto">
+                <h3 className="font-serif text-lg font-medium text-ink">
+                  No Batch Screening Sessions Recorded
+                </h3>
+                <p className="text-xs text-ink-soft font-light leading-relaxed">
+                  Run high-throughput multi-patient screenings (up to 50,000 records) in the Breast Cancer or Heart Attack studios using CSV, JSON, ZIP, or bulk ECG image uploads.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Link
+                  href="/predict/breast-cancer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-ink text-parchment font-medium text-xs hover:opacity-90 transition-all shadow-sm cursor-pointer"
+                >
+                  <Microscope size={13} className="text-quantum" />
+                  <span>Breast Cancer Batch Screening</span>
+                </Link>
+                <Link
+                  href="/predict/heart-disease"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cream hover:bg-cream-deep border border-hairline text-ink font-medium text-xs transition-all shadow-2xs cursor-pointer"
+                >
+                  <Activity size={13} className="text-red-500" />
+                  <span>Cardiac ECG Bulk Screening</span>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {batchSessions.map((session) => (
+                <div
+                  key={session.batchId}
+                  className="rounded-2xl bg-white border border-hairline shadow-xs p-5 hover:border-quantum/40 transition-all"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-hairline/60">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-cream border border-hairline flex items-center justify-center text-quantum shrink-0">
+                        {session.diseaseType.includes("Cardiac") ? (
+                          <Activity size={20} className="text-red-500" />
+                        ) : (
+                          <FileSpreadsheet size={20} className="text-emerald-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-ink">
+                            {session.batchId}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-quantum/10 border border-quantum/20 text-quantum font-semibold">
+                            {session.diseaseType}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-ink-soft mt-0.5">
+                          Source: <strong className="text-ink">{session.uploadedFileName}</strong> • Started {new Date(session.startTime).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Batch Actions */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => exportBatchAsCSV(session)}
+                        className="px-3 py-1.5 rounded-lg bg-cream hover:bg-cream-deep border border-hairline text-xs font-medium text-ink flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FileSpreadsheet size={12} className="text-emerald-600" />
+                        <span>CSV</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportBatchAsJSON(session)}
+                        className="px-3 py-1.5 rounded-lg bg-cream hover:bg-cream-deep border border-hairline text-xs font-medium text-ink flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <FileJson size={12} className="text-blue-600" />
+                        <span>JSON</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleExportBatchPdf(session)}
+                        disabled={exportingBatchId === session.batchId}
+                        className="px-3 py-1.5 rounded-lg bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                      >
+                        {exportingBatchId === session.batchId ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin text-quantum" />
+                            <span>{batchPdfProgress.current}/{batchPdfProgress.total}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Archive size={12} className="text-quantum" />
+                            <span>PDF ZIP</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Counters */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-3">
+                    <div className="p-2.5 rounded-xl bg-cream/50 border border-hairline">
+                      <span className="text-[10px] text-ink-soft uppercase font-mono block">Records</span>
+                      <strong className="text-xs text-ink">{session.totalRecords.toLocaleString()}</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <span className="text-[10px] text-emerald-700 uppercase font-mono block">Success</span>
+                      <strong className="text-xs text-emerald-800">{session.successCount.toLocaleString()}</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-red-50 border border-red-200">
+                      <span className="text-[10px] text-red-700 uppercase font-mono block">High Risk</span>
+                      <strong className="text-xs text-red-800">{session.highRiskCount}</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-200">
+                      <span className="text-[10px] text-blue-700 uppercase font-mono block">Concordant</span>
+                      <strong className="text-xs text-blue-800">
+                        {session.concordantCount} ({session.successCount > 0 ? ((session.concordantCount / session.successCount) * 100).toFixed(0) : 0}%)
+                      </strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200">
+                      <span className="text-[10px] text-purple-700 uppercase font-mono block">Avg Risk</span>
+                      <strong className="text-xs text-purple-800">{session.averageRiskScore.toFixed(1)} / 100</strong>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-cream/50 border border-hairline">
+                      <span className="text-[10px] text-ink-soft uppercase font-mono block">Duration</span>
+                      <strong className="text-xs text-ink">{(session.executionTimeMs / 1000).toFixed(1)}s</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -628,7 +865,7 @@ System Provenance:    QuantumX Health Intelligence Platform (SIH26139)
                   className="px-3.5 py-2 rounded-xl bg-white hover:bg-cream border border-hairline text-ink font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                 >
                   <Download size={13} />
-                  <span>Download Report (.txt)</span>
+                  <span>Download Clinical Report (.pdf)</span>
                 </button>
                 <button
                   type="button"
