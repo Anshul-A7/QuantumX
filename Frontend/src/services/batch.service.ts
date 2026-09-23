@@ -454,7 +454,7 @@ export function exportBatchAsJSON(session: BatchSession): void {
 
 // ── Export: PDF ZIP ──────────────────────────────────────────────────────────────
 
-const BIOMARKER_LABELS: Record<string, { label: string; unit: string; benignMed: number; normalMax: number }> = {
+export const BIOMARKER_LABELS: Record<string, { label: string; unit: string; benignMed: number; normalMax: number }> = {
   radius_mean:         { label: "Cell Size (Radius)",     unit: "μm",     benignMed: 12.15, normalMax: 14.95 },
   texture_mean:        { label: "Surface Texture",        unit: "std",    benignMed: 17.91, normalMax: 22.87 },
   perimeter_mean:      { label: "Cell Perimeter",         unit: "μm",     benignMed: 78.08, normalMax: 93.80 },

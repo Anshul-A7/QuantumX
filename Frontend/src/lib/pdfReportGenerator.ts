@@ -24,6 +24,7 @@
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { saveAs } from "file-saver";
 
 // ── Types ───────────────────────────────────────────────────────────────────────
 
@@ -447,11 +448,11 @@ export function generateCombinedReport(payload: ReportPayload): jsPDF {
         bodyStyles: { fontSize: 8, textColor: C.ink, cellPadding: 2.8 },
         alternateRowStyles: { fillColor: C.cream },
         columnStyles: {
-          0: { fontStyle: "bold", cellWidth: 38 },
-          1: { halign: "right", cellWidth: 28 },
+          0: { fontStyle: "bold", cellWidth: 43 },
+          1: { halign: "right", cellWidth: 29 },
           2: { halign: "center", cellWidth: 14 },
-          3: { halign: "right", cellWidth: 30 },
-          4: { halign: "right", cellWidth: 28 },
+          3: { halign: "right", cellWidth: 32 },
+          4: { halign: "right", cellWidth: 30 },
           5: { halign: "center", cellWidth: 26, fontStyle: "bold" },
         },
         theme: "grid",
@@ -591,15 +592,23 @@ export function generateCombinedReport(payload: ReportPayload): jsPDF {
       head: [["Feature", "Measured", "Baseline (Benign)", "Impact %", "Direction", "Quantum Effect"]],
       body: payload.transfinite1.attributions.map((a) => [
         a.featureName,
-        a.measuredValue.toFixed(4),
-        a.baselineValue.toFixed(4),
-        `${a.impactPercentage.toFixed(1)}%`,
+        (Number(a.measuredValue) || 0).toFixed(4),
+        (Number(a.baselineValue) || 0).toFixed(4),
+        `${(Number(a.impactPercentage) || 0).toFixed(1)}%`,
         a.direction === "risk_elevating" ? "⬆ Risk Elevating" : "⬇ Protective",
         a.quantumImpact || "—",
       ]),
       headStyles: { fillColor: [124, 58, 237], textColor: C.white, fontSize: 7.5, fontStyle: "bold" },
       bodyStyles: { fontSize: 7.5, textColor: C.ink, cellPadding: 2.5 },
       alternateRowStyles: { fillColor: C.quantumBg },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 38 },
+        1: { halign: "right", cellWidth: 22 },
+        2: { halign: "right", cellWidth: 26 },
+        3: { halign: "right", cellWidth: 20 },
+        4: { halign: "center", cellWidth: 26 },
+        5: { cellWidth: 42 },
+      },
       theme: "grid",
       didParseCell: (data) => {
         if (data.column.index === 4 && data.section === "body") {
@@ -709,14 +718,21 @@ export function generateCombinedReport(payload: ReportPayload): jsPDF {
       head: [["Feature", "Measured", "Baseline (Benign)", "Impact %", "Direction"]],
       body: payload.cx01.attributions.map((a) => [
         a.featureName,
-        a.measuredValue.toFixed(4),
-        a.baselineValue.toFixed(4),
-        `${a.impactPercentage.toFixed(1)}%`,
+        (Number(a.measuredValue) || 0).toFixed(4),
+        (Number(a.baselineValue) || 0).toFixed(4),
+        `${(Number(a.impactPercentage) || 0).toFixed(1)}%`,
         a.direction === "risk_elevating" ? "⬆ Risk Elevating" : "⬇ Protective",
       ]),
       headStyles: { fillColor: [30, 64, 175], textColor: C.white, fontSize: 7.5, fontStyle: "bold" },
       bodyStyles: { fontSize: 7.5, textColor: C.ink, cellPadding: 2.5 },
       alternateRowStyles: { fillColor: C.classicBg },
+      columnStyles: {
+        0: { fontStyle: "bold", cellWidth: 46 },
+        1: { halign: "right", cellWidth: 26 },
+        2: { halign: "right", cellWidth: 34 },
+        3: { halign: "right", cellWidth: 26 },
+        4: { halign: "center", cellWidth: 42 },
+      },
       theme: "grid",
       didParseCell: (data) => {
         if (data.column.index === 4 && data.section === "body") {
@@ -780,9 +796,11 @@ export function generateCombinedReport(payload: ReportPayload): jsPDF {
     ],
     headStyles: { fillColor: C.ink, textColor: C.white, fontSize: 8, fontStyle: "bold" },
     bodyStyles: { fontSize: 8, textColor: C.ink, cellPadding: 3 },
-    alternateRowStyles: { fillColor: C.cream },
-    columnStyles: { 0: { fontStyle: "bold", cellWidth: 42 } },
-    theme: "grid",
+    columnStyles: {
+      0: { fontStyle: "bold", cellWidth: 44 },
+      1: { cellWidth: 65 },
+      2: { cellWidth: 65 },
+    },
     didParseCell: (data) => {
       if (data.column.index === 1 && data.section === "body") {
         data.cell.styles.textColor = C.blue;
@@ -1024,7 +1042,11 @@ export function generateCombinedReport(payload: ReportPayload): jsPDF {
 
       // Value label
       doc.setFontSize(6);
-      doc.setTextColor(isRisk ? [...C.red] as any : [...C.green] as any);
+      if (isRisk) {
+        doc.setTextColor(...C.red);
+      } else {
+        doc.setTextColor(...C.green);
+      }
       const valLabel = `${isRisk ? "+" : "-"}${attr.impactPercentage.toFixed(1)}%`;
       doc.text(valLabel, isRisk ? midX + barLen + 2 : midX - barLen - 10, wfY + wfBarH - 2);
     });
@@ -1349,7 +1371,37 @@ function getClosingMessage(riskTag: string, prediction: string, diseaseType?: st
 
 export function downloadCombinedReport(payload: ReportPayload): void {
   const doc = generateCombinedReport(payload);
-  const fileName = `QuantumX_Report_${payload.patient.patientId || "Patient"}_Combined.pdf`;
+  const safeId = (payload.patient.patientId || "Patient").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const fileName = `QuantumX_Report_${safeId}_Combined.pdf`;
+
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    try {
+      const blob = doc.output("blob");
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        } catch (_) {}
+      }, 1000);
+      return;
+    } catch (blobErr) {
+      console.warn("[QuantumX] Direct anchor download failed, falling back to saveAs:", blobErr);
+      try {
+        saveAs(doc.output("blob"), fileName);
+        return;
+      } catch (saveAsErr) {
+        console.warn("[QuantumX] saveAs failed, falling back to doc.save:", saveAsErr);
+      }
+    }
+  }
+
   doc.save(fileName);
 }
 

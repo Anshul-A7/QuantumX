@@ -14,8 +14,10 @@ import {
   Layers,
   Microscope,
   User,
+  Loader2,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
+import { showToast } from "@/components/common/ToastNotification";
 import { downloadCombinedReport, type ReportPayload, type BiomarkerEntry } from "@/lib/pdfReportGenerator";
 
 import KeyRiskFactorsTab, { COMBINED_BIOMARKER_DATA } from "./components/KeyRiskFactorsTab";
@@ -74,6 +76,7 @@ export default function BreastCancerAnalysisPage() {
   });
 
   const [aiSynthesis, setAiSynthesis] = useState<any>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     // 1. Load active session analysis payload if navigated from Screening Form
@@ -233,6 +236,12 @@ export default function BreastCancerAnalysisPage() {
       : screeningResult.shap_attributions || []);
 
   const handleDownloadFullReport = () => {
+    setIsDownloading(true);
+    showToast({
+      title: "Generating Clinical Dossier",
+      message: "Assembling 12-page combined report...",
+      type: "quantum",
+    });
     const biomarkerEntries: BiomarkerEntry[] = Object.entries(COMBINED_BIOMARKER_DATA).map(([k, ref]) => ({
       key: k,
       label: ref.label,
@@ -312,7 +321,25 @@ export default function BreastCancerAnalysisPage() {
       clinicalAdvice: screeningResult.clinical_action,
     };
 
-    downloadCombinedReport(payload);
+    setTimeout(() => {
+      try {
+        downloadCombinedReport(payload);
+        showToast({
+          title: "Report Download Complete",
+          message: `Saved QuantumX_Report_${payload.patient.patientId}_Combined.pdf`,
+          type: "quantum",
+        });
+      } catch (err: any) {
+        console.error("PDF generation failed:", err);
+        showToast({
+          title: "Download Failed",
+          message: err?.message || "Could not generate PDF report.",
+          type: "warning",
+        });
+      } finally {
+        setIsDownloading(false);
+      }
+    }, 100);
   };
 
   return (
@@ -354,10 +381,15 @@ export default function BreastCancerAnalysisPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownloadFullReport}
-            className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            disabled={isDownloading}
+            className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
           >
-            <Download size={14} className="text-quantum" />
-            <span>Download Report (.pdf)</span>
+            {isDownloading ? (
+              <Loader2 size={14} className="text-quantum animate-spin" />
+            ) : (
+              <Download size={14} className="text-quantum" />
+            )}
+            <span>{isDownloading ? "Generating PDF..." : "Download Report (.pdf)"}</span>
           </button>
         </div>
       </div>

@@ -27,7 +27,10 @@ import {
   exportBatchAsCSV,
   exportBatchAsJSON,
   exportBatchAsPdfZip,
+  BIOMARKER_LABELS,
 } from "@/services/batch.service";
+import { downloadCombinedReport, type ReportPayload, type BiomarkerEntry } from "@/lib/pdfReportGenerator";
+import { showToast } from "@/components/common/ToastNotification";
 
 interface BatchResultsTableProps {
   session: BatchSession;
@@ -123,12 +126,121 @@ export default function BatchResultsTable({
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
     setPdfProgress({ current: 0, total: session.successCount });
+    showToast({
+      title: "Exporting Batch ZIP",
+      message: `Compiling PDF reports for ${session.successCount} patients...`,
+      type: "quantum",
+    });
     try {
       await exportBatchAsPdfZip(session, (current, total) => {
         setPdfProgress({ current, total });
       });
+      showToast({
+        title: "Batch ZIP Downloaded",
+        message: `Downloaded QuantumX_Batch_${session.batchId}_Reports.zip`,
+        type: "quantum",
+      });
+    } catch (err: any) {
+      console.error("PDF ZIP export failed:", err);
+      showToast({
+        title: "Batch Export Failed",
+        message: err?.message || "Could not compile batch PDF ZIP archive.",
+        type: "warning",
+      });
     } finally {
       setIsExportingPdf(false);
+    }
+  };
+
+  const handleDownloadSingleRecord = (record: BatchRecord, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      showToast({
+        title: "Generating Patient Report",
+        message: `Assembling clinical report for ${record.patientName}...`,
+        type: "quantum",
+      });
+
+      const biomarkers: BiomarkerEntry[] = Object.entries(record.inputData || {}).map(([key, val]) => {
+        const meta = BIOMARKER_LABELS[key] || { label: key, unit: "", benignMed: 0, normalMax: 0 };
+        return {
+          key,
+          label: meta.label,
+          value: val as number,
+          unit: meta.unit,
+          benignMedian: meta.benignMed,
+          normalMax: meta.normalMax,
+        };
+      });
+
+      const mapAttrs = (arr: any[]) =>
+        arr.map((a: any) => ({
+          featureName: a.featureName || a.feature_name || "",
+          measuredValue: a.measuredValue || a.measured_value || 0,
+          baselineValue: a.baselineValue || a.baseline_value || 0,
+          impactPercentage: a.impactPercentage || a.impact_percentage || 0,
+          direction: (a.direction || "protective") as "risk_elevating" | "protective",
+          quantumImpact: a.quantumImpact || a.quantum_impact || "",
+        }));
+
+      const payload: ReportPayload = {
+        patient: {
+          patientName: record.patientName,
+          patientId: record.patientId,
+          patientAge: "N/A",
+          patientGender: "Not Specified",
+          diseaseType: record.diseaseType.includes("Cardiac") ? "cardiac_ecg" : "breast_cancer",
+        },
+        biomarkers,
+        transfinite1: {
+          engineName: "Transfinite-1",
+          engineDescription: "8-Qubit ZZ Variational Quantum Classifier (Simulator)",
+          modelType: "hybrid",
+          predictionLabel: record.quantumPrediction || "Unknown",
+          confidence: record.quantumConfidence || 0,
+          riskScore: record.quantumRiskScore || 0,
+          riskTier: record.riskTier || "",
+          riskTag: record.riskTag || "LOW_RISK",
+          clinicalAction: "Refer to clinical provider for follow-up.",
+          latencyMs: record.latencyMs || 15,
+          architecture: "8-Qubit ZZ Pauli Tensor Map",
+          attributions: mapAttrs(record.attributions || []),
+          qubits: 8,
+          ansatz: "StronglyEntanglingLayers",
+          circuitDepth: 36,
+          cnotCount: 16,
+          variationalParams: 48,
+        },
+        cx01: {
+          engineName: "CX-01",
+          engineDescription: "Classical SVM-RBF + XGBoost Ensemble",
+          modelType: "classical",
+          predictionLabel: record.classicalPrediction || "Unknown",
+          confidence: record.classicalConfidence || 0,
+          riskScore: record.classicalRiskScore || 0,
+          riskTier: record.riskTier || "",
+          riskTag: record.riskTag || "LOW_RISK",
+          clinicalAction: "Refer to clinical provider for follow-up.",
+          latencyMs: 2.5,
+          architecture: "30-Feature Regularized Hyperplane",
+          attributions: mapAttrs(record.attributions || []),
+        },
+        consensusStatus: (record.consensusStatus as "Concordant" | "Discordant") || "Concordant",
+      };
+
+      downloadCombinedReport(payload);
+      showToast({
+        title: "Report Downloaded",
+        message: `Saved QuantumX_Report_${payload.patient.patientId}_Combined.pdf`,
+        type: "quantum",
+      });
+    } catch (err: any) {
+      console.error("Batch single PDF generation failed:", err);
+      showToast({
+        title: "Download Failed",
+        message: err?.message || "Could not generate PDF report.",
+        type: "warning",
+      });
     }
   };
 
@@ -263,14 +375,28 @@ export default function BatchResultsTable({
         {/* Export Buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportBatchAsCSV(session)}
+            onClick={() => {
+              exportBatchAsCSV(session);
+              showToast({
+                title: "CSV Exported",
+                message: `Exported QuantumX_Batch_${session.batchId}.csv`,
+                type: "quantum",
+              });
+            }}
             className="px-3 py-1.5 rounded-lg bg-cream border border-hairline text-xs font-medium text-ink hover:bg-cream/80 flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <FileText size={12} />
             CSV
           </button>
           <button
-            onClick={() => exportBatchAsJSON(session)}
+            onClick={() => {
+              exportBatchAsJSON(session);
+              showToast({
+                title: "JSON Exported",
+                message: `Exported QuantumX_Batch_${session.batchId}.json`,
+                type: "quantum",
+              });
+            }}
             className="px-3 py-1.5 rounded-lg bg-cream border border-hairline text-xs font-medium text-ink hover:bg-cream/80 flex items-center gap-1.5 cursor-pointer transition-colors"
           >
             <FileJson size={12} />
@@ -425,12 +551,21 @@ export default function BatchResultsTable({
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       {record.status === "success" && (
-                        <button
-                          onClick={() => onViewDetails(record)}
-                          className="px-2.5 py-1 rounded-lg bg-cream border border-hairline text-[10px] font-medium text-ink hover:bg-ink hover:text-parchment transition-all cursor-pointer flex items-center gap-1 ml-auto"
-                        >
-                          <Eye size={11} /> View
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={(e) => handleDownloadSingleRecord(record, e)}
+                            title="Download Clinical PDF Report"
+                            className="p-1 rounded-lg bg-cream border border-hairline text-ink hover:bg-quantum hover:text-black transition-all cursor-pointer"
+                          >
+                            <Download size={11} />
+                          </button>
+                          <button
+                            onClick={() => onViewDetails(record)}
+                            className="px-2.5 py-1 rounded-lg bg-cream border border-hairline text-[10px] font-medium text-ink hover:bg-ink hover:text-parchment transition-all cursor-pointer flex items-center gap-1"
+                          >
+                            <Eye size={11} /> View
+                          </button>
+                        </div>
                       )}
                       {record.status === "error" && (
                         <span className="text-[10px] text-red-500 italic truncate max-w-[100px] block ml-auto" title={record.error}>

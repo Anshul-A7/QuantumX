@@ -32,6 +32,7 @@ import HelpTooltip from "@/components/common/HelpTooltip";
 import { ScreeningService, type StoredPrediction } from "@/services/screening.service";
 import { downloadCombinedReport, type ReportPayload, type BiomarkerEntry } from "@/lib/pdfReportGenerator";
 import { getBatchSessions, type BatchSession, exportBatchAsCSV, exportBatchAsJSON, exportBatchAsPdfZip } from "@/services/batch.service";
+import { showToast } from "@/components/common/ToastNotification";
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -151,7 +152,26 @@ export default function HistoryPage() {
       clinicalAdvice: "Refer to clinical provider for follow-up evaluation.",
     };
 
-    downloadCombinedReport(payload);
+    try {
+      showToast({
+        title: "Generating Report",
+        message: `Assembling clinical report for ${payload.patient.patientName}...`,
+        type: "quantum",
+      });
+      downloadCombinedReport(payload);
+      showToast({
+        title: "Report Downloaded",
+        message: `Saved QuantumX_Report_${payload.patient.patientId}_Combined.pdf`,
+        type: "quantum",
+      });
+    } catch (err: any) {
+      console.error("PDF download failed:", err);
+      showToast({
+        title: "Download Failed",
+        message: err?.message || "Could not generate PDF report.",
+        type: "warning",
+      });
+    }
   };
 
   const handleViewAnalysis = (pred: StoredPrediction, e: React.MouseEvent) => {

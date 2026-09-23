@@ -16,9 +16,11 @@ import {
   HeartPulse,
   Zap,
   Cpu,
+  Loader2,
 } from "lucide-react";
 import HelpTooltip from "@/components/common/HelpTooltip";
 import { downloadCombinedReport, type ReportPayload } from "@/lib/pdfReportGenerator";
+import { showToast } from "@/components/common/ToastNotification";
 
 import KeyRiskFactorsTab from "./components/KeyRiskFactorsTab";
 import AiDoctorConsultationTab from "./components/AiDoctorConsultationTab";
@@ -35,6 +37,7 @@ export default function HeartDiseaseAnalysisPage() {
 
   // Model selection switch: "transfinite_1" (Hybrid Quantum) vs "cx_01" (Classical Baseline)
   const [selectedModel, setSelectedModel] = useState<"transfinite_1" | "cx_01">("transfinite_1");
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Loaded State
   const [patientInfo, setPatientInfo] = useState({
@@ -182,6 +185,13 @@ export default function HeartDiseaseAnalysisPage() {
     (dialCircumference * Math.min(100, Math.max(0, activeRiskScore))) / 100;
 
   const handleDownloadFullReport = () => {
+    setIsDownloading(true);
+    showToast({
+      title: "Generating Clinical Dossier",
+      message: "Assembling 12-page combined report...",
+      type: "quantum",
+    });
+
     const isCardiacHigh = activeRiskScore >= 60 || currentBadge.label.includes("CRITICAL") || currentBadge.label.includes("HIGH");
 
     const fullAiSummary = [
@@ -262,7 +272,25 @@ export default function HeartDiseaseAnalysisPage() {
       clinicalAdvice: telemetry?.risk_stratification?.clinical_recommendation,
     };
 
-    downloadCombinedReport(payload);
+    setTimeout(() => {
+      try {
+        downloadCombinedReport(payload);
+        showToast({
+          title: "Report Download Complete",
+          message: `Saved QuantumX_Report_${payload.patient.patientId}_Combined.pdf`,
+          type: "quantum",
+        });
+      } catch (err: any) {
+        console.error("PDF generation failed:", err);
+        showToast({
+          title: "Download Failed",
+          message: err?.message || "Could not generate PDF report.",
+          type: "warning",
+        });
+      } finally {
+        setIsDownloading(false);
+      }
+    }, 100);
   };
 
   return (
@@ -304,10 +332,15 @@ export default function HeartDiseaseAnalysisPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleDownloadFullReport}
-            className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+            disabled={isDownloading}
+            className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment font-semibold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-60"
           >
-            <Download size={14} className="text-quantum" />
-            <span>Download Report (.pdf)</span>
+            {isDownloading ? (
+              <Loader2 size={14} className="text-quantum animate-spin" />
+            ) : (
+              <Download size={14} className="text-quantum" />
+            )}
+            <span>{isDownloading ? "Generating PDF..." : "Download Report (.pdf)"}</span>
           </button>
         </div>
       </div>
