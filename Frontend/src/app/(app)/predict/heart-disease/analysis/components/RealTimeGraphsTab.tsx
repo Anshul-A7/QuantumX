@@ -133,7 +133,7 @@ export default function RealTimeGraphsTab({
     },
   ];
 
-  // Classical ResNet-18 Layer Pipeline Specifications
+  // Classical ResNet-34 Layer Pipeline Specifications
   const RESNET_STAGES = [
     {
       id: "input",
@@ -159,45 +159,45 @@ export default function RealTimeGraphsTab({
     },
     {
       id: "layer1",
-      title: "ResNet Stage 1 (2× BasicBlocks)",
+      title: "ResNet Stage 1 (3× BasicBlocks)",
       shape: "64 × 56 × 56",
       channels: 64,
       receptiveField: "11 × 11 px",
-      params: 147968,
-      flops: "232 MFLOPs",
+      params: 221952,
+      flops: "348 MFLOPs",
       activation: "Residual Skip Connections",
-      desc: "Dual 3×3 convolutional residual blocks extracting local waveform curvatures, baseline isoelectric segments, and fine P-wave deflections.",
+      desc: "Triple 3×3 convolutional residual blocks extracting local waveform curvatures, baseline isoelectric segments, and fine P-wave deflections.",
     },
     {
       id: "layer2",
-      title: "ResNet Stage 2 (2× BasicBlocks)",
+      title: "ResNet Stage 2 (4× BasicBlocks)",
       shape: "128 × 28 × 28",
       channels: 128,
-      receptiveField: "23 × 23 px",
-      params: 525824,
-      flops: "411 MFLOPs",
+      receptiveField: "27 × 27 px",
+      params: 1117184,
+      flops: "822 MFLOPs",
       activation: "Projection Downsampling",
       desc: "Downsampling stage with 1×1 stride-2 projection shortcut; isolates QRS rapid spike complexes and ventricular depolarization boundaries.",
     },
     {
       id: "layer3",
-      title: "ResNet Stage 3 (2× BasicBlocks)",
+      title: "ResNet Stage 3 (6× BasicBlocks)",
       shape: "256 × 14 × 14",
       channels: 256,
-      receptiveField: "47 × 47 px",
-      params: 2100224,
-      flops: "411 MFLOPs",
+      receptiveField: "63 × 63 px",
+      params: 6822912,
+      flops: "1,337 MFLOPs",
       activation: "Inter-lead Spatial Integration",
-      desc: "Deep residual blocks capturing multi-lead anatomical relationships between precordial (V1-V6) and limb (I, II, III, aVR, aVL, aVF) channels.",
+      desc: "Six deep residual blocks capturing multi-lead anatomical relationships between precordial (V1-V6) and limb (I, II, III, aVR, aVL, aVF) channels.",
     },
     {
       id: "layer4",
-      title: "ResNet Stage 4 (2× BasicBlocks)",
+      title: "ResNet Stage 4 (3× BasicBlocks)",
       shape: "512 × 7 × 7",
       channels: 512,
       receptiveField: "95 × 95 px",
-      params: 8394752,
-      flops: "411 MFLOPs",
+      params: 13115392,
+      flops: "822 MFLOPs",
       activation: "Grad-CAM Peak Activation",
       desc: "Highest-level spatial semantic features where ST-segment elevation, pathological Q-waves, and ischemic inversion patterns are localized.",
     },
@@ -235,7 +235,7 @@ export default function RealTimeGraphsTab({
               <h3 className="font-serif text-base font-medium text-ink">
                 {isHybrid
                   ? "8-Qubit Variational Quantum Circuit (VQC) Telemetry"
-                  : "ResNet-18 Deep Convolutional Architecture & Feature Flow"}
+                  : "ResNet-34 Deep Convolutional Architecture & Feature Flow"}
               </h3>
               <span
                 className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
