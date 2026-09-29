@@ -104,6 +104,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   // Sidebar toggle state (persisted across refreshes)
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showAlephCard, setShowAlephCard] = useState(false);
 
   // Distinct open vs close transitions
   const sidebarTransition = sidebarOpen
@@ -323,19 +324,57 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <Sparkles size={12} className="text-quantum" />
                 <span>Transfinite-1 (Simulator)</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
-                }}
-                className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-not-allowed opacity-80"
-                title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
-              >
-                <Lock size={12} className="text-amber-500" />
-                <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
-                <span className="sm:hidden">Aleph-1</span>
-                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAlephCard(prev => !prev)}
+                  className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-pointer opacity-90 hover:opacity-100"
+                  title="Aleph-1 (IBM QPU) — Real Quantum Hardware"
+                >
+                  <Cpu size={12} className="text-amber-500" />
+                  <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
+                  <span className="sm:hidden">Aleph-1</span>
+                  <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
+                </button>
+                <AnimatePresence>
+                  {showAlephCard && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full right-0 mt-2 w-80 sm:w-96 z-50 p-4 rounded-2xl bg-slate-950 text-slate-100 border border-slate-800 shadow-2xl"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                          <Cpu size={18} />
+                        </div>
+                        <div className="space-y-1.5 flex-1">
+                          <h4 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">Aleph-1 — IBM Quantum QPU</h4>
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            Physical 127-qubit IBM Eagle r3 superconducting transmon processor operating at 15 millikelvin inside a Bluefors dilution refrigerator. Achieves 99.5% single-qubit and 99.1% two-qubit gate fidelities with T1 coherence ≈ 300μs.
+                          </p>
+                          <div className="flex items-center gap-2 pt-1 flex-wrap">
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">127 Physical Qubits</span>
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">IBM Qiskit Runtime</span>
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">ZNE + M3 + DD</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 pt-1">
+                            Reserved for verified clinical partner deployments. All quantum diagnostic circuits will execute on real IBM hardware with full error mitigation.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAlephCard(false)}
+                        className="absolute top-2 right-2 w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center text-xs cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* Notification Icon (Left of Account) */}
@@ -513,13 +552,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               {/* Aleph-1 (IBM QPU Locked) */}
               <button
                 type="button"
-                onClick={() => {
-                  alert("Aleph-1 (Physical 127-Qubit IBM Quantum QPU) is currently locked and reserved for verified clinical partner access.");
-                }}
-                className="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 text-ink-soft hover:text-ink font-medium cursor-not-allowed opacity-80"
-                title="Aleph-1 (IBM QPU) - Locked for Verified Clinical Partners"
+                onClick={() => setShowAlephCard(prev => !prev)}
+                className="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 text-ink-soft hover:text-ink font-medium cursor-pointer opacity-90 hover:opacity-100"
+                title="Aleph-1 (IBM QPU) — Real Quantum Hardware"
               >
-                <Lock size={10} className="text-amber-500 shrink-0" />
+                <Cpu size={10} className="text-amber-500 shrink-0" />
                 <span>Aleph-1</span>
                 <span className="hidden xs:inline text-[8px] font-mono text-amber-700 bg-amber-50 px-0.5 py-0.1 rounded border border-amber-200">Locked</span>
               </button>

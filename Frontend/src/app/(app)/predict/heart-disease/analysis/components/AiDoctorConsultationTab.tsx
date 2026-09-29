@@ -164,17 +164,34 @@ ${summaryText || recommendation}
     setIsTyping(true);
 
     try {
-      const prompt = `You are an expert cardiologist providing clinical second-opinion decision support on a patient's 12-lead ECG.
-Patient Context:
-- Name: ${pName} (${pId}), ${pAge} y/o ${pGender}
-- Finding: ${diagTitle}
-- Risk Score: ${riskScore}/100 (${tier})
-- Primary Lead: ${lead} (${region})
-- Action: ${recommendation}
+      const conversationContext = messages
+        .slice(-6)
+        .map(m => `${m.role === "user" ? "Patient/Clinician" : "Cardiologist"}: ${m.content.substring(0, 300)}`)
+        .join("\n");
 
-Question from Clinician: "${question}"
+      const prompt = `You are a senior cardiologist answering a specific question about a patient's ECG results.
 
-Provide a concise, highly professional, evidence-based response (2-3 short paragraphs or bullet points). Mention clinical guideline standards (AHA/ACC or ESC).`;
+PATIENT: ${pName}, ${pAge}y ${pGender} (${pId})
+FINDING: ${diagTitle}
+RISK: ${riskScore}/100 — ${tier}
+LEAD: ${lead} (${region})
+RECOMMENDATION: ${recommendation}
+
+RECENT CONVERSATION:
+${conversationContext}
+
+QUESTION: "${question}"
+
+RULES:
+1. Answer ONLY what was asked. Do not dump unrelated clinical data.
+2. Keep your answer SHORT — 2-3 concise paragraphs or 3-5 bullet points maximum.
+3. Use simple, clear language a patient can understand. Avoid jargon unless the question is technical.
+4. If the question is about medications, give specific drug names and dosages per ACC/AHA guidelines.
+5. If the question is about a specific lead or waveform, explain what it means anatomically.
+6. If the question is general ("what does this mean?"), give a brief plain-English explanation of the finding and next steps.
+7. Do NOT repeat the full patient profile. The patient already knows their name and ID.
+8. Do NOT use markdown headings (# or ##). Use bold (**text**) for key terms and bullet points (•) for lists.
+9. End with one brief actionable next step.`;
 
       const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
       let answer = "";
