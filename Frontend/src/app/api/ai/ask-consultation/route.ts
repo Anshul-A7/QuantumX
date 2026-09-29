@@ -85,33 +85,42 @@ RULES:
 10. End with one brief actionable recommendation.`;
 
     if (geminiApiKey) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.2 },
-            }),
-            signal: AbortSignal.timeout(4000),
-          }
-        );
+      const candidateModels = [
+        "gemini-3.8-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash",
+      ];
 
-        if (response.ok) {
-          const data = await response.json();
-          const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (answer) {
-            return NextResponse.json({
-              success: true,
-              answer,
-              source: "gemini-2.5-flash",
-            });
+      for (const model of candidateModels) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.2 },
+              }),
+              signal: AbortSignal.timeout(8000),
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            const answer = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (answer) {
+              return NextResponse.json({
+                success: true,
+                answer,
+                source: model,
+              });
+            }
           }
+        } catch (geminiErr) {
+          console.warn(`[Breast Consultation] Model ${model} failed, trying next:`, geminiErr);
         }
-      } catch (geminiErr) {
-        console.warn("Gemini ask consultation error:", geminiErr);
       }
     }
 

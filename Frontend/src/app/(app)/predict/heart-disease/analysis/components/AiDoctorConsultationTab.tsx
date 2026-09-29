@@ -164,68 +164,25 @@ ${summaryText || recommendation}
     setIsTyping(true);
 
     try {
-      const conversationContext = messages
-        .slice(-6)
-        .map(m => `${m.role === "user" ? "Patient/Clinician" : "Cardiologist"}: ${m.content.substring(0, 300)}`)
-        .join("\n");
+      const res = await fetch("/api/ai/cardiac-consultation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          patient: { name: pName, age: pAge, gender: pGender, id: pId },
+          finding: { diagnosis: diagTitle, riskScore, tier, lead, region, recommendation },
+          history: messages.slice(-6),
+        }),
+      });
 
-      const prompt = `You are a senior cardiologist answering a specific question about a patient's ECG results.
-
-PATIENT: ${pName}, ${pAge}y ${pGender} (${pId})
-FINDING: ${diagTitle}
-RISK: ${riskScore}/100 — ${tier}
-LEAD: ${lead} (${region})
-RECOMMENDATION: ${recommendation}
-
-RECENT CONVERSATION:
-${conversationContext}
-
-QUESTION: "${question}"
-
-RULES:
-1. Answer ONLY what was asked. Do not dump unrelated clinical data.
-2. Keep your answer SHORT — 2-3 concise paragraphs or 3-5 bullet points maximum.
-3. Use simple, clear language a patient can understand. Avoid jargon unless the question is technical.
-4. If the question is about medications, give specific drug names and dosages per ACC/AHA guidelines.
-5. If the question is about a specific lead or waveform, explain what it means anatomically.
-6. If the question is general ("what does this mean?"), give a brief plain-English explanation of the finding and next steps.
-7. Do NOT repeat the full patient profile. The patient already knows their name and ID.
-8. Do NOT use markdown headings (# or ##). Use bold (**text**) for key terms and bullet points (•) for lists.
-9. End with one brief actionable next step.`;
-
-      const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
       let answer = "";
-
-      if (geminiApiKey) {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.3 },
-            }),
-          }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        }
+      if (res.ok) {
+        const data = await res.json();
+        answer = data.answer || "";
       }
 
       if (!answer) {
-        // High-signal knowledgebase fallback
-        const qLower = question.toLowerCase();
-        if (qLower.includes("pci") || qLower.includes("cath") || qLower.includes("emergency")) {
-          answer = `### **Emergency Cath Lab & Revascularization Protocol**\n• For acute STEMI patterns, guideline door-to-balloon time is **<90 minutes** (AHA/ACC).\n• If PCI capability is unavailable within 120 minutes, consider immediate intravenous fibrinolytic therapy within 30 minutes of arrival.\n• Immediate dual antiplatelet therapy (Aspirin 325 mg chewed + Ticagrelor 180 mg or Clopidogrel 600 mg loading dose) and unfractionated heparin bolus is recommended prior to catheterization.`;
-        } else if (qLower.includes("lead") || qLower.includes("st") || qLower.includes("morphology")) {
-          answer = `### **Lead Attribution Analysis (${lead})**\n• The primary neural attention is centered on **${lead}**, corresponding to the **${region}**.\n• In the standard 12-lead vector system, V1-V2 elevation reflects anteroseptal involvement typically supplied by the Left Anterior Descending (LAD) coronary artery.\n• Reciprocal ST depression in inferior leads (II, III, aVF) should be cross-examined to confirm acute transmural injury versus benign repolarization.`;
-        } else if (qLower.includes("drug") || qLower.includes("medication") || qLower.includes("treatment")) {
-          answer = `### **Guideline-Directed Pharmacotherapy**\n• **Antiplatelet:** Dual antiplatelet therapy (Aspirin + P2Y12 inhibitor).\n• **Anticoagulation:** Weight-adjusted Heparin or Enoxaparin.\n• **Anti-ischemic:** Sublingual nitroglycerin (if systolic BP >90 mmHg and no right ventricular involvement) and beta-blockade once hemodynamically stabilized.\n• **Lipid lowering:** High-intensity Statin (Atorvastatin 80 mg daily).`;
-        } else {
-          answer = `### **Cardiological Second Opinion**\nFor **${pName}**, the overall continuous cardiac risk score of **${riskScore}/100** classifies the presentation under **${tier}**.\n\n• The anatomical focus on **${lead}** suggests that serial 12-lead ECGs (every 15-30 minutes) should be performed to monitor dynamic ST-segment evolution.\n• Complementary baseline diagnostics should include high-sensitivity cardiac troponin (hs-cTnI/T), serum potassium, magnesium, and an emergency bedside point-of-care echocardiogram (POCUS) to evaluate wall motion abnormalities.`;
-        }
+        answer = `• **Cardiac Assessment for ${pName}:** Based on the **${diagTitle}** finding and focal repolarization changes in **${lead}** (${region}), immediate cardiological correlation and continuous telemetric monitoring are recommended.\n• **Action:** Verify serial troponin biomarkers and obtain emergency clinical consultation.`;
       }
 
       setMessages((prev) => [
@@ -242,7 +199,7 @@ RULES:
         ...prev,
         {
           role: "assistant",
-          content: `For **${pName}**, continuous telemetric cardiac monitoring and correlation with clinical anginal symptoms and serial troponin biomarkers is advised.`,
+          content: `• **Assessment:** For **${pName}**, continuous cardiac monitoring and immediate evaluation for **${diagTitle}** is recommended.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
