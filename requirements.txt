@@ -1,2 +1,4 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
+greenlet>=3.0.0
+SQLAlchemy[asyncio]>=2.0.0
 -r Backend/requirements.txt
