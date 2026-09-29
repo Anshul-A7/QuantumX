@@ -53,8 +53,10 @@ Models/v2/
 Models/v1 - Heart Attack (ECG Image) - Claude/
 Models/v1 - Heart Attack (ECG Image) - Gemini/
 Models/v1 - Cardiovascular Disease/
+Models/Archieved/
 Models/**/data/
 data/
+Models/Heart Model Final/Dataset/
 Models/breast_cancer_quantum_pipeline_deep_dive_and_circuit_mechanics.md
 Models/quantum_pipeline_deep_dive_and_circuit_mechanics.md
 Models/v1 - Breast Cancer/INSIGHTS.md
@@ -70,6 +72,7 @@ test_*.py
 *.pt
 !Backend/models_v1/heart_v1/artifacts/cardiac_cnn_production.pt
 !Backend/models_v1/heart_v1/artifacts/cardiac_hybrid_production.pt
+!Backend/models_v1/heart_v2/artifacts/*.pt
 *.pkl
 Plan/
 Research/

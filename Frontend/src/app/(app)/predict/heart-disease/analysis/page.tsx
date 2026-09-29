@@ -80,7 +80,7 @@ export default function HeartDiseaseAnalysisPage() {
       coordinates: { peak_x: 650, peak_y: 420, rel_x: 0.29, rel_y: 0.35 },
     },
     quantum_engine: {
-      signature: "QuantumX Transfinite-1",
+      signature: "Transfinite-IM1 (Hybrid Quantum)",
       qubits: 8,
       ansatz: "8-Qubit AngleEmbedding + StronglyEntanglingLayers (2 Layers)",
       statevector_backend: "PennyLane default.qubit",
@@ -129,7 +129,9 @@ export default function HeartDiseaseAnalysisPage() {
 
   const isHybrid = selectedModel === "transfinite_1";
 
-  const activeRiskScore = Number(telemetry?.risk_stratification?.cardiac_risk_score ?? 2.0);
+  const activeRiskScore = isHybrid
+    ? Number(telemetry?.quantum_engine?.risk_score ?? telemetry?.risk_stratification?.cardiac_risk_score ?? 2.0)
+    : Number(telemetry?.classical_engine?.risk_score ?? telemetry?.risk_stratification?.cardiac_risk_score ?? 2.0);
   const activeConfidence = isHybrid
     ? telemetry?.quantum_engine?.quantum_confidence_pct ?? 100.0
     : telemetry?.classical_engine?.confidence_pct ?? 100.0;
@@ -139,13 +141,15 @@ export default function HeartDiseaseAnalysisPage() {
   const activeLatency = isHybrid
     ? telemetry?.quantum_engine?.latency_ms ?? 54.3
     : telemetry?.classical_engine?.latency_ms ?? 35.3;
-  const activeEngineName = isHybrid ? "QuantumX Transfinite-1" : "CX-01 Cardiac Classical";
+  const activeEngineName = isHybrid
+    ? (telemetry?.quantum_engine?.signature || "Transfinite-IM1 (Hybrid Quantum)")
+    : (telemetry?.classical_engine?.name || "CX-IM01 (Classical)");
   const activeEngineSpecs = isHybrid
-    ? "8-Qubit AngleEmbedding + StronglyEntanglingLayers (2 Layers)"
-    : "ResNet-18 Deep Convolutional Neural Network";
+    ? "8-Qubit Universal AngleEmbedding + StronglyEntanglingLayers (3 Layers)"
+    : "ResNet-34 + Multi-Scale Dilated Convolutions + CBAM + ECGConVT (21.5M Params)";
   const activeEngineDesc = isHybrid
-    ? "8-Qubit variational quantum circuit projects compressed visual features into 256-dimensional Hilbert space."
-    : "PyTorch ResNet-18 model trained on 4,000+ Kaggle 12-lead ECG images with Grad-CAM gradient backpropagation.";
+    ? "8-Qubit universal variational quantum circuit with 3 data re-uploading layers projecting features into 256-dimensional Hilbert space."
+    : "PyTorch ResNet-34 SOTA classical architecture with concat-pooling, multi-scale dilated convolutions, and spatial attention.";
 
   const getRiskBadge = () => {
     if (activeRiskScore >= 85.0) {
@@ -215,53 +219,53 @@ export default function HeartDiseaseAnalysisPage() {
       },
       biomarkers: [],
       transfinite1: {
-        engineName: "Transfinite-1",
-        engineDescription: "8-Qubit AngleEmbedding + StronglyEntanglingLayers VQC",
+        engineName: telemetry?.quantum_engine?.signature || "Transfinite-IM1 (Hybrid Quantum)",
+        engineDescription: "8-Qubit Universal Data Re-Uploading PQC + Bilinear Gated Fusion",
         modelType: "hybrid",
         predictionLabel: telemetry?.quantum_engine?.quantum_prediction || telemetry?.prediction?.clinical_title || "Normal",
         confidence: telemetry?.quantum_engine?.quantum_confidence_pct ?? telemetry?.prediction?.confidence_pct ?? 100,
-        riskScore: activeRiskScore,
-        riskTier: telemetry?.risk_stratification?.severity_tier || currentBadge.label,
+        riskScore: Number(telemetry?.quantum_engine?.risk_score ?? telemetry?.risk_stratification?.cardiac_risk_score ?? 2.0),
+        riskTier: telemetry?.quantum_engine?.severity_tier || telemetry?.risk_stratification?.severity_tier || currentBadge.label,
         riskTag: isCardiacHigh ? "CRITICAL_RISK" : "LOW_RISK",
         clinicalAction: telemetry?.risk_stratification?.clinical_recommendation || "Routine annual cardiovascular follow-up.",
         latencyMs: telemetry?.quantum_engine?.latency_ms || 54.3,
-        architecture: "8-Qubit Variational Quantum Circuit (256-dim Hilbert space)",
+        architecture: "8-Qubit Variational Quantum Circuit (3 Re-Uploading Layers, 72 Params)",
         attributions: [
           {
-            featureName: leadName,
-            measuredValue: telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95,
+            featureName: telemetry?.quantum_engine?.lead_detected || "Lead V2 (Septal)",
+            measuredValue: (telemetry?.quantum_engine?.quantum_confidence_pct ?? 98.0) / 100,
             baselineValue: 0.1,
-            impactPercentage: (telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95) * 100,
+            impactPercentage: telemetry?.quantum_engine?.quantum_confidence_pct ?? 98.0,
             direction: isCardiacHigh ? "risk_elevating" : "protective",
-            quantumImpact: `Peak spatial saliency localized to ${anatomicalRegion}`,
+            quantumImpact: `Quantum observable attribution localized to ${telemetry?.quantum_engine?.anatomical_region || "Anteroseptal Wall (LAD)"}`,
           },
         ],
         qubits: 8,
-        ansatz: "StronglyEntanglingLayers (2 Layers)",
-        circuitDepth: 36,
-        cnotCount: 16,
-        variationalParams: 48,
+        ansatz: "Universal AngleEmbedding + StronglyEntanglingLayers (3 Layers)",
+        circuitDepth: 48,
+        cnotCount: 24,
+        variationalParams: 72,
       },
       cx01: {
-        engineName: "CX-01 Cardiac Classical",
-        engineDescription: "ResNet-18 Deep Convolutional Neural Network Baseline",
+        engineName: telemetry?.classical_engine?.name || "CX-IM01 (Classical)",
+        engineDescription: "ResNet-34 + Multi-Scale Dilated Convolutions + CBAM (21.5M Params)",
         modelType: "classical",
         predictionLabel: telemetry?.classical_engine?.prediction || telemetry?.prediction?.clinical_title || "Normal",
         confidence: telemetry?.classical_engine?.confidence_pct ?? 100,
-        riskScore: activeRiskScore,
-        riskTier: telemetry?.risk_stratification?.severity_tier || currentBadge.label,
+        riskScore: Number(telemetry?.classical_engine?.risk_score ?? telemetry?.risk_stratification?.cardiac_risk_score ?? 2.0),
+        riskTier: telemetry?.classical_engine?.severity_tier || telemetry?.risk_stratification?.severity_tier || currentBadge.label,
         riskTag: isCardiacHigh ? "CRITICAL_RISK" : "LOW_RISK",
         clinicalAction: telemetry?.risk_stratification?.clinical_recommendation || "Routine annual cardiovascular follow-up.",
         latencyMs: telemetry?.classical_engine?.latency_ms || 35.3,
-        architecture: "ResNet-18 (11.1M Parameters)",
+        architecture: "ResNet-34 ECGConVT (21.5M Parameters)",
         attributions: [
           {
-            featureName: leadName,
-            measuredValue: telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95,
+            featureName: telemetry?.classical_engine?.lead_detected || "Lead V5 (Lateral)",
+            measuredValue: (telemetry?.classical_engine?.confidence_pct ?? 78.0) / 100,
             baselineValue: 0.1,
-            impactPercentage: (telemetry?.pinpointing_gradcam?.activation_peak_score || 0.95) * 100,
+            impactPercentage: telemetry?.classical_engine?.confidence_pct ?? 78.0,
             direction: isCardiacHigh ? "risk_elevating" : "protective",
-            quantumImpact: "Convolutional gradient activation on 12-lead grid",
+            quantumImpact: `Spatial Grad-CAM saliency localized to ${telemetry?.classical_engine?.anatomical_region || "Apical Lateral Wall (LCx)"}`,
           },
         ],
       },
@@ -383,7 +387,7 @@ export default function HeartDiseaseAnalysisPage() {
               }`}
             >
               <Sparkles size={13} className={isHybrid ? "text-quantum" : "text-ink-soft"} />
-              <span>Hybrid Quantum (Transfinite-1)</span>
+              <span>Hybrid Quantum (Transfinite-IM1)</span>
               {isHybrid && <span className="w-1.5 h-1.5 rounded-full bg-quantum" />}
             </button>
             <button
@@ -395,7 +399,7 @@ export default function HeartDiseaseAnalysisPage() {
               }`}
             >
               <Activity size={13} className={!isHybrid ? "text-blue-600" : "text-ink-soft"} />
-              <span>Classical Baseline (CX-01)</span>
+              <span>Classical SOTA (CX-IM01)</span>
               {!isHybrid && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
             </button>
           </div>
@@ -532,7 +536,7 @@ export default function HeartDiseaseAnalysisPage() {
             }`}
           >
             <Layers size={14} className={activeTab === "model_comparison" ? "text-quantum" : ""} />
-            <span>⚖️ 3. Model Comparison (CX-01 vs Transfinite-1)</span>
+            <span>⚖️ 3. Model Comparison (CX-IM01 vs Transfinite-IM1)</span>
           </button>
 
           {/* Tab 4: Real-Time Architecture & Circuit Telemetry */}

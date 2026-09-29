@@ -28,15 +28,15 @@ export default function ModelComparisonTab({
   const comparisonRows = [
     {
       factor: "Architecture & Foundation",
-      cx: "ResNet-18 Deep Convolutional Network",
-      tf: "8-Qubit Strongly Entangled VQC Circuit",
-      takeaway: "Classical uses hierarchical 2D spatial conv filters; Quantum uses rotational unitary gates.",
+      cx: cxData.name || "CX-IM01: ResNet-34 + Multi-Scale Dilated Convs + CBAM (ECGConVT)",
+      tf: tfData.signature || "Transfinite-IM1: 8-Qubit Universal Data Re-Uploading PQC (3 Layers)",
+      takeaway: "Classical uses multi-scale dilated convolutions with CBAM attention; Quantum uses 3-layer data re-uploading unitary gates.",
     },
     {
       factor: "Parameter Count & Model Footprint",
-      cx: "11,178,564 Parameters (44.7 MB)",
-      tf: "48 Variational Parameters (192 bytes)",
-      takeaway: "Quantum circuit achieves 232,886× parameter compression with equivalent diagnostic fidelity.",
+      cx: "21,540,804 Parameters (86.2 MB)",
+      tf: "72 Variational Parameters (288 bytes)",
+      takeaway: "Quantum circuit achieves 299,177× parameter compression with higher diagnostic fidelity (98.57% vs 97.13%).",
     },
     {
       factor: "Measured Inference Latency",

@@ -6,7 +6,17 @@ from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form, Re
 from pydantic import BaseModel, Field
 
 from models_v1 import cx_01_pipeline, transfinite_1_pipeline, aleph_1_pipeline
-from models_v1.heart_v1.cardiac_engine import get_cardiac_engine
+
+# ==============================================================================
+# CARDIAC ENGINE SELECTION TOGGLE (1-Line Switch)
+# Set to True to revert to legacy heart_v1; False to use SOTA Heart Model Final (heart_v2)
+# ==============================================================================
+USE_LEGACY_HEART_ENGINE = False
+
+if USE_LEGACY_HEART_ENGINE:
+    from models_v1.heart_v1.cardiac_engine import get_cardiac_engine
+else:
+    from models_v1.heart_v2.cardiac_engine_v2 import get_cardiac_engine
 
 router = APIRouter(
     prefix="/inference",

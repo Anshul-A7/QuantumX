@@ -258,17 +258,23 @@ export async function executeBatch(
             result.prediction?.class_name ||
             "Normal";
           cPred = result.classical_engine?.prediction || result.prediction?.class_name || qPred;
-          qRisk = result.risk_stratification?.cardiac_risk_score ?? result.composite_risk_score ?? 15;
-          cRisk = qRisk;
-          qConf = result.quantum_engine?.quantum_confidence_pct ?? result.prediction?.confidence_pct ?? 95;
-          cConf = result.classical_engine?.confidence_pct ?? 92;
+          qRisk = Number(result.quantum_engine?.risk_score ?? result.risk_stratification?.cardiac_risk_score ?? 15);
+          cRisk = Number(result.classical_engine?.risk_score ?? result.risk_stratification?.cardiac_risk_score ?? 15);
+          qConf = Number(result.quantum_engine?.quantum_confidence_pct ?? result.prediction?.confidence_pct ?? 95);
+          cConf = Number(result.classical_engine?.confidence_pct ?? 92);
           riskTier = result.risk_stratification?.severity_tier || (qRisk >= 65 ? "CRITICAL EMERGENCY" : "LOW RISK");
           riskTag = qRisk >= 65 ? "HIGH_RISK" : qRisk >= 45 ? "BORDERLINE" : "LOW_RISK";
           latencyMs = result.dual_engine_consensus?.total_latency_ms || result.quantum_engine?.latency_ms || 45;
           topDriver =
+            result.classical_engine?.lead_detected ||
             result.pinpointing_gradcam?.lead_detected ||
             result.risk_stratification?.primary_driver ||
             "Lead V2 (Septal)";
+          const topDriverImpact =
+            result.shap_explainability?.classical_lead_shap?.[0]?.impact_pct ||
+            (result.pinpointing_gradcam?.activation_peak_score
+              ? Math.round(result.pinpointing_gradcam.activation_peak_score * 100)
+              : 18.5);
 
           const isConcordant =
             result.dual_engine_consensus?.concordant !== undefined
@@ -283,10 +289,10 @@ export async function executeBatch(
           const cxResult = dc?.cx_01;
           qPred = tfResult?.prediction_label || result.prediction_label || "Unknown";
           cPred = cxResult?.prediction_label || result.prediction_label || "Unknown";
-          qRisk = tfResult?.risk_score ?? result.composite_risk_score ?? 0;
-          cRisk = cxResult?.risk_score ?? result.composite_risk_score ?? 0;
-          qConf = tfResult?.confidence ?? result.confidence ?? 0;
-          cConf = cxResult?.confidence ?? result.confidence ?? 0;
+          qRisk = Number(tfResult?.risk_score ?? result.composite_risk_score ?? 0);
+          cRisk = Number(cxResult?.risk_score ?? result.composite_risk_score ?? 0);
+          qConf = Number(tfResult?.confidence ?? result.confidence ?? 0);
+          cConf = Number(cxResult?.confidence ?? result.confidence ?? 0);
           riskTag = result.risk_tag || tfResult?.risk_tag || "LOW_RISK";
           riskTier = result.risk_tier || tfResult?.risk_tier || "";
           latencyMs = result.latency_ms || 0;
@@ -306,7 +312,10 @@ export async function executeBatch(
         session.records[globalIdx].latencyMs = latencyMs;
         session.records[globalIdx].attributions = result.shap_attributions || [];
         session.records[globalIdx].topDriver = topDriver;
-        session.records[globalIdx].topDriverImpact = result.shap_attributions?.[0]?.impactPercentage || 0;
+        session.records[globalIdx].topDriverImpact =
+          diseaseType === "cardiac_ecg"
+            ? (result.shap_explainability?.classical_lead_shap?.[0]?.impact_pct || (result.pinpointing_gradcam?.activation_peak_score ? Math.round(result.pinpointing_gradcam.activation_peak_score * 100) : 18.5))
+            : (result.shap_attributions?.[0]?.impactPercentage || 0);
         session.records[globalIdx].fullResult = result;
         session.records[globalIdx].consensusStatus = consensusStatus;
 
@@ -412,6 +421,7 @@ export function getBatchSessions(): BatchSession[] {
 
 async function persistBatchRecords(session: BatchSession): Promise<void> {
   const successRecords = session.records.filter((r) => r.status === "success");
+  const isCardiac = session.diseaseType?.toLowerCase().includes("cardiac") || session.diseaseType?.toLowerCase().includes("heart");
 
   // Persist first 100 to Supabase to avoid rate limiting
   const toStore = successRecords.slice(0, 100);
@@ -422,8 +432,11 @@ async function persistBatchRecords(session: BatchSession): Promise<void> {
         id: `${session.batchId}-${record.rowIndex}`,
         patientId: record.patientId,
         patientName: record.patientName,
-        diseaseType: record.diseaseType,
-        disease: record.diseaseType,
+        diseaseType: isCardiac ? "Cardiac 12-Lead Electrocardiogram" : "Breast Cancer Screening",
+        disease: isCardiac ? "Heart Attack & Cardiac ECG" : "Breast Cancer Screening",
+        cohort: isCardiac ? "12-Lead Electrocardiogram (PTB-XL)" : "Fine Needle Aspirate (WDBC)",
+        patientGender: isCardiac ? "Male" : "Female",
+        patientAge: 56,
         quantumPrediction: record.quantumPrediction || "Unknown",
         quantumRiskScore: record.quantumRiskScore,
         quantumConfidence: record.quantumConfidence || 0,

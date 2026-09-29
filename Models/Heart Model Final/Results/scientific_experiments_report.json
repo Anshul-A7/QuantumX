@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-09-24 19:14:11",
+  "total_unique_patients": 1856,
+  "split_summary": {
+    "train_patients": 1298,
+    "val_patients": 279,
+    "test_patients": 279
+  },
+  "autoencoder_retained_variance": 0.963235516881447,
+  "exp1_leakage": {
+    "random_split_accuracy": 0.989247311827957,
+    "random_split_f1": 0.9883465780090863,
+    "patient_isolated_accuracy": 0.978494623655914,
+    "patient_isolated_f1": 0.9794039575289575
+  },
+  "exp2_hardware_noise": {
+    "ideal_simulator_accuracy": 1.0,
+    "noisy_sherbrooke_accuracy": 1.0,
+    "mitigated_accuracy": 1.0
+  },
+  "exp3_scarcity": {
+    "fractions": [
+      0.1,
+      0.25,
+      0.5,
+      1.0
+    ],
+    "classical_accuracies": [
+      0.8279569892473119,
+      0.8745519713261649,
+      0.9354838709677419,
+      0.982078853046595
+    ],
+    "hybrid_accuracies": [
+      0.7921146953405018,
+      0.7670250896057348,
+      0.7491039426523297,
+      0.9713261648745519
+    ]
+  },
+  "exp4_gradcam": {
+    "average_lwer": 0.7910015904903411
+  }
+}

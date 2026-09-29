@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import verifiedSamples from "@/lib/verified_samples.json";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function getBackendUrl(): string {
-  if (process.env.BACKEND_INTERNAL_URL) return process.env.BACKEND_INTERNAL_URL.replace(/\/$/, "");
+  if (process.env.BACKEND_INTERNAL_URL) {
+    return process.env.BACKEND_INTERNAL_URL.replace(/\/$/, "");
+  }
   if (
     process.env.NEXT_PUBLIC_API_URL &&
     !process.env.NEXT_PUBLIC_API_URL.includes("localhost") &&
@@ -18,6 +20,11 @@ function getBackendUrl(): string {
   return "http://127.0.0.1:8000";
 }
 
+/**
+ * Production Next.js API Route for Cardiac Reference Demo Inference.
+ * Dispatches to live Python Dual-Engine Backend running real SOTA models
+ * on authentic clinical benchmark ECG records.
+ */
 export async function POST(req: NextRequest) {
   let sampleType = "mi";
   try {
@@ -28,13 +35,14 @@ export async function POST(req: NextRequest) {
   }
 
   const backendUrl = getBackendUrl();
+  const targetEndpoint = `${backendUrl}/inference/cardiac-demo`;
 
   try {
-    const resp = await fetch(`${backendUrl}/inference/cardiac-demo`, {
+    const resp = await fetch(targetEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sample_type: sampleType }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (resp.ok) {
@@ -42,19 +50,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(liveData);
     }
 
-    console.warn(`[Cardiac Demo API] Backend returned status ${resp.status}, engaging verified reference fallback.`);
+    const errJson = await resp.json().catch(() => ({}));
+    const detail = errJson.detail || `Backend returned status ${resp.status}`;
+    return NextResponse.json({ detail }, { status: resp.status });
   } catch (error: any) {
-    console.warn(`[Cardiac Demo API] Live connection note (${backendUrl}): ${error?.message}, engaging verified reference fallback.`);
+    console.error(`[Cardiac Demo API] Connection error to ${targetEndpoint}:`, error);
+    return NextResponse.json(
+      { detail: `Inference backend unreachable: ${error?.message || "Failed to reach inference server"}` },
+      { status: 502 }
+    );
   }
-
-  // Graceful verified reference fallback (prevents 503 error toast on Vercel)
-  const fallbackRecord = (verifiedSamples as Record<string, any>)[sampleType] || (verifiedSamples as Record<string, any>)["mi"];
-  if (fallbackRecord) {
-    return NextResponse.json(fallbackRecord);
-  }
-
-  return NextResponse.json(
-    { detail: "Unable to process cardiac sample telemetry at this time." },
-    { status: 500 }
-  );
 }
