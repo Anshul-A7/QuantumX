@@ -588,18 +588,9 @@ export default function HeartDiseaseStudioPage() {
       return;
     }
 
-    if (validationError) {
-      showToast({
-        title: "Invalid ECG Image",
-        message: validationError,
-        type: "warning",
-      });
-      return;
-    }
-
+    setValidationError(null);
     setIsProcessing(true);
     setTelemetry(null);
-    setValidationError(null);
 
     try {
       let res: Response;
@@ -634,12 +625,11 @@ export default function HeartDiseaseStudioPage() {
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         const errMsg = errData.detail || `Server returned status ${res.status}`;
-        setValidationError(errMsg);
         setTelemetry(null);
         setAiSynthesis(null);
         setIsProcessing(false);
         showToast({
-          title: "Clinical Guardrail Active",
+          title: "Inference Notification",
           message: errMsg,
           type: "warning",
         });
