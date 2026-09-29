@@ -522,7 +522,7 @@ def ideal_cardiac_circuit(inputs, weights):
                   </h4>
                 </div>
                 <p className="text-xs text-ink-soft mt-0.5">
-                  18-layer residual architecture processing 12-lead ECG strips across hierarchical spatial receptive fields.
+                  34-layer residual architecture processing 12-lead ECG strips across hierarchical spatial receptive fields.
                 </p>
               </div>
 
