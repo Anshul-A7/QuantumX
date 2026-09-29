@@ -518,7 +518,7 @@ def ideal_cardiac_circuit(inputs, weights):
                 <div className="flex items-center gap-2">
                   <Network size={16} className="text-blue-600" />
                   <h4 className="text-sm font-bold text-ink">
-                    ResNet-18 Deep Convolutional Network Stage Hierarchy
+                    ResNet-34 Deep Convolutional Network Stage Hierarchy
                   </h4>
                 </div>
                 <p className="text-xs text-ink-soft mt-0.5">

@@ -97,7 +97,7 @@ export default function HeartDiseaseAnalysisPage() {
     },
     classical_engine: {
       name: "CX-01 Cardiac Classical",
-      architecture: "ResNet-18 + FC (512 -> 256 -> 4)",
+      architecture: "ResNet-34 + FC (512 -> 256 -> 4)",
       prediction: "Normal",
       confidence_pct: 100.0,
       total_parameters: 11178564,
@@ -556,7 +556,7 @@ export default function HeartDiseaseAnalysisPage() {
             <span>
               {isHybrid
                 ? "⚡ 4. Quantum Circuit & Pauli-Z Telemetry"
-                : "🔬 4. ResNet-18 Architecture & Layer Flow"}
+                : "🔬 4. ResNet-34 Architecture & Layer Flow"}
             </span>
           </button>
         </div>

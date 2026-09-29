@@ -102,7 +102,7 @@ export default function ModelComparisonTab({
               </span>
             </div>
             <p className="text-xs text-ink-soft mt-0.5">
-              Comparison between Classical ResNet-18 and PennyLane 8-Qubit Variational Quantum Circuit
+              Comparison between Classical ResNet-34 and PennyLane 8-Qubit Variational Quantum Circuit
             </p>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function ModelComparisonTab({
 
       {/* 2. ARCHITECTURAL SIDE-BY-SIDE SUMMARY */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Classical ResNet-18 */}
+        {/* Classical ResNet-34 */}
         <div className={`p-5 rounded-2xl border transition-all ${
           !isHybrid ? "bg-white border-blue-300 shadow-xs" : "bg-white border-hairline opacity-80"
         }`}>
@@ -141,7 +141,7 @@ export default function ModelComparisonTab({
               </div>
               <div>
                 <h4 className="text-xs font-bold text-ink">CX-01 Cardiac Classical</h4>
-                <p className="text-[10px] font-mono text-ink-soft">ResNet-18 Convolutional Architecture</p>
+                <p className="text-[10px] font-mono text-ink-soft">ResNet-34 Convolutional Architecture</p>
               </div>
             </div>
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-bold">
