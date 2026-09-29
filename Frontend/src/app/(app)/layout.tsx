@@ -324,57 +324,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <Sparkles size={12} className="text-quantum" />
                 <span>Transfinite-1 (Simulator)</span>
               </button>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowAlephCard(prev => !prev)}
-                  className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-pointer opacity-90 hover:opacity-100"
-                  title="Aleph-1 (IBM QPU) — Real Quantum Hardware"
-                >
-                  <Cpu size={12} className="text-amber-500" />
-                  <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
-                  <span className="sm:hidden">Aleph-1</span>
-                  <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
-                </button>
-                <AnimatePresence>
-                  {showAlephCard && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-2 w-80 sm:w-96 z-50 p-4 rounded-2xl bg-slate-950 text-slate-100 border border-slate-800 shadow-2xl"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                          <Cpu size={18} />
-                        </div>
-                        <div className="space-y-1.5 flex-1">
-                          <h4 className="text-xs font-bold text-amber-400 font-mono uppercase tracking-wider">Aleph-1 — IBM Quantum QPU</h4>
-                          <p className="text-[11px] text-slate-300 leading-relaxed">
-                            Physical 127-qubit IBM Eagle r3 superconducting transmon processor operating at 15 millikelvin inside a Bluefors dilution refrigerator. Achieves 99.5% single-qubit and 99.1% two-qubit gate fidelities with T1 coherence ≈ 300μs.
-                          </p>
-                          <div className="flex items-center gap-2 pt-1 flex-wrap">
-                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-slate-700">127 Physical Qubits</span>
-                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">IBM Qiskit Runtime</span>
-                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">ZNE + M3 + DD</span>
-                          </div>
-                          <p className="text-[10px] text-slate-500 pt-1">
-                            Reserved for verified clinical partner deployments. All quantum diagnostic circuits will execute on real IBM hardware with full error mitigation.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowAlephCard(false)}
-                        className="absolute top-2 right-2 w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center text-xs cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowAlephCard(true)}
+                className="px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-ink-soft hover:text-ink text-[11px] font-medium cursor-pointer opacity-90 hover:opacity-100"
+                title="Aleph-1 (IBM QPU) — Real Quantum Hardware"
+              >
+                <Cpu size={12} className="text-amber-500" />
+                <span className="hidden sm:inline">Aleph-1 (IBM QPU)</span>
+                <span className="sm:hidden">Aleph-1</span>
+                <span className="text-[9px] font-mono text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">Locked</span>
+              </button>
             </div>
 
             {/* Notification Icon (Left of Account) */}
@@ -552,7 +512,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               {/* Aleph-1 (IBM QPU Locked) */}
               <button
                 type="button"
-                onClick={() => setShowAlephCard(prev => !prev)}
+                onClick={() => setShowAlephCard(true)}
                 className="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 text-ink-soft hover:text-ink font-medium cursor-pointer opacity-90 hover:opacity-100"
                 title="Aleph-1 (IBM QPU) — Real Quantum Hardware"
               >
@@ -1223,6 +1183,119 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   className="px-4 py-1.5 rounded-lg bg-ink text-parchment text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
                 >
                   Save &amp; Close
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ========================================================================= */}
+      {/* ALEPH-1 REAL QUANTUM HARDWARE CENTER CARD MODAL (WHITE) */}
+      {/* ========================================================================= */}
+      <AnimatePresence>
+        {showAlephCard && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAlephCard(false)}
+              className="fixed inset-0 bg-ink/35 backdrop-blur-xs z-50"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-2xl border border-hairline shadow-2xl z-50 p-6 space-y-4"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between border-b border-hairline pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-200/60 flex items-center justify-center shrink-0">
+                    <Cpu size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-serif text-lg font-medium text-ink">Aleph-1 — IBM Quantum QPU</h3>
+                      <span className="text-[10px] font-mono text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-300 font-bold">
+                        Physical Hardware
+                      </span>
+                    </div>
+                    <p className="text-xs text-ink-soft">
+                      127-Qubit Eagle r3 Superconducting Transmon Processor
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAlephCard(false)}
+                  className="w-8 h-8 rounded-full bg-cream hover:bg-cream-deep border border-hairline flex items-center justify-center text-ink-soft hover:text-ink transition-colors cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Hardware KPI Badges */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-cream/60 border border-hairline text-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Qubits</span>
+                  <span className="font-serif text-xl font-light text-ink">127</span>
+                  <span className="text-[9px] font-mono text-ink-soft block">Eagle r3 Transmon</span>
+                </div>
+                <div className="p-3 rounded-xl bg-cream/60 border border-hairline text-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Cryo Temp</span>
+                  <span className="font-serif text-xl font-light text-ink">15 mK</span>
+                  <span className="text-[9px] font-mono text-ink-soft block">Dilution Cryostat</span>
+                </div>
+                <div className="p-3 rounded-xl bg-cream/60 border border-hairline text-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Gate Fidelity</span>
+                  <span className="font-serif text-xl font-light text-emerald-600">99.1%</span>
+                  <span className="text-[9px] font-mono text-ink-soft block">T1 ≈ 300 μs</span>
+                </div>
+                <div className="p-3 rounded-xl bg-cream/60 border border-hairline text-center space-y-1">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Mitigation</span>
+                  <span className="font-serif text-sm font-semibold text-quantum">ZNE + M3</span>
+                  <span className="text-[9px] font-mono text-ink-soft block">Qiskit Runtime</span>
+                </div>
+              </div>
+
+              {/* Technical Architecture Details */}
+              <div className="p-3.5 rounded-xl bg-cream/40 border border-hairline space-y-2 text-xs text-ink-soft leading-relaxed">
+                <p>
+                  <strong className="text-ink">Physical System Architecture:</strong> Real superconducting circuits housed inside a Bluefors LD400 dilution refrigerator at IBM Quantum datacenter. Supports parameterized quantum circuits (PQC) executed via IBM Qiskit Runtime Sampler &amp; Estimator primitives.
+                </p>
+                <p>
+                  <strong className="text-ink">Active Noise Suppression:</strong> Quantum circuits employ Matrix-free Measurement Mitigation (M3) for readout calibration, Zero-Noise Extrapolation (ZNE) for unitary gate error scaling, and Dynamical Decoupling (DD) pulse sequences during idle qubit delays.
+                </p>
+              </div>
+
+              {/* Clinical Deployment Status Notice */}
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-200 flex items-start gap-3 text-xs">
+                <Lock size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                <div className="space-y-1 text-ink">
+                  <p className="font-semibold text-amber-900">
+                    Restricted Clinical Deployment Tier (Locked)
+                  </p>
+                  <p className="text-[11px] text-ink-soft leading-relaxed">
+                    Physical IBM QPU circuit execution is reserved for verified clinical partner hospitals under IRB diagnostic protocols. Active patient screening runs transparently on our 1:1 statevector quantum simulator (<strong>Transfinite-1</strong>), delivering identical mathematical probability distributions at sub-second latency.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-2 flex items-center justify-between gap-3 border-t border-hairline">
+                <span className="text-[11px] text-ink-soft font-mono">
+                  IBM Qiskit Runtime Service • v2 Architecture
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowAlephCard(false)}
+                  className="px-5 py-2 rounded-xl bg-ink text-parchment hover:bg-ink/90 font-medium text-xs transition-colors cursor-pointer"
+                >
+                  Understood
                 </button>
               </div>
             </motion.div>

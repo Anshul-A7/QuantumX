@@ -25,6 +25,7 @@ import {
   Microscope,
   AlertTriangle,
   Users,
+  Cpu,
 } from "lucide-react";
 import { showToast } from "@/components/common/ToastNotification";
 import { ScreeningService } from "@/services/screening.service";
@@ -1738,64 +1739,84 @@ export default function HeartDiseaseStudioPage() {
       </div>
       )}
 
-      {/* IBM MODAL (Matching Breast Cancer) */}
+      {/* IBM MODAL (White Center Card) */}
       <AnimatePresence>
         {isIbmModalOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-neutral-900 text-neutral-100 rounded-3xl border border-neutral-800 p-6 max-w-lg w-full space-y-4 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="bg-white text-ink rounded-2xl border border-hairline p-6 max-w-lg w-full space-y-4 shadow-2xl"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+              <div className="flex items-center justify-between pb-3 border-b border-hairline">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                    <Sparkles size={16} />
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-200/60 flex items-center justify-center">
+                    <Cpu size={18} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base">Real IBM Quantum QPU Engine</h3>
-                    <p className="text-xs text-neutral-400">Superconducting Transmon Hardware Gateway</p>
+                    <h3 className="font-serif text-lg font-medium text-ink">Real IBM Quantum QPU Engine</h3>
+                    <p className="text-xs text-ink-soft">127-Qubit Superconducting Transmon Processor</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsIbmModalOpen(false)}
-                  className="h-8 w-8 rounded-xl bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white cursor-pointer"
+                  className="h-8 w-8 rounded-full bg-cream hover:bg-cream-deep border border-hairline flex items-center justify-center text-ink-soft hover:text-ink cursor-pointer transition-colors"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs text-neutral-300 leading-relaxed">
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-start gap-2.5">
-                  <Lock size={16} className="shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold">Enterprise / Hardware Access</strong>
-                    <span>
-                      Physical cryogenic IBM Quantum QPU runs (e.g. ibm_brisbane) execute with queue scheduling. Simulator mode runs instantly on GPU tensor statevectors.
+              {/* Hardware KPI Cards */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Target</span>
+                  <span className="font-serif text-sm font-light text-ink">ibm_brisbane</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Topology</span>
+                  <span className="font-serif text-sm font-light text-ink">127 Transmons</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Mitigation</span>
+                  <span className="font-serif text-sm font-light text-emerald-600">ZNE + M3</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs text-ink-soft leading-relaxed">
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-200 text-ink flex items-start gap-2.5">
+                  <Lock size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="block font-semibold text-amber-900">Enterprise Hardware Queue Notice</strong>
+                    <span className="text-[11px] text-ink-soft leading-relaxed block">
+                      Physical cryogenic IBM Quantum QPU runs execute through the IBM Qiskit cloud queue (typical latency 1-8 minutes). Active clinical screening is recommended on our 1:1 statevector simulator (Transfinite-IM1) for immediate sub-second results.
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
                 <button
+                  type="button"
                   onClick={() => setIsIbmModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-cream hover:bg-cream-deep border border-hairline text-ink-soft hover:text-ink text-xs font-medium cursor-pointer transition-colors"
                 >
                   Use High-Speed Simulator
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setExecutionMode("real_ibm_qpu");
                     setIsIbmModalOpen(false);
                     showToast({
                       title: "IBM QPU Mode Selected",
-                      message: "Configured target: ibm_brisbane.",
+                      message: "Configured target: ibm_brisbane (127-qubit).",
                       type: "quantum",
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Enable Hardware Target
                 </button>

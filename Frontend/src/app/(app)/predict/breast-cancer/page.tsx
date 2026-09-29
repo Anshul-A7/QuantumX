@@ -8,6 +8,7 @@ import {
   Sparkles,
   Activity,
   Layers,
+  Cpu,
   Zap,
   Sliders,
   CheckCircle2,
@@ -1639,45 +1640,63 @@ export default function BreastCancerDetailPage() {
       {/* REAL IBM QUANTUM HARDWARE MODAL (ADMIN ACCESS NOTICE) */}
       <AnimatePresence>
         {isIbmModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-xs p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-lg w-full text-white space-y-5 shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="bg-white border border-hairline rounded-2xl p-6 max-w-lg w-full text-ink space-y-4 shadow-2xl"
             >
-              <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+              <div className="flex items-center justify-between border-b border-hairline pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400">
-                    <Layers size={20} />
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-200/60 flex items-center justify-center text-amber-600">
+                    <Cpu size={20} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-base">Real IBM Quantum QPU Engine</h3>
-                    <p className="text-xs text-neutral-400">Superconducting Transmon Hardware Gateway</p>
+                    <h3 className="font-serif text-lg font-medium text-ink">Real IBM Quantum QPU Engine</h3>
+                    <p className="text-xs text-ink-soft">127-Qubit Superconducting Transmon Gateway</p>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsIbmModalOpen(false)}
-                  className="h-8 w-8 rounded-xl bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white"
+                  className="h-8 w-8 rounded-full bg-cream hover:bg-cream-deep border border-hairline flex items-center justify-center text-ink-soft hover:text-ink transition-colors cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={15} />
                 </button>
               </div>
 
-              <div className="space-y-3 text-xs text-neutral-300 leading-relaxed">
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-start gap-2.5">
-                  <Lock size={16} className="shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block font-semibold">Enterprise / Admin Exclusive Feature</strong>
-                    <span>
-                      Live IBM Quantum Hardware execution routes circuits to 127-qubit superconducting processors (e.g., ibm_brisbane / ibm_osaka). Due to physical cryogenic queue times (1-8 mins) and execution allocation, live hardware runs require authenticated enterprise API credentials.
+              {/* Hardware KPI Cards */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Target</span>
+                  <span className="font-serif text-sm font-light text-ink">ibm_brisbane</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Qubits</span>
+                  <span className="font-serif text-sm font-light text-ink">127 Physical</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-cream/60 border border-hairline space-y-0.5">
+                  <span className="text-[10px] font-mono uppercase text-ink-soft block font-bold">Coupling</span>
+                  <span className="font-serif text-sm font-light text-emerald-600">Heavy-Hex</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs text-ink-soft leading-relaxed">
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-200 text-ink flex items-start gap-2.5">
+                  <Lock size={16} className="text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <strong className="block font-semibold text-amber-900">Enterprise / Clinical Deployment Notice</strong>
+                    <span className="text-[11px] text-ink-soft leading-relaxed block">
+                      Live IBM Quantum Hardware execution routes circuits to 127-qubit superconducting processors. Due to physical cryogenic queue times (1-8 mins), live hardware runs require authenticated clinical partner credentials.
                     </span>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-2">
-                  <h4 className="font-bold text-neutral-200 uppercase tracking-wider text-[10px]">Active Transpilation Specs</h4>
-                  <ul className="space-y-1 font-mono text-[11px] text-neutral-400">
+                <div className="p-3 rounded-xl bg-cream/40 border border-hairline space-y-1.5">
+                  <h4 className="font-bold text-ink uppercase tracking-wider text-[10px]">Active Transpilation Specs</h4>
+                  <ul className="space-y-1 font-mono text-[11px] text-ink-soft">
                     <li>• Topology: 8 Physical Transmon Coupling</li>
                     <li>• Readout Error Mitigation: M3 (Matrix Inversion)</li>
                     <li>• Dynamical Decoupling: XY4 Microwave Pulses</li>
@@ -1686,14 +1705,16 @@ export default function BreastCancerDetailPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
                 <button
+                  type="button"
                   onClick={() => setIsIbmModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-cream hover:bg-cream-deep border border-hairline text-ink-soft hover:text-ink text-xs font-medium cursor-pointer transition-colors"
                 >
                   Use High-Speed Simulator
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setExecutionMode("real_ibm_qpu");
                     setIsIbmModalOpen(false);
@@ -1703,7 +1724,7 @@ export default function BreastCancerDetailPage() {
                       type: "quantum",
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-ink hover:bg-ink/90 text-parchment text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Enable QPU Verification
                 </button>
